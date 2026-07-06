@@ -1,7 +1,15 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// Schema do Sistema de Gestão do Ministério Ágape
+// Igreja Batista Casa de Deus · Jundiaí/SP
+// Etapa 1 — Fundação (modelo completo, seções 2.1–2.7 do PDF + audit_log)
+//
+// Decisões:
+// - Autenticação via Supabase Auth. As senhas ficam em auth.users (Supabase);
+//   MEMBROS guarda apenas o vínculo `authUserId`. Nada de senha_hash aqui.
+// - RLS desabilitado: a autorização é feita na camada de API (mais simples de auditar).
+// - Horários guardados como String "HH:MM" (evita os footguns de TIME/timezone do Prisma;
+//   o cálculo horario_inicio − 01:15 é feito em JS).
+// - Campos de autoria/auditoria (*_por) são uuid simples, sem FK relacional, para manter
+//   a trilha de auditoria enxuta. Os vínculos de domínio têm FK real.
 
 generator client {
   provider = "prisma-client"
@@ -12,4 +20,248 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+}
+
+// ─────────────────────────────── ENUMS ───────────────────────────────
+
+enum NivelAcesso {
+  super_admin
+  admin
+  lider
+  membro
+}
+
+enum StatusMembro {
+  ativo
+  inativo
+}
+
+enum TurnoEquipe {
+  manha
+  noite
+  variavel
+}
+
+enum StatusEquipe {
+  ativa
+  inativa
+}
+
+enum TipoRecorrencia {
+  diario
+  semanal
+  quinzenal
+  mensal_dia_fixo
+  mensal_posicao
+  mensal_ultima_posicao
+  avulso
+}
+
+enum CategoriaEvento {
+  culto_regular
+  evento_extra
+  campanha
+  conferencia
+  batismo
+  outro
+}
+
+enum StatusEvento {
+  agendado
+  realizado
+  cancelado
+}
+
+enum TipoEscala {
+  regular
+  especial
+  cobertura
+}
+
+enum Pontualidade {
+  pontual
+  atrasado
+}
+
+// ─────────────────────────────── MEMBROS ───────────────────────────────
+
+model Membro {
+  id              String       @id @default(uuid()) @db.Uuid
+  authUserId      String?      @unique @map("auth_user_id") @db.Uuid
+  dataCadastro    DateTime     @default(now()) @map("data_cadastro")
+  email           String       @unique @db.VarChar(150)
+  equipeId        String?      @map("equipe_id") @db.Uuid
+  nomeCompleto    String       @map("nome_completo") @db.VarChar(200)
+  celularWhatsapp String?      @map("celular_whatsapp") @db.VarChar(20)
+  dataNascimento  DateTime?    @map("data_nascimento") @db.Date
+  observacao      String?      @db.Text
+  fotoUrl         String?      @map("foto_url") @db.VarChar(500)
+  status          StatusMembro @default(ativo)
+  nivelAcesso     NivelAcesso  @default(membro) @map("nivel_acesso")
+  notifEmail      Boolean      @default(true) @map("notif_email")
+  notifTelegram   Boolean      @default(false) @map("notif_telegram")
+  notifPush       Boolean      @default(false) @map("notif_push")
+  telegramChatId  String?      @map("telegram_chat_id") @db.VarChar(50)
+  ultimoAcesso    DateTime?    @map("ultimo_acesso")
+
+  equipe     Equipe?       @relation("MembroEquipe", fields: [equipeId], references: [id], onDelete: SetNull)
+  liderancas EquipeLider[]
+  presencas  Presenca[]    @relation("PresencaMembro")
+
+  @@index([equipeId])
+  @@index([status])
+  @@index([nivelAcesso])
+  @@map("membros")
+}
+
+// ─────────────────────────────── EQUIPES ───────────────────────────────
+
+model Equipe {
+  id          String       @id @default(uuid()) @db.Uuid
+  nome        String       @db.VarChar(150)
+  turnoPadrao TurnoEquipe  @default(variavel) @map("turno_padrao")
+  corHex      String?      @map("cor_hex") @db.VarChar(7)
+  status      StatusEquipe @default(ativa)
+  dataCriacao DateTime     @default(now()) @map("data_criacao")
+
+  membros   Membro[]             @relation("MembroEquipe")
+  lideres   EquipeLider[]
+  escalas   EscalaEquipeEvento[]
+  presencas Presenca[]
+
+  @@map("equipes")
+}
+
+// ────────────────────────── EQUIPE_LIDERES (N:N) ──────────────────────────
+
+model EquipeLider {
+  id         String    @id @default(uuid()) @db.Uuid
+  equipeId   String    @map("equipe_id") @db.Uuid
+  membroId   String    @map("membro_id") @db.Uuid
+  dataInicio DateTime  @default(now()) @map("data_inicio") @db.Date
+  dataFim    DateTime? @map("data_fim") @db.Date
+
+  equipe Equipe @relation(fields: [equipeId], references: [id], onDelete: Cascade)
+  membro Membro @relation(fields: [membroId], references: [id], onDelete: Cascade)
+
+  @@index([equipeId])
+  @@index([membroId])
+  @@map("equipe_lideres")
+}
+
+// ─────────────────────────────── TIPOS_EVENTO ───────────────────────────────
+
+model TipoEvento {
+  id                   String          @id @default(uuid()) @db.Uuid
+  nome                 String          @db.VarChar(150)
+  descricao            String?         @db.Text
+  horarioInicio        String          @map("horario_inicio") @db.VarChar(5) // "HH:MM"
+  horarioChegadaEquipe String          @map("horario_chegada_equipe") @db.VarChar(5) // horario_inicio − 01:15
+  tipoRecorrencia      TipoRecorrencia @map("tipo_recorrencia")
+  configRecorrencia    Json            @default("{}") @map("config_recorrencia") @db.JsonB
+  categoria            CategoriaEvento @default(culto_regular)
+  ativo                Boolean         @default(true)
+  criadoPor            String?         @map("criado_por") @db.Uuid
+  dataCriacao          DateTime        @default(now()) @map("data_criacao")
+
+  eventos Evento[]
+
+  @@index([ativo])
+  @@map("tipos_evento")
+}
+
+// ─────────────────────────── EVENTOS (instâncias) ───────────────────────────
+
+model Evento {
+  id                    String       @id @default(uuid()) @db.Uuid
+  tipoEventoId          String       @map("tipo_evento_id") @db.Uuid
+  dataEvento            DateTime     @map("data_evento") @db.Date
+  horarioInicio         String       @map("horario_inicio") @db.VarChar(5)
+  horarioChegadaEquipe  String       @map("horario_chegada_equipe") @db.VarChar(5)
+  descricaoEspecifica   String?      @map("descricao_especifica") @db.VarChar(200)
+  status                StatusEvento @default(agendado)
+  geradoAutomaticamente Boolean      @default(false) @map("gerado_automaticamente")
+  criadoPor             String?      @map("criado_por") @db.Uuid
+  dataCriacao           DateTime     @default(now()) @map("data_criacao")
+
+  tipoEvento TipoEvento           @relation(fields: [tipoEventoId], references: [id], onDelete: Restrict)
+  escalas    EscalaEquipeEvento[]
+  presencas  Presenca[]
+
+  @@unique([tipoEventoId, dataEvento])
+  @@index([dataEvento])
+  @@index([status])
+  @@map("eventos")
+}
+
+// ────────────────────── ESCALA_EQUIPE_EVENTO (escalas) ──────────────────────
+
+model EscalaEquipeEvento {
+  id          String     @id @default(uuid()) @db.Uuid
+  eventoId    String     @map("evento_id") @db.Uuid
+  equipeId    String     @map("equipe_id") @db.Uuid
+  tipoEscala  TipoEscala @default(regular) @map("tipo_escala")
+  observacao  String?    @db.Text
+  criadoPor   String?    @map("criado_por") @db.Uuid
+  dataCriacao DateTime   @default(now()) @map("data_criacao")
+
+  evento Evento @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  equipe Equipe @relation(fields: [equipeId], references: [id], onDelete: Cascade)
+
+  @@unique([eventoId, equipeId])
+  @@index([equipeId])
+  @@map("escala_equipe_evento")
+}
+
+// ─────────────────────────────── PRESENCA ───────────────────────────────
+
+model Presenca {
+  id                    String        @id @default(uuid()) @db.Uuid
+  dataRegistro          DateTime      @default(now()) @map("data_registro")
+  eventoId              String        @map("evento_id") @db.Uuid
+  equipeId              String        @map("equipe_id") @db.Uuid
+  membroId              String        @map("membro_id") @db.Uuid
+  presente              Boolean
+  pontualidade          Pontualidade? // NULL quando ausente
+  horarioChegada        String?       @map("horario_chegada") @db.VarChar(5)
+  justificativaAusencia String?       @map("justificativa_ausencia") @db.Text
+  registradoPor         String        @map("registrado_por") @db.Uuid
+  editadoEm             DateTime?     @map("editado_em")
+  editadoPor            String?       @map("editado_por") @db.Uuid
+
+  // Exclusão lógica (nunca purge físico por padrão) + restauração
+  excluidoEm     DateTime? @map("excluido_em")
+  excluidoPor    String?   @map("excluido_por") @db.Uuid
+  motivoExclusao String?   @map("motivo_exclusao") @db.Text
+  restauradoEm   DateTime? @map("restaurado_em")
+  restauradoPor  String?   @map("restaurado_por") @db.Uuid
+
+  evento Evento @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  equipe Equipe @relation(fields: [equipeId], references: [id], onDelete: Cascade)
+  membro Membro @relation("PresencaMembro", fields: [membroId], references: [id], onDelete: Cascade)
+
+  // A constraint anti-duplicata é PARCIAL (WHERE excluido_em IS NULL) e é criada
+  // via SQL na migration, pois o Prisma não declara índices únicos parciais no schema.
+  @@index([eventoId, equipeId, membroId])
+  @@index([membroId])
+  @@map("presenca")
+}
+
+// ─────────────────────────────── AUDIT_LOG ───────────────────────────────
+
+model AuditLog {
+  id              String   @id @default(uuid()) @db.Uuid
+  usuarioId       String?  @map("usuario_id") @db.Uuid
+  acao            String   @db.VarChar(50) // criar / editar / excluir / restaurar / login / ...
+  tabelaAfetada   String   @map("tabela_afetada") @db.VarChar(100)
+  registroId      String?  @map("registro_id") @db.VarChar(100)
+  dadosAnteriores Json?    @map("dados_anteriores") @db.JsonB
+  dadosNovos      Json?    @map("dados_novos") @db.JsonB
+  ip              String?  @db.VarChar(50)
+  timestamp       DateTime @default(now())
+
+  @@index([tabelaAfetada, registroId])
+  @@index([usuarioId])
+  @@index([timestamp])
+  @@map("audit_log")
 }
