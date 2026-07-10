@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { can, nivelPeloMenos, type Permissao } from "@/lib/rbac";
-import type { NivelAcesso } from "@/generated/prisma/enums";
+import type { NivelAcesso } from "@prisma/client";
 
 // Representa o usuário logado: a sessão do Supabase (auth) + o perfil em MEMBROS.
 export type UsuarioAtual = {

@@ -12,11 +12,11 @@
 //   a trilha de auditoria enxuta. Os vínculos de domínio têm FK real.
 
 generator client {
-  provider      = "prisma-client"
-  output        = "../src/generated/prisma"
-  // "native" para desenvolvimento local (Windows); "rhel-openssl-3.0.x" para
-  // as funções serverless da Vercel — sem isso o build gera só o motor local
-  // e a Vercel não encontra o binário certo em runtime (PrismaClientInitializationError).
+  // Gerador clássico: instala o client em node_modules/@prisma/client (caminho
+  // padrão). É o setup mais compatível com Next.js + Vercel serverless — o
+  // empacotamento do motor é automático, sem file-tracing manual.
+  provider = "prisma-client-js"
+  // "native" = dev local (Windows); "rhel-openssl-3.0.x" = runtime da Vercel.
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 

@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { createClient } from "@supabase/supabase-js";
-import { PrismaClient } from "../src/generated/prisma/client";
-import type { NivelAcesso, TurnoEquipe } from "../src/generated/prisma/enums";
+import { PrismaClient } from "@prisma/client";
+import type { NivelAcesso, TurnoEquipe } from "@prisma/client";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Seed da Etapa 1 — Fundação.

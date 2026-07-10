@@ -1,4 +1,4 @@
-import type { NivelAcesso } from "@/generated/prisma/enums";
+import type { NivelAcesso } from "@prisma/client";
 
 // ─────────────────────────────────────────────────────────────────────────
 // RBAC — Matriz de permissões (PDF, seção 5 "Níveis de acesso — detalhado").
