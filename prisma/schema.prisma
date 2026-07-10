@@ -12,8 +12,12 @@
 //   a trilha de auditoria enxuta. Os vínculos de domínio têm FK real.
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider      = "prisma-client"
+  output        = "../src/generated/prisma"
+  // "native" para desenvolvimento local (Windows); "rhel-openssl-3.0.x" para
+  // as funções serverless da Vercel — sem isso o build gera só o motor local
+  // e a Vercel não encontra o binário certo em runtime (PrismaClientInitializationError).
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
