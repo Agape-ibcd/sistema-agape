@@ -11,13 +11,23 @@ import type { EstadoAcao } from "@/lib/actions";
 // O estado de "aberto" é derivado do carimbo `ts` da última ação: enquanto o
 // usuário não fecha (dispensa aquele `ts`), o popup fica visível — e reabre
 // automaticamente quando chega um novo resultado (ts diferente).
-export function FeedbackModal({ estado }: { estado: EstadoAcao }) {
+export function FeedbackModal({
+  estado,
+  onFechar,
+}: {
+  estado: EstadoAcao;
+  // Chamado quando o usuário dispensa o popup (ex.: redirecionar após criar).
+  onFechar?: (estado: NonNullable<EstadoAcao>) => void;
+}) {
   const [dispensadoTs, setDispensadoTs] = useState<number | null>(null);
 
   if (!estado || estado.ts === dispensadoTs) return null;
 
   const ok = estado.ok;
-  const fechar = () => setDispensadoTs(estado.ts);
+  const fechar = () => {
+    setDispensadoTs(estado.ts);
+    onFechar?.(estado);
+  };
 
   return (
     <div
