@@ -42,3 +42,6 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# dados pessoais reais dos membros (fonte da migração) — não versionar
+/Presença_Ágape.xlsx
