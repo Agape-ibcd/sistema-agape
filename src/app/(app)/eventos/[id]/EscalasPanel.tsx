@@ -9,6 +9,7 @@ type Escala = {
   equipeNome: string;
   corHex: string | null;
   tipoEscala: "regular" | "especial" | "cobertura";
+  origem: "manual" | "rodizio";
   observacao: string | null;
 };
 
@@ -64,6 +65,7 @@ export function EscalasPanel({ eventoId, escalas, equipesDisponiveis, cancelado 
               <p className="truncate text-sm font-medium text-zinc-900">{e.equipeNome}</p>
               <p className="text-xs text-zinc-500">
                 {ROTULO_TIPO_ESCALA[e.tipoEscala]}
+                {e.origem === "rodizio" ? " · rodízio" : ""}
                 {e.observacao ? ` · ${e.observacao}` : ""}
               </p>
             </div>

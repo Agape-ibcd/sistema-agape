@@ -14,7 +14,8 @@
     "migrate": "tsx scripts/migrate.ts",
     "migrate:dry": "tsx scripts/migrate.ts --dry-run",
     "setup:etapa3": "tsx scripts/setup-etapa3.ts",
-    "test:recorrencia": "tsx scripts/test-recorrencia.ts"
+    "test:recorrencia": "tsx scripts/test-recorrencia.ts",
+    "test:rodizio": "tsx scripts/test-rodizio.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

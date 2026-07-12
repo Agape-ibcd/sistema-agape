@@ -87,6 +87,11 @@ enum Pontualidade {
   atrasado
 }
 
+enum OrigemEscala {
+  manual // escalada por uma pessoa (tela do evento / propagação semanal)
+  rodizio // criada pelo motor de rodízio — pode ser corrigida por ele
+}
+
 // ─────────────────────────────── MEMBROS ───────────────────────────────
 
 model Membro {
@@ -201,13 +206,17 @@ model Evento {
 // ────────────────────── ESCALA_EQUIPE_EVENTO (escalas) ──────────────────────
 
 model EscalaEquipeEvento {
-  id          String     @id @default(uuid()) @db.Uuid
-  eventoId    String     @map("evento_id") @db.Uuid
-  equipeId    String     @map("equipe_id") @db.Uuid
-  tipoEscala  TipoEscala @default(regular) @map("tipo_escala")
-  observacao  String?    @db.Text
-  criadoPor   String?    @map("criado_por") @db.Uuid
-  dataCriacao DateTime   @default(now()) @map("data_criacao")
+  id          String       @id @default(uuid()) @db.Uuid
+  eventoId    String       @map("evento_id") @db.Uuid
+  equipeId    String       @map("equipe_id") @db.Uuid
+  tipoEscala  TipoEscala   @default(regular) @map("tipo_escala")
+  // Quem criou a linha: pessoa (manual) ou motor de rodízio. O rodízio SÓ
+  // cria/remove linhas `rodizio`; um evento com qualquer escala `manual` é
+  // considerado personalizado e fica fora do rodízio.
+  origem      OrigemEscala @default(manual)
+  observacao  String?      @db.Text
+  criadoPor   String?      @map("criado_por") @db.Uuid
+  dataCriacao DateTime     @default(now()) @map("data_criacao")
 
   evento Evento @relation(fields: [eventoId], references: [id], onDelete: Cascade)
   equipe Equipe @relation(fields: [equipeId], references: [id], onDelete: Cascade)
@@ -249,6 +258,28 @@ model Presenca {
   @@index([eventoId, equipeId, membroId])
   @@index([membroId])
   @@map("presenca")
+}
+
+// ─────────────────────────── RODIZIO_ESCALA (config) ───────────────────────────
+// Configuração do rodízio automático de escalas (singleton lógico: uma linha).
+// `ciclo` (JSONB) é a tabela editável do revezamento:
+//   [{ "manha": "<equipeId>", "noite": "<equipeId>" }, ...]
+// A semana do evento escolhe a entrada: índice = nºsemanas(domingo da semana −
+// semana_ancora) mod tamanho do ciclo. Quinzenal = ciclo com 2 entradas.
+// Regras de aplicação (motor em src/lib/rodizio.ts):
+//   domingo → equipe do turno correspondente (manhã/noite), tipo `regular`;
+//   demais dias (inclusive avulsos) → as duas equipes da semana, tipo `cobertura`.
+
+model RodizioEscala {
+  id           String   @id @default(uuid()) @db.Uuid
+  ativo        Boolean  @default(true)
+  semanaAncora DateTime @map("semana_ancora") @db.Date // domingo que inicia o ciclo
+  ciclo        Json     @db.JsonB
+  criadoPor    String?  @map("criado_por") @db.Uuid
+  dataCriacao  DateTime @default(now()) @map("data_criacao")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  @@map("rodizio_escala")
 }
 
 // ─────────────────────────────── AUDIT_LOG ───────────────────────────────

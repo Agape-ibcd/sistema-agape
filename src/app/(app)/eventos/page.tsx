@@ -126,6 +126,9 @@ export default async function EventosPage({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold text-zinc-900">Eventos e Escalas</h1>
           <div className="flex flex-wrap gap-2">
+            <Link href="/eventos/rodizio" className={navBtn}>
+              Rodízio
+            </Link>
             {podeGerirTipos && (
               <Link href="/eventos/tipos" className={navBtn}>
                 Tipos de evento

@@ -11,6 +11,7 @@ import {
   horarioValido,
   parseDataISO,
 } from "@/lib/recorrencia";
+import { aplicarRodizioNoBanco } from "@/lib/aplicarRodizio";
 import type { TipoEscala } from "@prisma/client";
 
 // Estado da ação de escalar: quando a equipe é escalada num evento e existem
@@ -292,8 +293,22 @@ export async function criarEventoAvulso(
       },
     });
 
+    // Rodízio ativo? Já escala as equipes da semana neste evento (o usuário
+    // pode trocar por uma escala específica na página do evento).
+    const rodizio = await aplicarRodizioNoBanco({
+      usuarioId: usuario.membroId,
+      eventoIds: [criado.id],
+    });
+
     revalidarCalendario(criado.id);
-    return { ...sucesso("Evento criado com sucesso.")!, eventoId: criado.id };
+    return {
+      ...sucesso(
+        rodizio && rodizio.criadas > 0
+          ? `Evento criado. Rodízio aplicou ${rodizio.criadas} escala(s) da semana — ajuste na página do evento se precisar.`
+          : "Evento criado com sucesso.",
+      )!,
+      eventoId: criado.id,
+    };
   } catch (erro) {
     if (
       erro instanceof Prisma.PrismaClientKnownRequestError &&

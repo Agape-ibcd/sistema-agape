@@ -83,6 +83,7 @@ export default async function EventoPage({
             equipeNome: e.equipe.nome,
             corHex: e.equipe.corHex,
             tipoEscala: e.tipoEscala,
+            origem: e.origem,
             observacao: e.observacao,
           }))}
           equipesDisponiveis={equipesDisponiveis}

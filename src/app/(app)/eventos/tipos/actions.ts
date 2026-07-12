@@ -12,6 +12,7 @@ import {
   type ConfigRecorrencia,
 } from "@/lib/recorrencia";
 import { gerarInstanciasEventos, JANELA_MESES } from "@/lib/gerarEventos";
+import { aplicarRodizioNoBanco } from "@/lib/aplicarRodizio";
 import type { CategoriaEvento, TipoRecorrencia } from "@prisma/client";
 
 const RECORRENCIAS: TipoRecorrencia[] = [
@@ -211,9 +212,29 @@ export async function gerarEventos(
       dadosNovos: { janelaMeses: JANELA_MESES, resultados },
     });
 
+    // Rodízio ativo? Preenche as escalas da mesma janela que acabou de gerar.
+    let msgRodizio = "";
+    if (totalCriados > 0) {
+      const agora = new Date();
+      const hoje = new Date(
+        Date.UTC(agora.getFullYear(), agora.getMonth(), agora.getDate()),
+      );
+      const fim = new Date(
+        Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth() + JANELA_MESES, hoje.getUTCDate()),
+      );
+      const rodizio = await aplicarRodizioNoBanco({
+        usuarioId: usuario.membroId,
+        inicio: hoje,
+        fim,
+      });
+      if (rodizio && rodizio.criadas > 0) {
+        msgRodizio = ` Rodízio aplicado: ${rodizio.criadas} escala(s) criada(s).`;
+      }
+    }
+
     revalidarEventos(tipoEventoId);
     return sucesso(
-      `Geração concluída (janela de ${JANELA_MESES} meses): ${totalCriados} evento(s) novo(s). ${linhas.join(" · ")}`,
+      `Geração concluída (janela de ${JANELA_MESES} meses): ${totalCriados} evento(s) novo(s). ${linhas.join(" · ")}${msgRodizio}`,
     );
   } catch (erro) {
     return falha(
