@@ -27,13 +27,13 @@ export default async function TiposEventoPage() {
   return (
     <div className="mx-auto max-w-4xl">
       <header className="mb-6">
-        <Link href="/eventos" className="text-sm text-emerald-700 hover:underline">
+        <Link href="/eventos" className="text-sm text-brand-text hover:underline">
           ← Calendário
         </Link>
         <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-zinc-900">Tipos de evento</h1>
-            <p className="mt-1 text-sm text-zinc-600">
+            <h1 className="text-2xl font-bold text-ink">Tipos de evento</h1>
+            <p className="mt-1 text-sm text-ink-soft">
               Modelos recorrentes que alimentam o calendário.
             </p>
           </div>
@@ -41,7 +41,7 @@ export default async function TiposEventoPage() {
             <GerarEventosBotao />
             <Link
               href="/eventos/tipos/novo"
-              className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700"
+              className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong"
             >
               + Novo tipo
             </Link>
@@ -49,9 +49,9 @@ export default async function TiposEventoPage() {
         </div>
       </header>
 
-      <ul className="divide-y divide-zinc-100 overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+      <ul className="divide-y divide-edge-soft overflow-hidden rounded-2xl border border-edge-soft bg-surface">
         {tipos.length === 0 && (
-          <li className="p-6 text-center text-sm text-zinc-500">
+          <li className="p-6 text-center text-sm text-ink-subtle">
             Nenhum tipo de evento cadastrado.
           </li>
         )}
@@ -59,11 +59,11 @@ export default async function TiposEventoPage() {
           <li key={t.id}>
             <Link
               href={`/eventos/tipos/${t.id}`}
-              className="flex items-center gap-4 px-4 py-3 transition hover:bg-zinc-50"
+              className="flex items-center gap-4 px-4 py-3 transition hover:bg-surface-2"
             >
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-zinc-900">{t.nome}</p>
-                <p className="truncate text-xs text-zinc-500">
+                <p className="truncate text-sm font-medium text-ink">{t.nome}</p>
+                <p className="truncate text-xs text-ink-subtle">
                   {descreverRecorrencia(
                     t.tipoRecorrencia,
                     (t.configRecorrencia ?? {}) as ConfigRecorrencia,
@@ -73,19 +73,19 @@ export default async function TiposEventoPage() {
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-sm font-semibold text-zinc-900">
+                <p className="text-sm font-semibold text-ink">
                   {t.horarioInicio}
                 </p>
-                <p className="text-xs text-zinc-500">chegada {t.horarioChegadaEquipe}</p>
+                <p className="text-xs text-ink-subtle">chegada {t.horarioChegadaEquipe}</p>
               </div>
               <div className="hidden text-right sm:block">
-                <p className="text-sm font-semibold text-zinc-900">
+                <p className="text-sm font-semibold text-ink">
                   {t._count.eventos}
                 </p>
-                <p className="text-xs text-zinc-500">evento(s)</p>
+                <p className="text-xs text-ink-subtle">evento(s)</p>
               </div>
               {!t.ativo && (
-                <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-600">
+                <span className="rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-soft">
                   Inativo
                 </span>
               )}
@@ -94,7 +94,7 @@ export default async function TiposEventoPage() {
         ))}
       </ul>
 
-      <p className="mt-3 text-xs text-zinc-500">
+      <p className="mt-3 text-xs text-ink-subtle">
         &quot;Gerar eventos&quot; cria as instâncias dos próximos 3 meses respeitando a
         recorrência de cada tipo ativo. A operação é idempotente: eventos já
         existentes (inclusive editados ou cancelados) não são tocados.

@@ -1,21 +1,172 @@
 @import "tailwindcss";
 
-/* Tema claro fixo (mobile-first). O app usa cores explícitas (zinc/emerald)
-   nas telas, então mantemos a base clara para consistência no celular. */
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* O tema escuro é ativado pela classe `dark` no <html> (ThemeProvider),
+   não pela media query — a escolha do usuário prevalece sobre o sistema. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Tokens semânticos de cor — fonte única da paleta do app.
+   Para trocar a paleta no futuro, basta editar os valores abaixo (e as
+   cores dos gráficos em src/lib/coresGraficos.ts).
+
+   Neutros (base zinc):
+     surface    fundo de cartões/painéis        ink        texto principal
+     surface-2  fundo da página / faixas        ink-soft   texto secundário
+     surface-3  hover/preenchimentos sutis      ink-subtle legendas e apoios
+     edge       bordas de inputs                ink-faint  texto apagado
+     edge-soft  bordas/divisórias leves         overlay    fundo de modais
+
+   Marca (base emerald) e status (danger/warn/info):
+     brand, brand-strong (hover), brand-faint (fundo suave), brand-soft
+     (chips), brand-edge (bordas), brand-ring (anel de foco), brand-text.
+     danger/warn/info seguem o mesmo padrão.
+
+   `.tema-claro` força os valores claros numa subárvore mesmo com o tema
+   escuro ativo — usado na rota de impressão (/imprimir), que sai sempre clara.
+   ────────────────────────────────────────────────────────────────────────── */
+:root,
+.tema-claro {
+  color-scheme: light;
+
+  --surface: #ffffff;
+  --surface-2: #fafafa;
+  --surface-3: #f4f4f5;
+  --ink: #18181b;
+  --ink-soft: #52525b;
+  --ink-subtle: #71717a;
+  --ink-faint: #a1a1aa;
+  --edge: #d4d4d8;
+  --edge-soft: #e4e4e7;
+  --overlay: rgb(0 0 0 / 0.4);
+
+  --brand: #059669;
+  --brand-strong: #047857;
+  --brand-text: #047857;
+  --brand-faint: #ecfdf5;
+  --brand-soft: #d1fae5;
+  --brand-edge: #6ee7b7;
+  --brand-ring: #a7f3d0;
+
+  --danger: #dc2626;
+  --danger-strong: #b91c1c;
+  --danger-text: #b91c1c;
+  --danger-faint: #fef2f2;
+  --danger-soft: #fee2e2;
+  --danger-edge: #fca5a5;
+
+  --warn: #f59e0b;
+  --warn-text: #b45309;
+  --warn-faint: #fffbeb;
+  --warn-soft: #fef3c7;
+  --warn-edge: #fde68a;
+
+  --info-text: #0369a1;
+  --info-faint: #f0f9ff;
+  --info-soft: #e0f2fe;
+  --info-edge: #bae6fd;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --surface: #18181b;
+  --surface-2: #09090b;
+  --surface-3: #27272a;
+  --ink: #f4f4f5;
+  --ink-soft: #d4d4d8;
+  --ink-subtle: #a1a1aa;
+  --ink-faint: #71717a;
+  --edge: #3f3f46;
+  --edge-soft: #27272a;
+  --overlay: rgb(0 0 0 / 0.65);
+
+  --brand: #059669;
+  --brand-strong: #047857;
+  --brand-text: #34d399;
+  --brand-faint: rgb(16 185 129 / 0.1);
+  --brand-soft: rgb(16 185 129 / 0.18);
+  --brand-edge: rgb(52 211 153 / 0.4);
+  --brand-ring: rgb(16 185 129 / 0.35);
+
+  --danger: #dc2626;
+  --danger-strong: #b91c1c;
+  --danger-text: #f87171;
+  --danger-faint: rgb(239 68 68 / 0.1);
+  --danger-soft: rgb(239 68 68 / 0.18);
+  --danger-edge: rgb(248 113 113 / 0.4);
+
+  --warn: #f59e0b;
+  --warn-text: #fbbf24;
+  --warn-faint: rgb(245 158 11 / 0.1);
+  --warn-soft: rgb(245 158 11 / 0.18);
+  --warn-edge: rgb(251 191 36 / 0.4);
+
+  --info-text: #38bdf8;
+  --info-faint: rgb(14 165 233 / 0.1);
+  --info-soft: rgb(14 165 233 / 0.18);
+  --info-edge: rgb(56 189 248 / 0.4);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-subtle: var(--ink-subtle);
+  --color-ink-faint: var(--ink-faint);
+  --color-edge: var(--edge);
+  --color-edge-soft: var(--edge-soft);
+  --color-overlay: var(--overlay);
+
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-text: var(--brand-text);
+  --color-brand-faint: var(--brand-faint);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-edge: var(--brand-edge);
+  --color-brand-ring: var(--brand-ring);
+
+  --color-danger: var(--danger);
+  --color-danger-strong: var(--danger-strong);
+  --color-danger-text: var(--danger-text);
+  --color-danger-faint: var(--danger-faint);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-edge: var(--danger-edge);
+
+  --color-warn: var(--warn);
+  --color-warn-text: var(--warn-text);
+  --color-warn-faint: var(--warn-faint);
+  --color-warn-soft: var(--warn-soft);
+  --color-warn-edge: var(--warn-edge);
+
+  --color-info-text: var(--info-text);
+  --color-info-faint: var(--info-faint);
+  --color-info-soft: var(--info-soft);
+  --color-info-edge: var(--info-edge);
+
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial,
     sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+/* Campos nativos legíveis nos dois temas: o dropdown de <select>, os
+   <option> e os pickers de data usam as cores do UA — força os tokens para
+   garantir contraste no tema escuro (e cobre navegadores que ignoram o
+   color-scheme dentro do popup). */
+select,
+input[type="date"],
+input[type="time"] {
+  background-color: var(--surface);
+  color: var(--ink);
+}
+select option,
+select optgroup {
+  background-color: var(--surface);
+  color: var(--ink);
 }

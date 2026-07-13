@@ -18,9 +18,10 @@ export default async function EquipePage({
       where: { id },
       include: {
         membros: {
-          where: { status: "ativo" },
+          // Afastados continuam pertencendo à equipe — aparecem com o rótulo.
+          where: { status: { not: "inativo" } },
           orderBy: { nomeCompleto: "asc" },
-          select: { id: true, nomeCompleto: true, fotoUrl: true },
+          select: { id: true, nomeCompleto: true, fotoUrl: true, status: true },
         },
         lideres: {
           where: { dataFim: null },
@@ -32,7 +33,8 @@ export default async function EquipePage({
       },
     }),
     prisma.membro.findMany({
-      where: { status: "ativo" },
+      // Monitores não participam de equipes — fora dos candidatos.
+      where: { status: "ativo", nivelAcesso: { not: "monitor" } },
       orderBy: { nomeCompleto: "asc" },
       select: {
         id: true,
@@ -68,18 +70,18 @@ export default async function EquipePage({
   return (
     <div className="mx-auto max-w-4xl">
       <header className="mb-6">
-        <Link href="/equipes" className="text-sm text-emerald-700 hover:underline">
+        <Link href="/equipes" className="text-sm text-brand-text hover:underline">
           ← Equipes
         </Link>
         <div className="mt-1 flex items-center gap-2">
           <span
-            className="h-4 w-4 rounded-full border border-black/10"
+            className="h-4 w-4 rounded-full border border-edge-soft"
             style={{ backgroundColor: equipe.corHex ?? "#a1a1aa" }}
             aria-hidden
           />
-          <h1 className="text-2xl font-bold text-zinc-900">{equipe.nome}</h1>
+          <h1 className="text-2xl font-bold text-ink">{equipe.nome}</h1>
           {equipe.status === "inativa" && (
-            <span className="rounded-full bg-zinc-200 px-2.5 py-0.5 text-xs font-medium text-zinc-600">
+            <span className="rounded-full bg-surface-3 px-2.5 py-0.5 text-xs font-medium text-ink-soft">
               Inativa
             </span>
           )}
@@ -107,7 +109,10 @@ export default async function EquipePage({
         }))}
         membrosDaEquipe={equipe.membros.map((m) => ({
           id: m.id,
-          nomeCompleto: m.nomeCompleto,
+          nomeCompleto:
+            m.status === "afastado"
+              ? `${m.nomeCompleto} (afastado)`
+              : m.nomeCompleto,
           fotoUrl: m.fotoUrl,
           equipeNome: equipe.nome,
         }))}

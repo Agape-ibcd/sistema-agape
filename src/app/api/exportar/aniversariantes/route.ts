@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { getUsuarioAtual } from "@/lib/auth";
+import { can } from "@/lib/rbac";
 import {
   aniversariantesDoMes,
   hojeSaoPaulo,
@@ -11,6 +12,10 @@ import { planilhaAniversariantes, respostaXlsx } from "@/lib/exportar";
 export async function GET(req: NextRequest) {
   const usuario = await getUsuarioAtual();
   if (!usuario) return new Response("Não autenticado", { status: 401 });
+  // Mesma permissão da tela — o monitor, p.ex., não vê aniversariantes.
+  if (!can(usuario.nivelAcesso, "painel_aniversariantes")) {
+    return new Response("Sem permissão", { status: 403 });
+  }
 
   const hoje = hojeSaoPaulo();
   const pedido = Number(req.nextUrl.searchParams.get("mes"));

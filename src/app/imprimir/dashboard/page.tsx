@@ -44,18 +44,18 @@ export default async function ImprimirDashboardPage({
     ["Cadastrados ativos", String(dados.membrosCadastradosAtivos)],
   ];
 
-  const th = "border-b border-zinc-300 px-2 py-1.5 text-left text-xs font-semibold uppercase text-zinc-600";
-  const td = "border-b border-zinc-100 px-2 py-1.5 text-sm text-zinc-800";
+  const th = "border-b border-edge px-2 py-1.5 text-left text-xs font-semibold uppercase text-ink-soft";
+  const td = "border-b border-edge-soft px-2 py-1.5 text-sm text-ink";
   const tdNum = `${td} text-right tabular-nums`;
 
   return (
-    <main className="mx-auto max-w-4xl bg-white p-6 text-zinc-900 print:p-0">
+    <main className="mx-auto max-w-4xl bg-surface p-6 text-ink print:p-0">
       <AutoPrint />
 
-      <header className="mb-4 border-b border-zinc-300 pb-3">
+      <header className="mb-4 border-b border-edge pb-3">
         <h1 className="text-xl font-bold">Ministério Ágape · IBCD Jundiaí/SP</h1>
-        <p className="text-sm text-zinc-600">{TITULO[escopo]}</p>
-        <p className="mt-1 text-xs text-zinc-500">
+        <p className="text-sm text-ink-soft">{TITULO[escopo]}</p>
+        <p className="mt-1 text-xs text-ink-subtle">
           Período: {periodo}
           {escopo === "equipe" && usuario.equipeNome ? ` · ${usuario.equipeNome}` : ""}
           {" · "}Gerado por {usuario.nomeCompleto} ({ROTULO_NIVEL[usuario.nivelAcesso]})
@@ -66,13 +66,13 @@ export default async function ImprimirDashboardPage({
 
       {/* KPIs */}
       <section className="mb-6">
-        <h2 className="mb-2 text-sm font-semibold uppercase text-zinc-600">
+        <h2 className="mb-2 text-sm font-semibold uppercase text-ink-soft">
           Indicadores
         </h2>
         <div className="grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-4">
           {kpiLista.map(([rot, val]) => (
-            <div key={rot} className="flex flex-col border-b border-zinc-100 py-1">
-              <span className="text-xs text-zinc-500">{rot}</span>
+            <div key={rot} className="flex flex-col border-b border-edge-soft py-1">
+              <span className="text-xs text-ink-subtle">{rot}</span>
               <span className="text-lg font-bold tabular-nums">{val}</span>
             </div>
           ))}
@@ -82,7 +82,7 @@ export default async function ImprimirDashboardPage({
       {/* Resumo por equipe */}
       {escopo === "geral" && dados.porEquipe.length > 0 && (
         <section className="mb-6 break-inside-avoid">
-          <h2 className="mb-2 text-sm font-semibold uppercase text-zinc-600">
+          <h2 className="mb-2 text-sm font-semibold uppercase text-ink-soft">
             Resumo por equipe
           </h2>
           <table className="w-full border-collapse">
@@ -111,7 +111,7 @@ export default async function ImprimirDashboardPage({
       {/* Resumo por tipo de culto */}
       {dados.porTipo.length > 0 && (
         <section className="mb-6 break-inside-avoid">
-          <h2 className="mb-2 text-sm font-semibold uppercase text-zinc-600">
+          <h2 className="mb-2 text-sm font-semibold uppercase text-ink-soft">
             Resumo por tipo de culto
           </h2>
           <table className="w-full border-collapse">
@@ -139,7 +139,7 @@ export default async function ImprimirDashboardPage({
 
       {/* Desempenho individual */}
       <section className="break-inside-avoid">
-        <h2 className="mb-2 text-sm font-semibold uppercase text-zinc-600">
+        <h2 className="mb-2 text-sm font-semibold uppercase text-ink-soft">
           Desempenho individual
         </h2>
         <table className="w-full border-collapse">

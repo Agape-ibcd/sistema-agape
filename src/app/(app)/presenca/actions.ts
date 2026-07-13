@@ -54,28 +54,53 @@ function resumoPresenca(p: {
   };
 }
 
+// Payload do salvamento automático (a lista salva sozinha após um tempo de
+// inatividade — sem botão por membro). Mesmas validações do fluxo antigo.
+export type DadosPresencaAuto = {
+  eventoId: string;
+  equipeId: string;
+  membroId: string;
+  presente: boolean;
+  pontualidade: "pontual" | "atrasado";
+  horarioChegada: string; // "HH:MM" ou ""
+  justificativa: string;
+};
+
+// Resultado do auto-save: sem popup — a linha mostra "salvo/erro" discreto.
+// `presencaId` permite excluir um lançamento recém-criado sem recarregar.
+export type ResultadoPresenca = {
+  ok: boolean;
+  message: string;
+  presencaId: string | null;
+};
+
 // Cria ou atualiza o lançamento de presença de um membro num evento/equipe.
 // Se já existe lançamento ativo (não excluído), faz UPDATE; senão, CREATE.
-export async function salvarPresenca(
-  _prev: EstadoAcao,
-  formData: FormData,
-): Promise<EstadoAcao> {
+export async function salvarPresencaAuto(
+  dados: DadosPresencaAuto,
+): Promise<ResultadoPresenca> {
   const usuario = await requirePermissao("registrar_presenca_propria");
 
-  const eventoId = String(formData.get("eventoId") ?? "").trim();
-  const equipeId = String(formData.get("equipeId") ?? "").trim();
-  const membroId = String(formData.get("membroId") ?? "").trim();
-  const presente = String(formData.get("presente") ?? "") === "true";
-  const pontualidadeRaw = String(formData.get("pontualidade") ?? "").trim();
-  const horarioChegada = String(formData.get("horarioChegada") ?? "").trim();
-  const justificativa = String(formData.get("justificativa") ?? "").trim();
+  const eventoId = String(dados.eventoId ?? "").trim();
+  const equipeId = String(dados.equipeId ?? "").trim();
+  const membroId = String(dados.membroId ?? "").trim();
+  const presente = dados.presente === true;
+  const pontualidadeRaw = String(dados.pontualidade ?? "").trim();
+  const horarioChegada = String(dados.horarioChegada ?? "").trim();
+  const justificativa = String(dados.justificativa ?? "").trim();
+
+  const erro = (message: string): ResultadoPresenca => ({
+    ok: false,
+    message,
+    presencaId: null,
+  });
 
   if (!eventoId || !equipeId || !membroId) {
-    return falha("Dados incompletos para registrar a presença.");
+    return erro("Dados incompletos para registrar a presença.");
   }
 
   const erroEquipe = checarEquipe(usuario, equipeId);
-  if (erroEquipe) return falha(erroEquipe);
+  if (erroEquipe) return erro(erroEquipe);
 
   // Normaliza os campos conforme presente/ausente.
   let pontualidade: Pontualidade | null = null;
@@ -84,12 +109,12 @@ export async function salvarPresenca(
 
   if (presente) {
     if (pontualidadeRaw !== "pontual" && pontualidadeRaw !== "atrasado") {
-      return falha("Selecione a pontualidade (pontual ou atrasado).");
+      return erro("Selecione a pontualidade (pontual ou atrasado).");
     }
     pontualidade = pontualidadeRaw as Pontualidade;
     if (horarioChegada) {
       if (!horarioValido(horarioChegada)) {
-        return falha("Horário de chegada inválido (use HH:MM).");
+        return erro("Horário de chegada inválido (use HH:MM).");
       }
       horario = horarioChegada;
     }
@@ -107,15 +132,22 @@ export async function salvarPresenca(
       }),
       prisma.membro.findUnique({ where: { id: membroId } }),
     ]);
-    if (!evento) return falha("Evento não encontrado.");
+    if (!evento) return erro("Evento não encontrado.");
     if (evento.status === "cancelado") {
-      return falha("Este evento está cancelado — não é possível registrar presença.");
+      return erro("Este evento está cancelado — não é possível registrar presença.");
     }
     if (!evento.escalas.some((e) => e.equipeId === equipeId)) {
-      return falha("Esta equipe não está escalada neste evento.");
+      return erro("Esta equipe não está escalada neste evento.");
     }
     if (!membro || membro.equipeId !== equipeId) {
-      return falha("Membro não pertence a esta equipe.");
+      return erro("Membro não pertence a esta equipe.");
+    }
+    if (membro.status !== "ativo") {
+      return erro(
+        membro.status === "afastado"
+          ? "Membro afastado — não recebe lançamentos de presença no período."
+          : "Membro inativo — não recebe lançamentos de presença.",
+      );
     }
 
     const existente = await prisma.presenca.findFirst({
@@ -143,9 +175,11 @@ export async function salvarPresenca(
         dadosNovos: resumoPresenca(atualizada),
       });
       revalidar();
-      return sucesso(
-        `Presença de ${membro.nomeCompleto} atualizada.`,
-      );
+      return {
+        ok: true,
+        message: `Presença de ${membro.nomeCompleto} atualizada.`,
+        presencaId: atualizada.id,
+      };
     }
 
     const criada = await prisma.presenca.create({
@@ -168,23 +202,25 @@ export async function salvarPresenca(
       dadosNovos: resumoPresenca(criada),
     });
     revalidar();
-    return sucesso(
-      presente
+    return {
+      ok: true,
+      message: presente
         ? `${membro.nomeCompleto} registrado(a) como presente.`
         : `${membro.nomeCompleto} registrado(a) como ausente.`,
-    );
-  } catch (erro) {
+      presencaId: criada.id,
+    };
+  } catch (excecao) {
     // Rede de segurança: o índice único parcial impede um 2º lançamento ativo.
     if (
-      erro instanceof Prisma.PrismaClientKnownRequestError &&
-      erro.code === "P2002"
+      excecao instanceof Prisma.PrismaClientKnownRequestError &&
+      excecao.code === "P2002"
     ) {
-      return falha(
+      return erro(
         "Já existe um lançamento ativo para este membro. Recarregue a página para editá-lo.",
       );
     }
-    return falha(
-      `Erro ao registrar presença: ${erro instanceof Error ? erro.message : "falha desconhecida"}`,
+    return erro(
+      `Erro ao registrar presença: ${excecao instanceof Error ? excecao.message : "falha desconhecida"}`,
     );
   }
 }

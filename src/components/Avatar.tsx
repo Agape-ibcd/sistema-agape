@@ -33,7 +33,7 @@ export function Avatar({
   return (
     <span
       aria-hidden
-      className="flex shrink-0 items-center justify-center rounded-full bg-emerald-100 font-semibold text-emerald-700"
+      className="flex shrink-0 items-center justify-center rounded-full bg-brand-soft font-semibold text-brand-text"
       style={{ width: tamanho, height: tamanho, fontSize: tamanho * 0.38 }}
     >
       {iniciais || "?"}

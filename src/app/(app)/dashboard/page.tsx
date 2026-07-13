@@ -1,4 +1,5 @@
 import { requireUsuario } from "@/lib/auth";
+import { can } from "@/lib/rbac";
 import {
   carregarDashboard,
   filtrosParaQuery,
@@ -36,21 +37,21 @@ function KpiCard({
     <div
       className={`rounded-2xl border p-4 ${
         destaque
-          ? "border-emerald-200 bg-emerald-50"
-          : "border-zinc-200 bg-white"
+          ? "border-brand-edge bg-brand-faint"
+          : "border-edge-soft bg-surface"
       }`}
     >
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+      <p className="text-xs font-medium uppercase tracking-wide text-ink-subtle">
         {rotulo}
       </p>
       <p
         className={`mt-1 text-2xl font-bold tabular-nums ${
-          destaque ? "text-emerald-700" : "text-zinc-900"
+          destaque ? "text-brand-text" : "text-ink"
         }`}
       >
         {valor}
       </p>
-      {sub && <p className="mt-0.5 text-xs text-zinc-500">{sub}</p>}
+      {sub && <p className="mt-0.5 text-xs text-ink-subtle">{sub}</p>}
     </div>
   );
 }
@@ -74,17 +75,21 @@ export default async function DashboardPage({
     <div className="mx-auto max-w-6xl">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900">
+          <h1 className="text-2xl font-bold text-ink">
             {TITULO[escopo]}
           </h1>
-          <p className="mt-1 text-sm text-zinc-600">
-            Período: <span className="font-medium text-zinc-800">{periodo}</span>
+          <p className="mt-1 text-sm text-ink-soft">
+            Período: <span className="font-medium text-ink">{periodo}</span>
             {escopo === "equipe" && usuario.equipeNome
               ? ` · ${usuario.equipeNome}`
               : ""}
           </p>
         </div>
-        <BotoesExportacao query={query} escopo={escopo} />
+        <BotoesExportacao
+          query={query}
+          escopo={escopo}
+          mostrarAgenda={can(usuario.nivelAcesso, "exportar_agenda")}
+        />
       </header>
 
       <FiltrosDashboard filtros={filtros} opcoes={dados.opcoes} escopo={escopo} />
@@ -148,7 +153,7 @@ export default async function DashboardPage({
 
       {/* Desempenho individual */}
       <section className="mb-6">
-        <h2 className="mb-3 text-lg font-semibold text-zinc-900">
+        <h2 className="mb-3 text-lg font-semibold text-ink">
           Desempenho individual
         </h2>
         <TabelaDesempenho
@@ -159,7 +164,7 @@ export default async function DashboardPage({
 
       {/* Registros detalhados */}
       <section>
-        <h2 className="mb-3 text-lg font-semibold text-zinc-900">
+        <h2 className="mb-3 text-lg font-semibold text-ink">
           Registros detalhados
         </h2>
         <RegistrosDetalhados registros={dados.registros} escopo={escopo} />

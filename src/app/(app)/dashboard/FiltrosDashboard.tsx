@@ -49,9 +49,9 @@ export function FiltrosDashboard({
   ].join("|");
 
   const inputCls =
-    "w-full min-w-0 max-w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 sm:w-auto";
+    "w-full min-w-0 max-w-full rounded-xl border border-edge px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-ring sm:w-auto";
   const labelCls =
-    "flex w-full flex-col gap-1 text-xs font-medium text-zinc-600 sm:w-auto";
+    "flex w-full flex-col gap-1 text-xs font-medium text-ink-soft sm:w-auto";
 
   const mostrarEquipe = escopo === "geral";
   const mostrarMembro = escopo !== "proprio";
@@ -64,7 +64,7 @@ export function FiltrosDashboard({
         e.preventDefault();
         aplicar(e.currentTarget);
       }}
-      className={`mb-6 flex flex-wrap items-end gap-3 rounded-2xl border border-zinc-200 bg-white p-4 transition-opacity ${
+      className={`mb-6 flex flex-wrap items-end gap-3 rounded-2xl border border-edge-soft bg-surface p-4 transition-opacity ${
         pendente ? "opacity-60" : ""
       }`}
     >
@@ -141,7 +141,7 @@ export function FiltrosDashboard({
 
       <div className="flex items-center gap-3">
         <span
-          className="text-xs text-zinc-400"
+          className="text-xs text-ink-faint"
           aria-live="polite"
           aria-busy={pendente}
         >
@@ -150,7 +150,7 @@ export function FiltrosDashboard({
         <button
           type="button"
           onClick={() => iniciar(() => router.push("/dashboard"))}
-          className="rounded-xl border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+          className="rounded-xl border border-edge bg-surface px-4 py-2 text-sm font-medium text-ink-soft hover:bg-surface-2"
         >
           Limpar
         </button>

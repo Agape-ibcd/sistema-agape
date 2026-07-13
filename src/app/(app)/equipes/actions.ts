@@ -108,6 +108,11 @@ export async function adicionarLider(
       }),
     ]);
     if (!equipe || !membro) return falha("Equipe ou membro não encontrado.");
+    if (membro.nivelAcesso === "monitor") {
+      return falha(
+        "Monitores não participam de equipes — mude o nível de acesso antes.",
+      );
+    }
     if (vinculoAtivo) return falha(`${membro.nomeCompleto} já é líder desta equipe.`);
 
     await prisma.equipeLider.create({ data: { equipeId, membroId } });
@@ -204,6 +209,11 @@ export async function adicionarMembroEquipe(
       }),
     ]);
     if (!equipe || !membro) return falha("Equipe ou membro não encontrado.");
+    if (membro.nivelAcesso === "monitor") {
+      return falha(
+        "Monitores não participam de equipes — mude o nível de acesso antes.",
+      );
+    }
     if (membro.equipeId === equipeId) {
       return falha(`${membro.nomeCompleto} já está nesta equipe.`);
     }

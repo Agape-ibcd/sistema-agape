@@ -14,8 +14,8 @@ export type EquipeFormDados = {
 };
 
 const inputCls =
-  "w-full rounded-xl border border-zinc-300 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200";
-const labelCls = "mb-1 block text-sm font-medium text-zinc-700";
+  "w-full rounded-xl border border-edge px-3 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-ring";
+const labelCls = "mb-1 block text-sm font-medium text-ink-soft";
 
 export function EquipeForm({ equipe }: { equipe: EquipeFormDados | null }) {
   const router = useRouter();
@@ -25,7 +25,7 @@ export function EquipeForm({ equipe }: { equipe: EquipeFormDados | null }) {
     <>
       <form
         action={formAction}
-        className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-5"
+        className="space-y-4 rounded-2xl border border-edge-soft bg-surface p-5"
       >
         {equipe && <input type="hidden" name="id" value={equipe.id} />}
 
@@ -70,7 +70,7 @@ export function EquipeForm({ equipe }: { equipe: EquipeFormDados | null }) {
               name="corHex"
               type="color"
               defaultValue={equipe?.corHex || "#059669"}
-              className="h-11 w-full cursor-pointer rounded-xl border border-zinc-300 bg-white px-1"
+              className="h-11 w-full cursor-pointer rounded-xl border border-edge bg-surface px-1"
             />
           </div>
 
@@ -93,7 +93,7 @@ export function EquipeForm({ equipe }: { equipe: EquipeFormDados | null }) {
         <button
           type="submit"
           disabled={pendente}
-          className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+          className="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-strong disabled:opacity-60"
         >
           {pendente ? "Salvando…" : equipe ? "Salvar alterações" : "Criar equipe"}
         </button>

@@ -24,18 +24,18 @@ export function EventoForm({ evento }: Props) {
     : "—";
 
   const inputCls =
-    "w-full rounded-xl border border-zinc-300 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200";
+    "w-full rounded-xl border border-edge px-3 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-ring";
 
   return (
-    <section className="rounded-2xl border border-zinc-200 bg-white p-5">
-      <h2 className="text-base font-semibold text-zinc-900">Dados do evento</h2>
+    <section className="rounded-2xl border border-edge-soft bg-surface p-5">
+      <h2 className="text-base font-semibold text-ink">Dados do evento</h2>
 
       <form action={formAction} className="mt-3 space-y-3">
         <input type="hidden" name="id" value={evento.id} />
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label htmlFor="horarioInicio" className="mb-1 block text-sm font-medium text-zinc-700">
+            <label htmlFor="horarioInicio" className="mb-1 block text-sm font-medium text-ink-soft">
               Horário de início
             </label>
             <input
@@ -47,15 +47,15 @@ export function EventoForm({ evento }: Props) {
               onChange={(e) => setHorario(e.target.value)}
               className={inputCls}
             />
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-ink-subtle">
               Chegada da equipe:{" "}
-              <span className="font-semibold text-emerald-700">{chegada}</span>
+              <span className="font-semibold text-brand-text">{chegada}</span>
             </p>
           </div>
           <div>
             <label
               htmlFor="descricaoEspecifica"
-              className="mb-1 block text-sm font-medium text-zinc-700"
+              className="mb-1 block text-sm font-medium text-ink-soft"
             >
               Descrição específica
             </label>
@@ -73,7 +73,7 @@ export function EventoForm({ evento }: Props) {
         <button
           type="submit"
           disabled={pendente || evento.status === "cancelado"}
-          className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+          className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-60"
         >
           {pendente ? "Salvando…" : "Salvar alterações"}
         </button>
@@ -89,7 +89,7 @@ export function EventoForm({ evento }: Props) {
                 : "Cancelar este evento? Ele permanece no histórico e pode ser reativado.";
             if (!window.confirm(msg)) e.preventDefault();
           }}
-          className="mt-4 border-t border-zinc-100 pt-4"
+          className="mt-4 border-t border-edge-soft pt-4"
         >
           <input type="hidden" name="id" value={evento.id} />
           <button
@@ -97,8 +97,8 @@ export function EventoForm({ evento }: Props) {
             disabled={pStatus}
             className={`rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-60 ${
               evento.status === "cancelado"
-                ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                : "border border-red-300 text-red-700 hover:bg-red-50"
+                ? "bg-brand text-white hover:bg-brand-strong"
+                : "border border-danger-edge text-danger-text hover:bg-danger-faint"
             }`}
           >
             {pStatus

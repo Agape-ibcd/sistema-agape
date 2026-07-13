@@ -8,10 +8,10 @@ export default async function NovaEquipePage() {
   return (
     <div className="mx-auto max-w-2xl">
       <header className="mb-6">
-        <Link href="/equipes" className="text-sm text-emerald-700 hover:underline">
+        <Link href="/equipes" className="text-sm text-brand-text hover:underline">
           ← Equipes
         </Link>
-        <h1 className="mt-1 text-2xl font-bold text-zinc-900">Nova equipe</h1>
+        <h1 className="mt-1 text-2xl font-bold text-ink">Nova equipe</h1>
       </header>
       <EquipeForm equipe={null} />
     </div>

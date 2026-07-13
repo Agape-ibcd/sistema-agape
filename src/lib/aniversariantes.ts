@@ -62,7 +62,8 @@ export async function aniversariantesDoMes(
 ): Promise<Aniversariante[]> {
   const membros = await prisma.membro.findMany({
     where: {
-      status: "ativo",
+      // Afastados (temporários) seguem no painel; só inativos saem.
+      status: { not: "inativo" },
       dataNascimento: { not: null },
       ...(equipeId ? { equipeId } : {}),
     },

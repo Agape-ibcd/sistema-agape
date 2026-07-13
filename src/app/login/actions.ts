@@ -43,6 +43,11 @@ export async function login(
     );
   }
 
+  if (membro.status === "inativo") {
+    await supabase.auth.signOut();
+    return falha("Cadastro inativo — fale com um administrador do ministério.");
+  }
+
   await prisma.membro.update({
     where: { id: membro.id },
     data: {

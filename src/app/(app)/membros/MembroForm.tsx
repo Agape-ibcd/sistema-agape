@@ -2,9 +2,10 @@
 
 import { useRef, useState, useActionState } from "react";
 import { useRouter } from "next/navigation";
-import { salvarMembro, removerFoto, alternarStatusMembro } from "./actions";
+import { salvarMembro, removerFoto, definirStatusMembro } from "./actions";
 import { FeedbackModal } from "@/components/FeedbackModal";
 import { Avatar } from "@/components/Avatar";
+import { prepararFotoInput } from "@/lib/fotoCliente";
 
 export type MembroFormDados = {
   id: string;
@@ -15,7 +16,9 @@ export type MembroFormDados = {
   equipeId: string;
   observacao: string;
   fotoUrl: string | null;
-  status: "ativo" | "inativo";
+  status: "ativo" | "afastado" | "inativo";
+  motivoStatus: string;
+  retornoPrevisto: string; // "YYYY-MM-DD" ou ""
 };
 
 type Props = {
@@ -23,41 +26,16 @@ type Props = {
   equipes: { id: string; nome: string }[];
 };
 
-// Redimensiona a imagem escolhida para 300×300 (corte central "cover") ainda
-// no navegador — regra do PDF — e devolve um JPEG leve para o upload.
-async function redimensionar300(arquivo: File): Promise<Blob> {
-  const bitmap = await createImageBitmap(arquivo);
-  const lado = Math.min(bitmap.width, bitmap.height);
-  const sx = (bitmap.width - lado) / 2;
-  const sy = (bitmap.height - lado) / 2;
-
-  const canvas = document.createElement("canvas");
-  canvas.width = 300;
-  canvas.height = 300;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas indisponível neste navegador.");
-  ctx.drawImage(bitmap, sx, sy, lado, lado, 0, 0, 300, 300);
-  bitmap.close();
-
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error("Falha ao processar a imagem."))),
-      "image/jpeg",
-      0.85,
-    );
-  });
-}
-
 const inputCls =
-  "w-full rounded-xl border border-zinc-300 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200";
-const labelCls = "mb-1 block text-sm font-medium text-zinc-700";
+  "w-full rounded-xl border border-edge px-3 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-ring";
+const labelCls = "mb-1 block text-sm font-medium text-ink-soft";
 
 export function MembroForm({ membro, equipes }: Props) {
   const router = useRouter();
   const [estado, formAction, pendente] = useActionState(salvarMembro, null);
   const [estadoFoto, acaoRemoverFoto, pendenteFoto] = useActionState(removerFoto, null);
   const [estadoStatus, acaoStatus, pendenteStatus] = useActionState(
-    alternarStatusMembro,
+    definirStatusMembro,
     null,
   );
 
@@ -66,16 +44,10 @@ export function MembroForm({ membro, equipes }: Props) {
   const fotoRef = useRef<HTMLInputElement>(null);
 
   async function aoEscolherFoto(e: React.ChangeEvent<HTMLInputElement>) {
-    const arquivo = e.target.files?.[0];
-    if (!arquivo) return;
     setErroFoto(null);
     try {
-      const blob = await redimensionar300(arquivo);
-      const jpeg = new File([blob], "foto.jpg", { type: "image/jpeg" });
-      const dt = new DataTransfer();
-      dt.items.add(jpeg);
-      e.target.files = dt.files; // o form envia a versão 300×300, não a original
-      setPreview(URL.createObjectURL(blob));
+      const url = await prepararFotoInput(e);
+      if (url) setPreview(url);
     } catch (erro) {
       e.target.value = "";
       setErroFoto(
@@ -88,7 +60,7 @@ export function MembroForm({ membro, equipes }: Props) {
     <>
       <form
         action={formAction}
-        className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-5"
+        className="space-y-4 rounded-2xl border border-edge-soft bg-surface p-5"
       >
         {membro && <input type="hidden" name="id" value={membro.id} />}
 
@@ -115,9 +87,9 @@ export function MembroForm({ membro, equipes }: Props) {
               type="file"
               accept="image/jpeg,image/png"
               onChange={aoEscolherFoto}
-              className="block w-full text-sm text-zinc-600 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-emerald-700 hover:file:bg-emerald-100"
+              className="block w-full text-sm text-ink-soft file:mr-3 file:rounded-lg file:border-0 file:bg-brand-faint file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-brand-text hover:file:bg-brand-soft"
             />
-            {erroFoto && <p className="mt-1 text-xs text-red-600">{erroFoto}</p>}
+            {erroFoto && <p className="mt-1 text-xs text-danger-text">{erroFoto}</p>}
           </div>
         </div>
 
@@ -217,7 +189,7 @@ export function MembroForm({ membro, equipes }: Props) {
           <button
             type="submit"
             disabled={pendente}
-            className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+            className="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-strong disabled:opacity-60"
           >
             {pendente
               ? "Salvando…"
@@ -231,7 +203,7 @@ export function MembroForm({ membro, equipes }: Props) {
               type="submit"
               formAction={acaoRemoverFoto}
               disabled={pendenteFoto}
-              className="rounded-xl border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-60"
+              className="rounded-xl border border-edge px-4 py-2.5 text-sm font-medium text-ink-soft hover:bg-surface-2 disabled:opacity-60"
             >
               {pendenteFoto ? "Removendo…" : "Remover foto"}
             </button>
@@ -239,44 +211,13 @@ export function MembroForm({ membro, equipes }: Props) {
         </div>
       </form>
 
-      {/* Inativação/reativação — nunca exclusão (regra do PDF). */}
+      {/* Status: ativo / afastado (temporário) / inativo — nunca exclusão. */}
       {membro && (
-        <form
-          action={acaoStatus}
-          onSubmit={(e) => {
-            const msg =
-              membro.status === "ativo"
-                ? `Inativar ${membro.nomeCompleto}? O histórico de presenças é preservado e o membro deixa de aparecer nas listas de registro.`
-                : `Reativar ${membro.nomeCompleto}?`;
-            if (!window.confirm(msg)) e.preventDefault();
-          }}
-          className="mt-4 flex items-center justify-between rounded-2xl border border-zinc-200 bg-white p-5"
-        >
-          <input type="hidden" name="id" value={membro.id} />
-          <div>
-            <p className="text-sm font-medium text-zinc-900">
-              {membro.status === "ativo" ? "Inativar membro" : "Membro inativo"}
-            </p>
-            <p className="text-xs text-zinc-500">
-              Membros nunca são excluídos — apenas inativados, preservando o histórico.
-            </p>
-          </div>
-          <button
-            type="submit"
-            disabled={pendenteStatus}
-            className={`rounded-xl px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60 ${
-              membro.status === "ativo"
-                ? "bg-red-600 hover:bg-red-700"
-                : "bg-emerald-600 hover:bg-emerald-700"
-            }`}
-          >
-            {pendenteStatus
-              ? "Aplicando…"
-              : membro.status === "ativo"
-                ? "Inativar"
-                : "Reativar"}
-          </button>
-        </form>
+        <PainelStatus
+          membro={membro}
+          acaoStatus={acaoStatus}
+          pendente={pendenteStatus}
+        />
       )}
 
       <FeedbackModal
@@ -297,5 +238,180 @@ export function MembroForm({ membro, equipes }: Props) {
       />
       <FeedbackModal estado={estadoStatus} />
     </>
+  );
+}
+
+// Painel de status do membro: afastar (com motivo + retorno previsto),
+// inativar (motivo opcional) e reativar. Afastado mantém equipe e login,
+// mas sai das listas de presença; inativo sai da equipe e perde o acesso.
+function PainelStatus({
+  membro,
+  acaoStatus,
+  pendente,
+}: {
+  membro: MembroFormDados;
+  acaoStatus: (formData: FormData) => void;
+  pendente: boolean;
+}) {
+  const [modo, setModo] = useState<"afastar" | "inativar" | null>(null);
+
+  const retornoBR = membro.retornoPrevisto
+    ? membro.retornoPrevisto.split("-").reverse().join("/")
+    : "";
+  const retornoVencido =
+    membro.status === "afastado" &&
+    membro.retornoPrevisto !== "" &&
+    membro.retornoPrevisto < new Date().toISOString().slice(0, 10);
+
+  const btnLeve =
+    "rounded-xl border border-edge px-4 py-2 text-sm font-medium text-ink-soft hover:bg-surface-2 disabled:opacity-60";
+
+  return (
+    <div className="mt-4 rounded-2xl border border-edge-soft bg-surface p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-ink">
+            Status:
+            {membro.status === "ativo" && (
+              <span className="rounded-full bg-brand-soft px-2 py-0.5 text-xs font-semibold text-brand-text">
+                Ativo
+              </span>
+            )}
+            {membro.status === "afastado" && (
+              <span className="rounded-full bg-warn-soft px-2 py-0.5 text-xs font-semibold text-warn-text">
+                Afastado{retornoBR ? ` até ${retornoBR}` : ""}
+              </span>
+            )}
+            {membro.status === "inativo" && (
+              <span className="rounded-full bg-danger-soft px-2 py-0.5 text-xs font-semibold text-danger-text">
+                Inativo
+              </span>
+            )}
+            {retornoVencido && (
+              <span className="rounded-full bg-danger-soft px-2 py-0.5 text-xs font-semibold text-danger-text">
+                retorno previsto vencido
+              </span>
+            )}
+          </p>
+          <p className="mt-1 text-xs text-ink-subtle">
+            {membro.status === "ativo" &&
+              "Afastado (temporário) mantém equipe e acesso, mas sai das listas de presença. Inativo sai da equipe e perde o acesso. Membros nunca são excluídos."}
+            {membro.status === "afastado" &&
+              `Fora das listas de presença — não gera convocação nem falta.${membro.motivoStatus ? ` Motivo: ${membro.motivoStatus}.` : ""}`}
+            {membro.status === "inativo" &&
+              `Sem equipe e sem acesso ao sistema; o histórico permanece.${membro.motivoStatus ? ` Motivo: ${membro.motivoStatus}.` : ""}`}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {membro.status !== "ativo" && (
+            <form
+              action={acaoStatus}
+              onSubmit={(e) => {
+                if (!window.confirm(`Reativar ${membro.nomeCompleto}?`))
+                  e.preventDefault();
+              }}
+            >
+              <input type="hidden" name="id" value={membro.id} />
+              <input type="hidden" name="status" value="ativo" />
+              <button
+                type="submit"
+                disabled={pendente}
+                className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-60"
+              >
+                Reativar
+              </button>
+            </form>
+          )}
+          {membro.status === "ativo" && (
+            <button
+              type="button"
+              onClick={() => setModo(modo === "afastar" ? null : "afastar")}
+              className={btnLeve}
+            >
+              Afastar…
+            </button>
+          )}
+          {membro.status !== "inativo" && (
+            <button
+              type="button"
+              onClick={() => setModo(modo === "inativar" ? null : "inativar")}
+              className={`${btnLeve} hover:border-danger-edge hover:bg-danger-faint hover:text-danger-text`}
+            >
+              Inativar…
+            </button>
+          )}
+        </div>
+      </div>
+
+      {modo === "afastar" && (
+        <form
+          action={acaoStatus}
+          onSubmit={(e) => {
+            if (
+              !window.confirm(
+                `Afastar ${membro.nomeCompleto}? Continua na equipe e com acesso, mas sai das listas de presença até ser reativado(a).`,
+              )
+            )
+              e.preventDefault();
+          }}
+          className="mt-3 space-y-2 rounded-xl bg-warn-faint p-3"
+        >
+          <input type="hidden" name="id" value={membro.id} />
+          <input type="hidden" name="status" value="afastado" />
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <input
+              name="motivo"
+              required
+              maxLength={300}
+              placeholder="Motivo do afastamento (obrigatório)"
+              className={inputCls}
+            />
+            <label className="flex items-center gap-2 text-xs text-ink-subtle">
+              Retorno previsto
+              <input name="retornoPrevisto" type="date" className={inputCls} />
+            </label>
+          </div>
+          <button
+            type="submit"
+            disabled={pendente}
+            className="rounded-xl bg-warn px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
+          >
+            {pendente ? "Aplicando…" : "Confirmar afastamento"}
+          </button>
+        </form>
+      )}
+
+      {modo === "inativar" && (
+        <form
+          action={acaoStatus}
+          onSubmit={(e) => {
+            if (
+              !window.confirm(
+                `Inativar ${membro.nomeCompleto}? Sai da equipe, perde o acesso ao sistema e deixa de contar nos indicadores daqui em diante. O histórico permanece.`,
+              )
+            )
+              e.preventDefault();
+          }}
+          className="mt-3 space-y-2 rounded-xl bg-danger-faint p-3"
+        >
+          <input type="hidden" name="id" value={membro.id} />
+          <input type="hidden" name="status" value="inativo" />
+          <input
+            name="motivo"
+            maxLength={300}
+            placeholder="Motivo da inativação (opcional)"
+            className={inputCls}
+          />
+          <button
+            type="submit"
+            disabled={pendente}
+            className="rounded-xl bg-danger px-4 py-2 text-sm font-semibold text-white hover:bg-danger-strong disabled:opacity-60"
+          >
+            {pendente ? "Aplicando…" : "Confirmar inativação"}
+          </button>
+        </form>
+      )}
+    </div>
   );
 }

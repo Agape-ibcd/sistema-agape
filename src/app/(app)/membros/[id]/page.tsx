@@ -29,17 +29,22 @@ export default async function EditarMembroPage({
   return (
     <div className="mx-auto max-w-2xl">
       <header className="mb-6">
-        <Link href="/membros" className="text-sm text-emerald-700 hover:underline">
+        <Link href="/membros" className="text-sm text-brand-text hover:underline">
           ← Membros
         </Link>
         <div className="mt-1 flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-bold text-zinc-900">{membro.nomeCompleto}</h1>
-          <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+          <h1 className="text-2xl font-bold text-ink">{membro.nomeCompleto}</h1>
+          <span className="rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-medium text-brand-text">
             {ROTULO_NIVEL[membro.nivelAcesso]}
           </span>
           {membro.status === "inativo" && (
-            <span className="rounded-full bg-zinc-200 px-2.5 py-0.5 text-xs font-medium text-zinc-600">
+            <span className="rounded-full bg-surface-3 px-2.5 py-0.5 text-xs font-medium text-ink-soft">
               Inativo
+            </span>
+          )}
+          {membro.status === "afastado" && (
+            <span className="rounded-full bg-warn-soft px-2.5 py-0.5 text-xs font-medium text-warn-text">
+              Afastado
             </span>
           )}
         </div>
@@ -58,6 +63,10 @@ export default async function EditarMembroPage({
           observacao: membro.observacao ?? "",
           fotoUrl: membro.fotoUrl,
           status: membro.status,
+          motivoStatus: membro.motivoStatus ?? "",
+          retornoPrevisto: membro.retornoPrevisto
+            ? membro.retornoPrevisto.toISOString().slice(0, 10)
+            : "",
         }}
         equipes={equipes}
       />

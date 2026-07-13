@@ -21,16 +21,13 @@ import type {
   SerieEvento,
   Composicao,
 } from "@/lib/dashboard";
+import { useTema } from "@/components/ThemeProvider";
+import { coresGraficos } from "@/lib/coresGraficos";
 
 // Gráficos do dashboard (client — Recharts). Recebem apenas dados serializáveis.
 // Paleta coerente com o app: esmeralda (presença/pontual), âmbar (atraso), rosa
-// (ausência). Mobile-first: cada gráfico ocupa 100% da largura do cartão.
-
-const COR_PRESENCA = "#059669"; // emerald-600
-const COR_PONTUAL = "#10b981"; // emerald-500
-const COR_ATRASO = "#f59e0b"; // amber-500
-const COR_AUSENCIA = "#f43f5e"; // rose-500
-const COR_LINHA = "#0ea5e9"; // sky-500
+// (ausência) — theme-aware via coresGraficos. Mobile-first: cada gráfico ocupa
+// 100% da largura do cartão.
 
 function Cartao({
   titulo,
@@ -42,10 +39,10 @@ function Cartao({
   vazio: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-4">
-      <h3 className="mb-3 text-sm font-semibold text-zinc-900">{titulo}</h3>
+    <div className="rounded-2xl border border-edge-soft bg-surface p-4">
+      <h3 className="mb-3 text-sm font-semibold text-ink">{titulo}</h3>
       {vazio ? (
-        <div className="flex h-[220px] items-center justify-center text-sm text-zinc-400">
+        <div className="flex h-[220px] items-center justify-center text-sm text-ink-faint">
           Sem dados no período/seleção.
         </div>
       ) : (
@@ -54,13 +51,6 @@ function Cartao({
     </div>
   );
 }
-
-const eixoPct = { fontSize: 11, fill: "#71717a" };
-const tooltipStyle = {
-  fontSize: 12,
-  borderRadius: 12,
-  border: "1px solid #e4e4e7",
-};
 
 function fmtPct(v: number) {
   return `${v.toFixed(1)}%`;
@@ -80,10 +70,21 @@ export function GraficosDashboard({
   // Líder/membro têm uma só equipe — o gráfico por equipe fica redundante.
   mostrarEquipes: boolean;
 }) {
+  const { tema } = useTema();
+  const cores = coresGraficos(tema);
+  const eixoPct = { fontSize: 11, fill: cores.eixo };
+  const tooltipStyle = {
+    fontSize: 12,
+    borderRadius: 12,
+    border: `1px solid ${cores.tooltipBorda}`,
+    backgroundColor: cores.tooltipFundo,
+    color: cores.tooltipTexto,
+  };
+
   const dadosComposicao = [
-    { nome: "Pontuais", valor: composicao.pontuais, cor: COR_PONTUAL },
-    { nome: "Atrasados", valor: composicao.atrasados, cor: COR_ATRASO },
-    { nome: "Ausentes", valor: composicao.ausentes, cor: COR_AUSENCIA },
+    { nome: "Pontuais", valor: composicao.pontuais, cor: cores.pontual },
+    { nome: "Atrasados", valor: composicao.atrasados, cor: cores.atraso },
+    { nome: "Ausentes", valor: composicao.ausentes, cor: cores.ausencia },
   ].filter((d) => d.valor > 0);
 
   return (
@@ -95,7 +96,7 @@ export function GraficosDashboard({
               data={porEquipe}
               margin={{ top: 8, right: 8, left: -16, bottom: 4 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#f4f4f5" />
+              <CartesianGrid strokeDasharray="3 3" stroke={cores.grade} />
               <XAxis
                 dataKey="nome"
                 tick={eixoPct}
@@ -113,7 +114,7 @@ export function GraficosDashboard({
                 isAnimationActive={false}
               >
                 {porEquipe.map((e) => (
-                  <Cell key={e.equipeId} fill={e.corHex ?? COR_PRESENCA} />
+                  <Cell key={e.equipeId} fill={e.corHex ?? cores.presenca} />
                 ))}
               </Bar>
             </BarChart>
@@ -130,7 +131,7 @@ export function GraficosDashboard({
             data={porEvento}
             margin={{ top: 8, right: 12, left: -16, bottom: 4 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#f4f4f5" />
+            <CartesianGrid strokeDasharray="3 3" stroke={cores.grade} />
             <XAxis
               dataKey="data"
               tick={eixoPct}
@@ -147,7 +148,7 @@ export function GraficosDashboard({
             <Line
               type="monotone"
               dataKey="taxaPresenca"
-              stroke={COR_LINHA}
+              stroke={cores.linha}
               strokeWidth={2}
               dot={{ r: 3 }}
               isAnimationActive={false}
@@ -192,7 +193,7 @@ export function GraficosDashboard({
             data={porTipo}
             margin={{ top: 8, right: 8, left: -16, bottom: 4 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#f4f4f5" />
+            <CartesianGrid strokeDasharray="3 3" stroke={cores.grade} />
             <XAxis
               dataKey="nome"
               tick={eixoPct}
@@ -204,7 +205,7 @@ export function GraficosDashboard({
               contentStyle={tooltipStyle}
               formatter={(v) => [fmtPct(Number(v)), "Presença"]}
             />
-            <Bar dataKey="taxaPresenca" fill={COR_PRESENCA} radius={[6, 6, 0, 0]} />
+            <Bar dataKey="taxaPresenca" fill={cores.presenca} radius={[6, 6, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </Cartao>

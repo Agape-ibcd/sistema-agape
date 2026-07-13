@@ -32,7 +32,7 @@ export function RodizioForm({
   );
 
   const inputCls =
-    "w-full min-w-0 rounded-xl border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200";
+    "w-full min-w-0 rounded-xl border border-edge px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-ring";
 
   const mudar = (i: number, campo: keyof Semana, valor: string) =>
     setSemanas((s) => s.map((sem, j) => (j === i ? { ...sem, [campo]: valor } : sem)));
@@ -43,7 +43,7 @@ export function RodizioForm({
     rotulo: string,
     turnoSugerido: string,
   ) => (
-    <label className="flex flex-1 flex-col gap-1 text-xs font-medium text-zinc-600">
+    <label className="flex flex-1 flex-col gap-1 text-xs font-medium text-ink-soft">
       {rotulo}
       <select
         name={campo}
@@ -70,9 +70,9 @@ export function RodizioForm({
   return (
     <div className="space-y-5">
       {/* ── Configuração do ciclo ── */}
-      <form action={salvarAction} className="rounded-2xl border border-zinc-200 bg-white p-5">
-        <h2 className="text-base font-semibold text-zinc-900">Ciclo do rodízio</h2>
-        <p className="mt-1 text-sm text-zinc-600">
+      <form action={salvarAction} className="rounded-2xl border border-edge-soft bg-surface p-5">
+        <h2 className="text-base font-semibold text-ink">Ciclo do rodízio</h2>
+        <p className="mt-1 text-sm text-ink-soft">
           Em cada semana do ciclo, defina a equipe da manhã e a da noite. Domingo
           cada uma cobre o seu turno; nos demais dias (inclusive eventos avulsos)
           as duas apoiam juntas.
@@ -80,16 +80,16 @@ export function RodizioForm({
 
         <div className="mt-4 space-y-3">
           {semanas.map((_, i) => (
-            <fieldset key={i} className="rounded-xl bg-zinc-50 p-3">
+            <fieldset key={i} className="rounded-xl bg-surface-2 p-3">
               <div className="mb-2 flex items-center justify-between">
-                <legend className="text-sm font-semibold text-zinc-800">
+                <legend className="text-sm font-semibold text-ink">
                   Semana {i + 1} do ciclo
                 </legend>
                 {semanas.length > 1 && (
                   <button
                     type="button"
                     onClick={() => setSemanas((s) => s.filter((_, j) => j !== i))}
-                    className="text-xs font-medium text-zinc-500 underline hover:text-red-600"
+                    className="text-xs font-medium text-ink-subtle underline hover:text-danger-text"
                   >
                     Remover semana
                   </button>
@@ -106,13 +106,13 @@ export function RodizioForm({
         <button
           type="button"
           onClick={() => setSemanas((s) => [...s, { manha: "", noite: "" }])}
-          className="mt-3 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+          className="mt-3 rounded-lg border border-edge bg-surface px-3 py-1.5 text-xs font-medium text-ink-soft hover:bg-surface-2"
         >
           + Adicionar semana ao ciclo
         </button>
 
         <div className="mt-4 flex flex-wrap items-end gap-4">
-          <label className="flex flex-col gap-1 text-xs font-medium text-zinc-600">
+          <label className="flex flex-col gap-1 text-xs font-medium text-ink-soft">
             Semana âncora (1ª semana do ciclo)
             <input
               type="date"
@@ -122,12 +122,12 @@ export function RodizioForm({
               className={inputCls}
             />
           </label>
-          <label className="flex items-center gap-2 pb-2 text-sm text-zinc-700">
+          <label className="flex items-center gap-2 pb-2 text-sm text-ink-soft">
             <input
               type="checkbox"
               name="ativo"
               defaultChecked={ativoInicial}
-              className="h-4 w-4 rounded border-zinc-300 accent-emerald-600"
+              className="h-4 w-4 rounded border-edge accent-brand"
             />
             Rodízio ativo (aplica automaticamente ao gerar eventos e criar avulsos)
           </label>
@@ -136,33 +136,33 @@ export function RodizioForm({
         <button
           type="submit"
           disabled={pSalvar}
-          className="mt-4 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+          className="mt-4 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-60"
         >
           {pSalvar ? "Salvando…" : "Salvar configuração"}
         </button>
       </form>
 
       {/* ── Aplicar num período ── */}
-      <form action={aplicarAction} className="rounded-2xl border border-zinc-200 bg-white p-5">
-        <h2 className="text-base font-semibold text-zinc-900">Aplicar rodízio</h2>
-        <p className="mt-1 text-sm text-zinc-600">
+      <form action={aplicarAction} className="rounded-2xl border border-edge-soft bg-surface p-5">
+        <h2 className="text-base font-semibold text-ink">Aplicar rodízio</h2>
+        <p className="mt-1 text-sm text-ink-soft">
           Preenche as escalas dos eventos do período. Eventos com escala manual
           (ex.: conferência com equipes próprias) são preservados; pode reaplicar
           quantas vezes quiser.
         </p>
         <div className="mt-3 flex flex-wrap items-end gap-3">
-          <label className="flex flex-col gap-1 text-xs font-medium text-zinc-600">
+          <label className="flex flex-col gap-1 text-xs font-medium text-ink-soft">
             De
             <input type="date" name="inicio" required defaultValue={aplicarInicioPadrao} className={inputCls} />
           </label>
-          <label className="flex flex-col gap-1 text-xs font-medium text-zinc-600">
+          <label className="flex flex-col gap-1 text-xs font-medium text-ink-soft">
             Até
             <input type="date" name="fim" required defaultValue={aplicarFimPadrao} className={inputCls} />
           </label>
           <button
             type="submit"
             disabled={pAplicar}
-            className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+            className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-60"
           >
             {pAplicar ? "Aplicando…" : "Aplicar rodízio"}
           </button>

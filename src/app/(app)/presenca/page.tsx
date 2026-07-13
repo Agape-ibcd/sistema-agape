@@ -61,8 +61,8 @@ export default async function PresencaPage({
   if (!podeQualquer && !equipeIdFoco) {
     return (
       <div className="mx-auto max-w-3xl">
-        <h1 className="text-2xl font-bold text-zinc-900">Registrar Presença</h1>
-        <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
+        <h1 className="text-2xl font-bold text-ink">Registrar Presença</h1>
+        <div className="mt-6 rounded-2xl border border-warn-edge bg-warn-faint p-6 text-sm text-warn-text">
           Você não está vinculado a uma equipe. Peça a um administrador para
           associar seu cadastro a uma equipe antes de registrar presenças.
         </div>
@@ -74,8 +74,8 @@ export default async function PresencaPage({
   if (!equipeIdFoco) {
     return (
       <div className="mx-auto max-w-3xl">
-        <h1 className="text-2xl font-bold text-zinc-900">Registrar Presença</h1>
-        <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
+        <h1 className="text-2xl font-bold text-ink">Registrar Presença</h1>
+        <div className="mt-6 rounded-2xl border border-warn-edge bg-warn-faint p-6 text-sm text-warn-text">
           Nenhuma equipe ativa cadastrada.
         </div>
       </div>
@@ -125,7 +125,7 @@ export default async function PresencaPage({
   const tituloSemana = `Semana de ${inicioSemana.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "UTC" })} a ${fimSemana.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "UTC" })}`;
 
   const navBtn =
-    "rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50";
+    "rounded-lg border border-edge bg-surface px-3 py-1.5 text-sm font-medium text-ink-soft hover:bg-surface-2";
 
   // ── Evento selecionado → lista de presença ────────────────────────────
   const eventoSelecionado = params.eventoId
@@ -186,9 +186,9 @@ export default async function PresencaPage({
   return (
     <div className="mx-auto max-w-3xl">
       <header className="mb-4">
-        <h1 className="text-2xl font-bold text-zinc-900">Registrar Presença</h1>
-        <p className="mt-1 text-sm text-zinc-600">
-          Equipe: <span className="font-medium text-zinc-800">{equipeNomeFoco}</span>
+        <h1 className="text-2xl font-bold text-ink">Registrar Presença</h1>
+        <p className="mt-1 text-sm text-ink-soft">
+          Equipe: <span className="font-medium text-ink">{equipeNomeFoco}</span>
         </p>
       </header>
 
@@ -204,17 +204,17 @@ export default async function PresencaPage({
         <div className="space-y-4">
           <Link
             href={qs({ ref: formatarDataISO(inicioSemana) })}
-            className="text-sm text-emerald-700 hover:underline"
+            className="text-sm text-brand-text hover:underline"
           >
             ← Voltar aos eventos da semana
           </Link>
 
-          <div className="rounded-2xl border border-zinc-200 bg-white p-4">
-            <p className="text-sm font-semibold text-zinc-900">
+          <div className="rounded-2xl border border-edge-soft bg-surface p-4">
+            <p className="text-sm font-semibold text-ink">
               {eventoSelecionado.descricaoEspecifica ??
                 eventoSelecionado.tipoEvento.nome}
             </p>
-            <p className="mt-0.5 text-xs text-zinc-500">
+            <p className="mt-0.5 text-xs text-ink-subtle">
               {eventoSelecionado.dataEvento.toLocaleDateString("pt-BR", {
                 weekday: "long",
                 day: "2-digit",
@@ -226,7 +226,7 @@ export default async function PresencaPage({
               {eventoSelecionado.horarioChegadaEquipe}
             </p>
             {eventoSelecionado.escalas.length > 1 && (
-              <p className="mt-2 rounded-lg bg-sky-50 px-3 py-2 text-xs text-sky-700">
+              <p className="mt-2 rounded-lg bg-info-faint px-3 py-2 text-xs text-info-text">
                 Este evento tem mais de uma equipe escalada. Você está lançando a
                 presença da equipe <strong>{equipeNomeFoco}</strong>.
               </p>
@@ -261,13 +261,13 @@ export default async function PresencaPage({
             >
               →
             </Link>
-            <span className="ml-1 text-sm font-semibold text-zinc-800">
+            <span className="ml-1 text-sm font-semibold text-ink">
               {tituloSemana}
             </span>
           </div>
 
           {eventos.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-zinc-300 bg-white p-8 text-center text-sm text-zinc-500">
+            <div className="rounded-2xl border border-dashed border-edge bg-surface p-8 text-center text-sm text-ink-subtle">
               Nenhum evento da equipe {equipeNomeFoco} nesta semana. Use as setas
               para navegar entre as semanas.
             </div>
@@ -283,22 +283,22 @@ export default async function PresencaPage({
                         ref: formatarDataISO(inicioSemana),
                         eventoId: e.id,
                       })}
-                      className={`block rounded-2xl border bg-white p-4 transition hover:border-emerald-300 hover:bg-emerald-50 ${ehHoje ? "border-emerald-300 ring-1 ring-emerald-200" : "border-zinc-200"}`}
+                      className={`block rounded-2xl border bg-surface p-4 transition hover:border-brand-edge hover:bg-brand-faint ${ehHoje ? "border-brand-edge ring-1 ring-brand-ring" : "border-edge-soft"}`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-medium text-zinc-900">
+                        <p className="text-sm font-medium text-ink">
                           {ehHoje && (
-                            <span className="mr-2 rounded-full bg-emerald-600 px-2 py-0.5 text-xs font-semibold text-white">
+                            <span className="mr-2 rounded-full bg-brand px-2 py-0.5 text-xs font-semibold text-white">
                               Hoje
                             </span>
                           )}
                           {e.descricaoEspecifica ?? e.tipoEvento.nome}
                         </p>
-                        <p className="text-sm font-semibold text-zinc-700">
+                        <p className="text-sm font-semibold text-ink-soft">
                           {e.horarioInicio}
                         </p>
                       </div>
-                      <p className="mt-1 text-xs text-zinc-500">
+                      <p className="mt-1 text-xs text-ink-subtle">
                         {e.dataEvento.toLocaleDateString("pt-BR", {
                           weekday: "long",
                           day: "2-digit",

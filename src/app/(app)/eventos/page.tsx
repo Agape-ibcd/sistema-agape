@@ -36,7 +36,9 @@ export default async function EventosPage({
 }: {
   searchParams: Promise<{ visao?: string; ref?: string }>;
 }) {
-  const usuario = await requirePermissao("gerenciar_escalas");
+  // Leitura basta para ver o calendário (nível monitor); os controles de
+  // escrita abaixo são condicionados às permissões específicas.
+  const usuario = await requirePermissao("ver_calendario");
   const params = await searchParams;
 
   const hoje = hojeUTC();
@@ -116,19 +118,22 @@ export default async function EventosPage({
 
   const podeGerirTipos = can(usuario.nivelAcesso, "gerenciar_tipos_evento");
   const podeEventoExtra = can(usuario.nivelAcesso, "criar_eventos_extras");
+  const podeGerirEscalas = can(usuario.nivelAcesso, "gerenciar_escalas");
 
   const navBtn =
-    "rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50";
+    "rounded-lg border border-edge bg-surface px-3 py-1.5 text-sm font-medium text-ink-soft hover:bg-surface-2";
 
   return (
     <div className="mx-auto max-w-6xl">
       <header className="mb-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold text-zinc-900">Eventos e Escalas</h1>
+          <h1 className="text-2xl font-bold text-ink">Eventos e Escalas</h1>
           <div className="flex flex-wrap gap-2">
-            <Link href="/eventos/rodizio" className={navBtn}>
-              Rodízio
-            </Link>
+            {podeGerirEscalas && (
+              <Link href="/eventos/rodizio" className={navBtn}>
+                Rodízio
+              </Link>
+            )}
             {podeGerirTipos && (
               <Link href="/eventos/tipos" className={navBtn}>
                 Tipos de evento
@@ -137,7 +142,7 @@ export default async function EventosPage({
             {podeEventoExtra && (
               <Link
                 href="/eventos/novo"
-                className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700"
+                className="rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-strong"
               >
                 + Evento avulso
               </Link>
@@ -155,20 +160,20 @@ export default async function EventosPage({
           <Link href={urlCal(visao, refProximo)} className={navBtn} aria-label="Próximo">
             →
           </Link>
-          <span className="ml-1 text-sm font-semibold capitalize text-zinc-800">
+          <span className="ml-1 text-sm font-semibold capitalize text-ink">
             {tituloPeriodo}
           </span>
           <span className="flex-1" />
-          <nav className="flex overflow-hidden rounded-lg border border-zinc-300">
+          <nav className="flex overflow-hidden rounded-lg border border-edge">
             <Link
               href={urlCal("mes", ref)}
-              className={`px-3 py-1.5 text-sm font-medium ${visao === "mes" ? "bg-emerald-600 text-white" : "bg-white text-zinc-700 hover:bg-zinc-50"}`}
+              className={`px-3 py-1.5 text-sm font-medium ${visao === "mes" ? "bg-brand text-white" : "bg-surface text-ink-soft hover:bg-surface-2"}`}
             >
               Mês
             </Link>
             <Link
               href={urlCal("semana", ref)}
-              className={`px-3 py-1.5 text-sm font-medium ${visao === "semana" ? "bg-emerald-600 text-white" : "bg-white text-zinc-700 hover:bg-zinc-50"}`}
+              className={`px-3 py-1.5 text-sm font-medium ${visao === "semana" ? "bg-brand text-white" : "bg-surface text-ink-soft hover:bg-surface-2"}`}
             >
               Semana
             </Link>
@@ -179,10 +184,10 @@ export default async function EventosPage({
       {visao === "mes" ? (
         <>
           {/* Grade mensal (desktop/tablet) */}
-          <div className="hidden overflow-hidden rounded-2xl border border-zinc-200 bg-white sm:block">
-            <div className="grid grid-cols-7 border-b border-zinc-200 bg-zinc-50">
+          <div className="hidden overflow-hidden rounded-2xl border border-edge-soft bg-surface sm:block">
+            <div className="grid grid-cols-7 border-b border-edge-soft bg-surface-2">
               {NOMES_DIAS.map((n) => (
-                <div key={n} className="px-2 py-2 text-center text-xs font-semibold text-zinc-600">
+                <div key={n} className="px-2 py-2 text-center text-xs font-semibold text-ink-soft">
                   {n}
                 </div>
               ))}
@@ -196,15 +201,15 @@ export default async function EventosPage({
                 return (
                   <div
                     key={chave}
-                    className={`min-h-24 border-b border-r border-zinc-100 p-1.5 ${mesAtual ? "" : "bg-zinc-50/60"}`}
+                    className={`min-h-24 border-b border-r border-edge-soft p-1.5 ${mesAtual ? "" : "bg-surface-2/60"}`}
                   >
                     <p
                       className={`mb-1 text-right text-xs font-medium ${
                         ehHoje
-                          ? "ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-white"
+                          ? "ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-brand text-white"
                           : mesAtual
-                            ? "text-zinc-700"
-                            : "text-zinc-400"
+                            ? "text-ink-soft"
+                            : "text-ink-faint"
                       }`}
                     >
                       {d.getUTCDate()}
@@ -248,8 +253,9 @@ export default async function EventosPage({
         </div>
       )}
 
-      <p className="mt-3 text-xs text-zinc-500">
-        As cores indicam as equipes escaladas. Toque num evento para gerir a escala.
+      <p className="mt-3 text-xs text-ink-subtle">
+        As cores indicam as equipes escaladas. Toque num evento para{" "}
+        {podeGerirEscalas ? "gerir a escala" : "ver os detalhes"}.
       </p>
     </div>
   );
@@ -260,9 +266,9 @@ function ChipEvento({ evento, compacto }: { evento: EventoDoDia; compacto?: bool
   return (
     <Link
       href={`/eventos/${evento.id}`}
-      className={`block rounded-lg border border-zinc-200 px-1.5 py-1 text-xs transition hover:border-emerald-300 hover:bg-emerald-50 ${cancelado ? "opacity-50" : ""}`}
+      className={`block rounded-lg border border-edge-soft px-1.5 py-1 text-xs transition hover:border-brand-edge hover:bg-brand-faint ${cancelado ? "opacity-50" : ""}`}
     >
-      <p className={`truncate font-medium text-zinc-800 ${cancelado ? "line-through" : ""}`}>
+      <p className={`truncate font-medium text-ink ${cancelado ? "line-through" : ""}`}>
         {evento.horarioInicio} {evento.nome}
       </p>
       {evento.escalas.length > 0 && (
@@ -271,14 +277,14 @@ function ChipEvento({ evento, compacto }: { evento: EventoDoDia; compacto?: bool
             <span
               key={i}
               title={`${esc.equipeNome}${esc.tipoEscala === "cobertura" ? " (cobertura semanal)" : esc.tipoEscala === "especial" ? " (especial)" : ""}`}
-              className="inline-block h-2 w-2 rounded-full border border-black/10"
+              className="inline-block h-2 w-2 rounded-full border border-edge-soft"
               style={{ backgroundColor: esc.corHex ?? "#a1a1aa" }}
             />
           ))}
         </span>
       )}
       {!compacto && evento.escalas.length === 0 && !cancelado && (
-        <p className="text-[11px] text-amber-600">Sem equipe escalada</p>
+        <p className="text-[11px] text-warn-text">Sem equipe escalada</p>
       )}
     </Link>
   );
@@ -294,10 +300,10 @@ function DiaLista({
   ehHoje: boolean;
 }) {
   return (
-    <section className="rounded-2xl border border-zinc-200 bg-white p-3">
-      <h2 className="mb-2 text-sm font-semibold text-zinc-800">
+    <section className="rounded-2xl border border-edge-soft bg-surface p-3">
+      <h2 className="mb-2 text-sm font-semibold text-ink">
         {ehHoje && (
-          <span className="mr-2 rounded-full bg-emerald-600 px-2 py-0.5 text-xs font-semibold text-white">
+          <span className="mr-2 rounded-full bg-brand px-2 py-0.5 text-xs font-semibold text-white">
             Hoje
           </span>
         )}
@@ -309,44 +315,44 @@ function DiaLista({
         })}
       </h2>
       {eventos.length === 0 ? (
-        <p className="text-xs text-zinc-400">Sem eventos.</p>
+        <p className="text-xs text-ink-faint">Sem eventos.</p>
       ) : (
         <div className="space-y-2">
           {eventos.map((e) => (
             <Link
               key={e.id}
               href={`/eventos/${e.id}`}
-              className={`block rounded-xl border border-zinc-200 p-3 transition hover:border-emerald-300 hover:bg-emerald-50 ${e.status === "cancelado" ? "opacity-50" : ""}`}
+              className={`block rounded-xl border border-edge-soft p-3 transition hover:border-brand-edge hover:bg-brand-faint ${e.status === "cancelado" ? "opacity-50" : ""}`}
             >
               <div className="flex items-center justify-between gap-2">
                 <p
-                  className={`text-sm font-medium text-zinc-900 ${e.status === "cancelado" ? "line-through" : ""}`}
+                  className={`text-sm font-medium text-ink ${e.status === "cancelado" ? "line-through" : ""}`}
                 >
                   {e.nome}
                 </p>
-                <p className="text-sm font-semibold text-zinc-700">{e.horarioInicio}</p>
+                <p className="text-sm font-semibold text-ink-soft">{e.horarioInicio}</p>
               </div>
-              <p className="mt-0.5 text-xs text-zinc-500">
+              <p className="mt-0.5 text-xs text-ink-subtle">
                 Chegada da equipe: {e.horarioChegadaEquipe}
               </p>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {e.escalas.length === 0 && e.status !== "cancelado" && (
-                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                  <span className="rounded-full bg-warn-soft px-2 py-0.5 text-xs font-medium text-warn-text">
                     Sem equipe escalada
                   </span>
                 )}
                 {e.escalas.map((esc, i) => (
                   <span
                     key={i}
-                    className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700"
+                    className="inline-flex items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-soft"
                   >
                     <span
-                      className="h-2 w-2 rounded-full border border-black/10"
+                      className="h-2 w-2 rounded-full border border-edge-soft"
                       style={{ backgroundColor: esc.corHex ?? "#a1a1aa" }}
                     />
                     {esc.equipeNome}
                     {esc.tipoEscala !== "regular" && (
-                      <span className="text-zinc-400">
+                      <span className="text-ink-faint">
                         · {esc.tipoEscala === "cobertura" ? "cobertura" : "especial"}
                       </span>
                     )}
@@ -363,9 +369,9 @@ function DiaLista({
 
 function VazioCalendario() {
   return (
-    <div className="rounded-2xl border border-dashed border-zinc-300 bg-white p-8 text-center text-sm text-zinc-500">
+    <div className="rounded-2xl border border-dashed border-edge bg-surface p-8 text-center text-sm text-ink-subtle">
       Nenhum evento neste período. Gere as instâncias em{" "}
-      <Link href="/eventos/tipos" className="text-emerald-700 underline">
+      <Link href="/eventos/tipos" className="text-brand-text underline">
         Tipos de evento
       </Link>
       .

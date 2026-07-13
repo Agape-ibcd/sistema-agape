@@ -2,14 +2,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requirePermissao } from "@/lib/auth";
+import { can } from "@/lib/rbac";
 import { formatarDataISO } from "@/lib/recorrencia";
 import { EscalasPanel } from "./EscalasPanel";
 import { EventoForm } from "./EventoForm";
 
 const BADGE_STATUS = {
-  agendado: ["Agendado", "bg-emerald-100 text-emerald-700"],
-  realizado: ["Realizado", "bg-sky-100 text-sky-700"],
-  cancelado: ["Cancelado", "bg-red-100 text-red-700"],
+  agendado: ["Agendado", "bg-brand-soft text-brand-text"],
+  realizado: ["Realizado", "bg-info-soft text-info-text"],
+  cancelado: ["Cancelado", "bg-danger-soft text-danger-text"],
 } as const;
 
 export default async function EventoPage({
@@ -17,7 +18,10 @@ export default async function EventoPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requirePermissao("gerenciar_escalas");
+  // Leitura basta para ver o evento (nível monitor); escrita fica atrás de
+  // `gerenciar_escalas` — validada também nas Server Actions.
+  const usuario = await requirePermissao("ver_calendario");
+  const podeGerirEscalas = can(usuario.nivelAcesso, "gerenciar_escalas");
   const { id } = await params;
 
   const [evento, equipesAtivas] = await Promise.all([
@@ -48,19 +52,19 @@ export default async function EventoPage({
       <header className="mb-6">
         <Link
           href={`/eventos?visao=semana&ref=${formatarDataISO(evento.dataEvento)}`}
-          className="text-sm text-emerald-700 hover:underline"
+          className="text-sm text-brand-text hover:underline"
         >
           ← Calendário
         </Link>
         <div className="mt-1 flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-bold text-zinc-900">
+          <h1 className="text-2xl font-bold text-ink">
             {evento.descricaoEspecifica ?? evento.tipoEvento.nome}
           </h1>
           <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${corStatus}`}>
             {rotuloStatus}
           </span>
         </div>
-        <p className="mt-1 text-sm text-zinc-600">
+        <p className="mt-1 text-sm text-ink-soft">
           {evento.dataEvento.toLocaleDateString("pt-BR", {
             weekday: "long",
             day: "2-digit",
@@ -88,16 +92,19 @@ export default async function EventoPage({
           }))}
           equipesDisponiveis={equipesDisponiveis}
           cancelado={evento.status === "cancelado"}
+          somenteLeitura={!podeGerirEscalas}
         />
 
-        <EventoForm
-          evento={{
-            id: evento.id,
-            horarioInicio: evento.horarioInicio,
-            descricaoEspecifica: evento.descricaoEspecifica ?? "",
-            status: evento.status,
-          }}
-        />
+        {podeGerirEscalas && (
+          <EventoForm
+            evento={{
+              id: evento.id,
+              horarioInicio: evento.horarioInicio,
+              descricaoEspecifica: evento.descricaoEspecifica ?? "",
+              status: evento.status,
+            }}
+          />
+        )}
       </div>
     </div>
   );

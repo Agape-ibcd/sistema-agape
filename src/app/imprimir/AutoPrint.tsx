@@ -11,7 +11,7 @@ export function AutoPrint() {
   }, []);
 
   return (
-    <div className="mb-4 flex items-center justify-between gap-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800 print:hidden">
+    <div className="mb-4 flex items-center justify-between gap-3 rounded-xl bg-brand-faint px-4 py-3 text-sm text-brand-text print:hidden">
       <span>
         Use <strong>Salvar como PDF</strong> na caixa de impressão para gerar o
         arquivo.
@@ -19,7 +19,7 @@ export function AutoPrint() {
       <button
         type="button"
         onClick={() => window.print()}
-        className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+        className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-strong"
       >
         Imprimir
       </button>

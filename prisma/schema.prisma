@@ -31,12 +31,14 @@ datasource db {
 enum NivelAcesso {
   super_admin
   admin
+  monitor // só leitura: vê todos os indicadores, não altera nada
   lider
   membro
 }
 
 enum StatusMembro {
   ativo
+  afastado // temporário (cirurgia, viagem…): mantém equipe e login, sai das listas de presença
   inativo
 }
 
@@ -106,6 +108,8 @@ model Membro {
   observacao      String?      @db.Text
   fotoUrl         String?      @map("foto_url") @db.VarChar(500)
   status          StatusMembro @default(ativo)
+  motivoStatus    String?      @map("motivo_status") @db.VarChar(300) // por que está afastado/inativo
+  retornoPrevisto DateTime?    @map("retorno_previsto") @db.Date // só p/ afastado
   nivelAcesso     NivelAcesso  @default(membro) @map("nivel_acesso")
   notifEmail      Boolean      @default(true) @map("notif_email")
   notifTelegram   Boolean      @default(false) @map("notif_telegram")

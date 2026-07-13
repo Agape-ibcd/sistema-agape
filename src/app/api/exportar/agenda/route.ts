@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { getUsuarioAtual } from "@/lib/auth";
+import { can } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { resolverFiltros } from "@/lib/dashboard";
 import { DIAS_SEMANA } from "@/lib/recorrencia";
@@ -21,6 +22,10 @@ const STATUS_ROTULO: Record<string, string> = {
 export async function GET(req: NextRequest) {
   const usuario = await getUsuarioAtual();
   if (!usuario) return new Response("Não autenticado", { status: 401 });
+  // Dados de escalas do próprio escopo — o monitor não tem esta permissão.
+  if (!can(usuario.nivelAcesso, "exportar_agenda")) {
+    return new Response("Sem permissão", { status: 403 });
+  }
 
   const filtros = resolverFiltros(usuario, paramsDaUrl(req));
 

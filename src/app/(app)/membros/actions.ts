@@ -1,12 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { Prisma } from "@prisma/client";
+import { Prisma, type StatusMembro } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requirePermissao } from "@/lib/auth";
 import { writeAudit } from "@/lib/audit";
 import { sucesso, falha, type EstadoAcao } from "@/lib/actions";
 import { uploadFotoMembro, removerFotoMembro } from "@/lib/storage";
+import { aplicarStatusMembro } from "@/lib/statusMembro";
 import { parseDataISO } from "@/lib/recorrencia";
 
 // Estado do formulário de membro: além do popup padrão, devolve o id criado
@@ -19,6 +20,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function revalidarMembros(id?: string) {
   revalidatePath("/membros");
+  revalidatePath("/usuarios"); // a lista de acessos exibe status/equipe
   if (id) revalidatePath(`/membros/${id}`);
 }
 
@@ -64,6 +66,11 @@ export async function salvarMembro(
     if (id) {
       const antes = await prisma.membro.findUnique({ where: { id } });
       if (!antes) return falha("Membro não encontrado.");
+      if (antes.nivelAcesso === "monitor" && equipeId) {
+        return falha(
+          "Monitores não participam de equipes — deixe o campo Equipe como “Sem equipe” ou mude o nível de acesso antes.",
+        );
+      }
 
       const depois = await prisma.membro.update({ where: { id }, data: dados });
       membroId = depois.id;
@@ -120,36 +127,28 @@ export async function salvarMembro(
   }
 }
 
-// Inativa ou reativa um membro — nunca há exclusão física de membros.
-export async function alternarStatusMembro(
+// Define o status do membro (ativo/afastado/inativo) — nunca há exclusão
+// física. As regras de transição, guardas e auditoria estão em
+// src/lib/statusMembro.ts (compartilhadas com as ações em massa de /usuarios).
+export async function definirStatusMembro(
   _prev: EstadoAcao,
   formData: FormData,
 ): Promise<EstadoAcao> {
   const usuario = await requirePermissao("gerenciar_membros");
   const id = String(formData.get("id") ?? "");
+  const status = String(formData.get("status") ?? "") as StatusMembro;
+  const motivo = String(formData.get("motivo") ?? "");
+  const retornoPrevisto = String(formData.get("retornoPrevisto") ?? "");
+
+  if (!["ativo", "afastado", "inativo"].includes(status)) {
+    return falha("Status inválido.");
+  }
 
   try {
-    const antes = await prisma.membro.findUnique({ where: { id } });
-    if (!antes) return falha("Membro não encontrado.");
-
-    const novoStatus = antes.status === "ativo" ? "inativo" : "ativo";
-    await prisma.membro.update({ where: { id }, data: { status: novoStatus } });
-
-    await writeAudit({
-      usuarioId: usuario.membroId,
-      acao: novoStatus === "inativo" ? "inativar" : "reativar",
-      tabelaAfetada: "membros",
-      registroId: id,
-      dadosAnteriores: { status: antes.status },
-      dadosNovos: { status: novoStatus },
-    });
-
+    const r = await aplicarStatusMembro(usuario, id, status, motivo, retornoPrevisto);
+    if (!r.ok) return falha(r.message);
     revalidarMembros(id);
-    return sucesso(
-      novoStatus === "inativo"
-        ? `${antes.nomeCompleto} foi inativado(a). O histórico de presenças permanece.`
-        : `${antes.nomeCompleto} foi reativado(a).`,
-    );
+    return sucesso(r.message);
   } catch (erro) {
     return falha(
       `Erro ao alterar status: ${erro instanceof Error ? erro.message : "falha desconhecida"}`,

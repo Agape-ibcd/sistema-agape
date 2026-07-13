@@ -57,11 +57,11 @@ export default async function RodizioPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <header className="mb-5">
-        <Link href="/eventos" className="text-sm text-emerald-700 hover:underline">
+        <Link href="/eventos" className="text-sm text-brand-text hover:underline">
           ← Voltar ao calendário
         </Link>
-        <h1 className="mt-2 text-2xl font-bold text-zinc-900">Rodízio de escalas</h1>
-        <p className="mt-1 text-sm text-zinc-600">
+        <h1 className="mt-2 text-2xl font-bold text-ink">Rodízio de escalas</h1>
+        <p className="mt-1 text-sm text-ink-soft">
           Revezamento automático das equipes: aos domingos cada equipe cobre o
           seu turno; nos demais dias da semana (e nos eventos avulsos) as duas
           equipes da semana apoiam juntas.
@@ -70,22 +70,22 @@ export default async function RodizioPage() {
 
       {/* Prévia das próximas semanas */}
       {previa.length > 0 && (
-        <section className="mb-5 overflow-hidden rounded-2xl border border-zinc-200 bg-white">
-          <h2 className="border-b border-zinc-100 px-4 py-3 text-sm font-semibold text-zinc-900">
+        <section className="mb-5 overflow-hidden rounded-2xl border border-edge-soft bg-surface">
+          <h2 className="border-b border-edge-soft px-4 py-3 text-sm font-semibold text-ink">
             Próximas semanas {config?.ativo ? "" : "· rodízio INATIVO"}
           </h2>
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs uppercase tracking-wide text-zinc-500">
+              <tr className="text-left text-xs uppercase tracking-wide text-ink-subtle">
                 <th className="px-4 py-2">Semana de</th>
                 <th className="px-4 py-2">Manhã</th>
                 <th className="px-4 py-2">Noite</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-50">
+            <tbody className="divide-y divide-edge-soft">
               {previa.map((p) => (
                 <tr key={p.domingo.toISOString()}>
-                  <td className="whitespace-nowrap px-4 py-2 tabular-nums text-zinc-700">
+                  <td className="whitespace-nowrap px-4 py-2 tabular-nums text-ink-soft">
                     {p.domingo.toLocaleDateString("pt-BR", {
                       day: "2-digit",
                       month: "2-digit",
@@ -94,9 +94,9 @@ export default async function RodizioPage() {
                   </td>
                   {(["manha", "noite"] as const).map((turno) => (
                     <td key={turno} className="px-4 py-2">
-                      <span className="inline-flex items-center gap-1.5 text-zinc-800">
+                      <span className="inline-flex items-center gap-1.5 text-ink">
                         <span
-                          className="h-2.5 w-2.5 shrink-0 rounded-full border border-black/10"
+                          className="h-2.5 w-2.5 shrink-0 rounded-full border border-edge-soft"
                           style={{
                             backgroundColor: corPorId.get(p.entrada[turno]) ?? "#a1a1aa",
                           }}
@@ -125,7 +125,7 @@ export default async function RodizioPage() {
         aplicarFimPadrao={formatarDataISO(new Date(hoje.getTime() + 92 * DIA_MS))}
       />
 
-      <div className="mt-5 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-800">
+      <div className="mt-5 rounded-2xl border border-info-edge bg-info-faint p-4 text-sm text-info-text">
         <p className="font-semibold">Como o rodízio respeita as suas edições</p>
         <ul className="mt-1 list-disc space-y-1 pl-5">
           <li>

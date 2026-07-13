@@ -49,8 +49,8 @@ const CATEGORIAS = [
 ] as const;
 
 const inputCls =
-  "w-full rounded-xl border border-zinc-300 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200";
-const labelCls = "mb-1 block text-sm font-medium text-zinc-700";
+  "w-full rounded-xl border border-edge px-3 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-ring";
+const labelCls = "mb-1 block text-sm font-medium text-ink-soft";
 
 export function TipoEventoForm({ tipo }: { tipo: TipoEventoFormDados | null }) {
   const router = useRouter();
@@ -66,7 +66,7 @@ export function TipoEventoForm({ tipo }: { tipo: TipoEventoFormDados | null }) {
     <>
       <form
         action={formAction}
-        className="space-y-5 rounded-2xl border border-zinc-200 bg-white p-5"
+        className="space-y-5 rounded-2xl border border-edge-soft bg-surface p-5"
       >
         {tipo && <input type="hidden" name="id" value={tipo.id} />}
 
@@ -118,9 +118,9 @@ export function TipoEventoForm({ tipo }: { tipo: TipoEventoFormDados | null }) {
               onChange={(e) => setHorario(e.target.value)}
               className={inputCls}
             />
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-ink-subtle">
               Chegada da equipe (início − 1h15):{" "}
-              <span className="font-semibold text-emerald-700">{chegada}</span>
+              <span className="font-semibold text-brand-text">{chegada}</span>
             </p>
           </div>
 
@@ -140,7 +140,7 @@ export function TipoEventoForm({ tipo }: { tipo: TipoEventoFormDados | null }) {
 
         {/* Seletor visual de recorrência */}
         <fieldset>
-          <legend className="mb-2 text-sm font-medium text-zinc-700">
+          <legend className="mb-2 text-sm font-medium text-ink-soft">
             Recorrência *
           </legend>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -149,8 +149,8 @@ export function TipoEventoForm({ tipo }: { tipo: TipoEventoFormDados | null }) {
                 key={m.valor}
                 className={`cursor-pointer rounded-xl border p-3 transition ${
                   modo === m.valor
-                    ? "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200"
-                    : "border-zinc-200 hover:border-zinc-300"
+                    ? "border-brand bg-brand-faint ring-2 ring-brand-ring"
+                    : "border-edge-soft hover:border-edge"
                 }`}
               >
                 <input
@@ -161,8 +161,8 @@ export function TipoEventoForm({ tipo }: { tipo: TipoEventoFormDados | null }) {
                   onChange={() => setModo(m.valor)}
                   className="sr-only"
                 />
-                <p className="text-sm font-semibold text-zinc-900">{m.titulo}</p>
-                <p className="mt-0.5 text-xs text-zinc-500">{m.exemplo}</p>
+                <p className="text-sm font-semibold text-ink">{m.titulo}</p>
+                <p className="mt-0.5 text-xs text-ink-subtle">{m.exemplo}</p>
               </label>
             ))}
           </div>
@@ -176,14 +176,14 @@ export function TipoEventoForm({ tipo }: { tipo: TipoEventoFormDados | null }) {
               {DIAS_SEMANA_CURTO.map((rotulo, dia) => (
                 <label
                   key={dia}
-                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-2 text-sm has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50"
+                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-edge-soft px-3 py-2 text-sm has-[:checked]:border-brand has-[:checked]:bg-brand-faint"
                 >
                   <input
                     type="checkbox"
                     name="diasSemana"
                     value={dia}
                     defaultChecked={tipo?.config.diasSemana?.includes(dia) ?? false}
-                    className="accent-emerald-600"
+                    className="accent-brand"
                   />
                   {rotulo}
                 </label>
@@ -205,7 +205,7 @@ export function TipoEventoForm({ tipo }: { tipo: TipoEventoFormDados | null }) {
               defaultValue={tipo?.config.dataBase ?? ""}
               className={inputCls}
             />
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-ink-subtle">
               Repete a cada 14 dias a partir desta data.
             </p>
           </div>
@@ -226,7 +226,7 @@ export function TipoEventoForm({ tipo }: { tipo: TipoEventoFormDados | null }) {
               defaultValue={tipo?.config.dia ?? ""}
               className={inputCls}
             />
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-ink-subtle">
               Em meses mais curtos, cai no último dia do mês.
             </p>
           </div>
@@ -272,7 +272,7 @@ export function TipoEventoForm({ tipo }: { tipo: TipoEventoFormDados | null }) {
               </select>
             </div>
             {modo === "mensal_ultima_posicao" && (
-              <p className="self-end pb-3 text-xs text-zinc-500">
+              <p className="self-end pb-3 text-xs text-ink-subtle">
                 Ex.: último domingo do mês (batismo).
               </p>
             )}
@@ -280,18 +280,18 @@ export function TipoEventoForm({ tipo }: { tipo: TipoEventoFormDados | null }) {
         )}
 
         {modo === "avulso" && (
-          <p className="rounded-xl bg-zinc-50 p-3 text-xs text-zinc-600">
+          <p className="rounded-xl bg-surface-2 p-3 text-xs text-ink-soft">
             Tipos avulsos não geram instâncias automáticas — crie cada evento
             manualmente pelo calendário (&quot;Novo evento avulso&quot;).
           </p>
         )}
 
-        <label className="flex items-center gap-2 text-sm text-zinc-700">
+        <label className="flex items-center gap-2 text-sm text-ink-soft">
           <input
             type="checkbox"
             name="ativo"
             defaultChecked={tipo?.ativo ?? true}
-            className="accent-emerald-600"
+            className="accent-brand"
           />
           Tipo ativo (aparece na geração automática e em novos eventos)
         </label>
@@ -299,7 +299,7 @@ export function TipoEventoForm({ tipo }: { tipo: TipoEventoFormDados | null }) {
         <button
           type="submit"
           disabled={pendente}
-          className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+          className="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-strong disabled:opacity-60"
         >
           {pendente ? "Salvando…" : tipo ? "Salvar alterações" : "Criar tipo de evento"}
         </button>

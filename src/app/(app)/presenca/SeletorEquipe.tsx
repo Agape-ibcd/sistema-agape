@@ -25,13 +25,13 @@ export function SeletorEquipe({
 
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-medium text-zinc-500">
+      <span className="mb-1 block text-xs font-medium text-ink-subtle">
         Equipe em foco
       </span>
       <select
         value={equipeIdAtual}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-xl border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+        className="w-full rounded-xl border border-edge px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-ring"
       >
         {equipes.map((eq) => (
           <option key={eq.id} value={eq.id}>

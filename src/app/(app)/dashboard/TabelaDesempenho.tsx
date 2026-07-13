@@ -61,24 +61,24 @@ export function TabelaDesempenho({
 
   if (dados.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-zinc-300 bg-white p-8 text-center text-sm text-zinc-500">
+      <div className="rounded-2xl border border-dashed border-edge bg-surface p-8 text-center text-sm text-ink-subtle">
         Nenhum membro com lançamentos no período/seleção.
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white">
+    <div className="overflow-x-auto rounded-2xl border border-edge-soft bg-surface">
       <table className="w-full min-w-[560px] text-sm">
         <thead>
-          <tr className="border-b border-zinc-100 text-left text-xs uppercase tracking-wide text-zinc-500">
+          <tr className="border-b border-edge-soft text-left text-xs uppercase tracking-wide text-ink-subtle">
             {colunas.map((c) => (
               <th key={c.chave} className={c.numerico ? "px-3 py-2.5 text-right" : "px-3 py-2.5"}>
                 <button
                   type="button"
                   onClick={() => clicar(c.chave, c.numerico)}
-                  className={`inline-flex items-center gap-1 font-medium hover:text-emerald-700 ${
-                    ordenarPor === c.chave ? "text-emerald-700" : ""
+                  className={`inline-flex items-center gap-1 font-medium hover:text-brand-text ${
+                    ordenarPor === c.chave ? "text-brand-text" : ""
                   }`}
                 >
                   {c.rotulo}
@@ -90,26 +90,26 @@ export function TabelaDesempenho({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-zinc-50">
+        <tbody className="divide-y divide-edge-soft">
           {ordenados.map((d) => (
-            <tr key={d.membroId} className="hover:bg-zinc-50">
-              <td className="px-3 py-2.5 font-medium text-zinc-900">{d.nome}</td>
+            <tr key={d.membroId} className="hover:bg-surface-2">
+              <td className="px-3 py-2.5 font-medium text-ink">{d.nome}</td>
               {mostrarEquipe && (
-                <td className="px-3 py-2.5 text-zinc-600">{d.equipeNome}</td>
+                <td className="px-3 py-2.5 text-ink-soft">{d.equipeNome}</td>
               )}
-              <td className="px-3 py-2.5 text-right tabular-nums text-zinc-700">
+              <td className="px-3 py-2.5 text-right tabular-nums text-ink-soft">
                 {d.convocacoes}
               </td>
-              <td className="px-3 py-2.5 text-right tabular-nums text-zinc-700">
+              <td className="px-3 py-2.5 text-right tabular-nums text-ink-soft">
                 {d.presentes}
               </td>
-              <td className="px-3 py-2.5 text-right tabular-nums text-zinc-700">
+              <td className="px-3 py-2.5 text-right tabular-nums text-ink-soft">
                 {d.ausentes}
               </td>
-              <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-zinc-900">
+              <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-ink">
                 {d.taxaPresenca.toFixed(1)}%
               </td>
-              <td className="px-3 py-2.5 text-right tabular-nums text-zinc-700">
+              <td className="px-3 py-2.5 text-right tabular-nums text-ink-soft">
                 {d.presentes > 0 ? `${d.taxaPontualidade.toFixed(1)}%` : "—"}
               </td>
             </tr>

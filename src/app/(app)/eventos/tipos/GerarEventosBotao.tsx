@@ -34,7 +34,7 @@ export function GerarEventosBotao({
         <button
           type="submit"
           disabled={pendente}
-          className="rounded-xl border border-emerald-600 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-60"
+          className="rounded-xl border border-brand px-4 py-2.5 text-sm font-semibold text-brand-text transition hover:bg-brand-faint disabled:opacity-60"
         >
           {pendente ? "Gerando…" : rotulo}
         </button>

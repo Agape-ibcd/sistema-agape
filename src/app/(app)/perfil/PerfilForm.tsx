@@ -1,27 +1,135 @@
 "use client";
 
-import { useActionState } from "react";
-import { atualizarPerfil } from "./actions";
+import { useRef, useState, useActionState } from "react";
+import {
+  atualizarPerfil,
+  atualizarFotoPerfil,
+  removerFotoPerfil,
+} from "./actions";
 import { FeedbackModal } from "@/components/FeedbackModal";
+import { Avatar } from "@/components/Avatar";
+import { prepararFotoInput } from "@/lib/fotoCliente";
 
 type Props = {
+  nome: string;
+  fotoUrl: string | null;
   celular: string;
   observacao: string;
+  dataNascimento: string; // "YYYY-MM-DD" ou ""
 };
 
-export function PerfilForm({ celular, observacao }: Props) {
+export function PerfilForm({
+  nome,
+  fotoUrl,
+  celular,
+  observacao,
+  dataNascimento,
+}: Props) {
   const [estado, formAction, pendente] = useActionState(atualizarPerfil, null);
+  const [estadoFoto, fotoAction, pendenteFoto] = useActionState(
+    atualizarFotoPerfil,
+    null,
+  );
+  const [estadoRemover, removerAction, pendenteRemover] = useActionState(
+    removerFotoPerfil,
+    null,
+  );
+
+  const [preview, setPreview] = useState<string | null>(fotoUrl);
+  const [fotoEscolhida, setFotoEscolhida] = useState(false);
+  const [erroFoto, setErroFoto] = useState<string | null>(null);
+  const fotoRef = useRef<HTMLInputElement>(null);
+
+  async function aoEscolherFoto(e: React.ChangeEvent<HTMLInputElement>) {
+    setErroFoto(null);
+    try {
+      const url = await prepararFotoInput(e);
+      if (url) {
+        setPreview(url);
+        setFotoEscolhida(true);
+      }
+    } catch (erro) {
+      e.target.value = "";
+      setFotoEscolhida(false);
+      setErroFoto(
+        erro instanceof Error ? erro.message : "Não foi possível ler a imagem.",
+      );
+    }
+  }
+
+  function limparEscolha() {
+    setFotoEscolhida(false);
+    if (fotoRef.current) fotoRef.current.value = "";
+  }
 
   return (
     <>
+      {/* Foto do perfil — mesmo fluxo do cadastro de membros (300×300 → Storage) */}
+      <form
+        action={fotoAction}
+        className="mb-6 rounded-2xl border border-edge-soft bg-surface p-5"
+      >
+        <div className="flex items-center gap-4">
+          {preview ? (
+            // eslint-disable-next-line @next/next/no-img-element -- pré-visualização local/Storage
+            <img
+              src={preview}
+              alt="Sua foto"
+              className="h-20 w-20 shrink-0 rounded-full object-cover"
+            />
+          ) : (
+            <Avatar nome={nome} fotoUrl={null} tamanho={80} />
+          )}
+          <div className="min-w-0 flex-1">
+            <label
+              htmlFor="foto"
+              className="mb-1 block text-sm font-medium text-ink-soft"
+            >
+              Foto (JPG/PNG — ajustada para 300×300)
+            </label>
+            <input
+              ref={fotoRef}
+              id="foto"
+              name="foto"
+              type="file"
+              accept="image/jpeg,image/png"
+              onChange={aoEscolherFoto}
+              className="block w-full text-sm text-ink-soft file:mr-3 file:rounded-lg file:border-0 file:bg-brand-faint file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-brand-text hover:file:bg-brand-soft"
+            />
+            {erroFoto && (
+              <p className="mt-1 text-xs text-danger-text">{erroFoto}</p>
+            )}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="submit"
+                disabled={!fotoEscolhida || pendenteFoto}
+                className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-strong disabled:opacity-60"
+              >
+                {pendenteFoto ? "Enviando…" : "Salvar foto"}
+              </button>
+              {fotoUrl && !fotoEscolhida && (
+                <button
+                  type="submit"
+                  formAction={removerAction}
+                  disabled={pendenteRemover}
+                  className="rounded-xl border border-edge px-4 py-2 text-sm font-medium text-ink-soft hover:bg-surface-2 disabled:opacity-60"
+                >
+                  {pendenteRemover ? "Removendo…" : "Remover foto"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </form>
+
       <form
         action={formAction}
-        className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-5"
+        className="space-y-4 rounded-2xl border border-edge-soft bg-surface p-5"
       >
         <div>
           <label
             htmlFor="celular"
-            className="mb-1 block text-sm font-medium text-zinc-700"
+            className="mb-1 block text-sm font-medium text-ink-soft"
           >
             Celular (WhatsApp)
           </label>
@@ -31,15 +139,31 @@ export function PerfilForm({ celular, observacao }: Props) {
             type="tel"
             defaultValue={celular}
             maxLength={20}
-            className="w-full rounded-xl border border-zinc-300 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+            className="w-full rounded-xl border border-edge px-3 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-ring"
             placeholder="(11) 99999-9999"
           />
         </div>
 
         <div>
           <label
+            htmlFor="dataNascimento"
+            className="mb-1 block text-sm font-medium text-ink-soft"
+          >
+            Data de nascimento
+          </label>
+          <input
+            id="dataNascimento"
+            name="dataNascimento"
+            type="date"
+            defaultValue={dataNascimento}
+            className="w-full rounded-xl border border-edge px-3 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-ring"
+          />
+        </div>
+
+        <div>
+          <label
             htmlFor="observacao"
-            className="mb-1 block text-sm font-medium text-zinc-700"
+            className="mb-1 block text-sm font-medium text-ink-soft"
           >
             Observação
           </label>
@@ -48,7 +172,7 @@ export function PerfilForm({ celular, observacao }: Props) {
             name="observacao"
             defaultValue={observacao}
             rows={3}
-            className="w-full rounded-xl border border-zinc-300 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+            className="w-full rounded-xl border border-edge px-3 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-ring"
             placeholder="Alguma observação sobre você"
           />
         </div>
@@ -56,13 +180,28 @@ export function PerfilForm({ celular, observacao }: Props) {
         <button
           type="submit"
           disabled={pendente}
-          className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+          className="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-strong disabled:opacity-60"
         >
           {pendente ? "Salvando…" : "Salvar alterações"}
         </button>
       </form>
 
       <FeedbackModal estado={estado} />
+      <FeedbackModal
+        estado={estadoFoto}
+        onFechar={(e) => {
+          if (e.ok) limparEscolha();
+        }}
+      />
+      <FeedbackModal
+        estado={estadoRemover}
+        onFechar={(e) => {
+          if (e.ok) {
+            setPreview(null);
+            limparEscolha();
+          }
+        }}
+      />
     </>
   );
 }

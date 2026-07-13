@@ -20,11 +20,11 @@ export default async function EditarTipoEventoPage({
   return (
     <div className="mx-auto max-w-3xl">
       <header className="mb-6">
-        <Link href="/eventos/tipos" className="text-sm text-emerald-700 hover:underline">
+        <Link href="/eventos/tipos" className="text-sm text-brand-text hover:underline">
           ← Tipos de evento
         </Link>
         <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold text-zinc-900">{tipo.nome}</h1>
+          <h1 className="text-2xl font-bold text-ink">{tipo.nome}</h1>
           {tipo.ativo && tipo.tipoRecorrencia !== "avulso" && (
             <GerarEventosBotao
               tipoEventoId={tipo.id}

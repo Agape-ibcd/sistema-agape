@@ -36,11 +36,11 @@ type Props = {
 };
 
 const selectCls =
-  "min-w-0 flex-1 rounded-xl border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200";
+  "min-w-0 flex-1 rounded-xl border border-edge px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-ring";
 const addBtnCls =
-  "rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60";
+  "rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-60";
 const removeBtnCls =
-  "rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700 disabled:opacity-60";
+  "rounded-lg border border-edge px-3 py-1.5 text-xs font-medium text-ink-soft hover:border-danger-edge hover:bg-danger-faint hover:text-danger-text disabled:opacity-60";
 
 export function GerirEquipe({
   equipeId,
@@ -65,24 +65,24 @@ export function GerirEquipe({
   return (
     <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
       {/* Líderes */}
-      <section className="rounded-2xl border border-zinc-200 bg-white p-5">
-        <h2 className="text-base font-semibold text-zinc-900">Líderes</h2>
-        <p className="mt-0.5 text-xs text-zinc-500">
+      <section className="rounded-2xl border border-edge-soft bg-surface p-5">
+        <h2 className="text-base font-semibold text-ink">Líderes</h2>
+        <p className="mt-0.5 text-xs text-ink-subtle">
           Ao encerrar uma liderança o histórico é preservado (data de fim).
         </p>
 
-        <ul className="mt-3 divide-y divide-zinc-100">
+        <ul className="mt-3 divide-y divide-edge-soft">
           {lideres.length === 0 && (
-            <li className="py-3 text-sm text-zinc-500">Nenhum líder ativo.</li>
+            <li className="py-3 text-sm text-ink-subtle">Nenhum líder ativo.</li>
           )}
           {lideres.map((l) => (
             <li key={l.vinculoId} className="flex items-center gap-3 py-2.5">
               <Avatar nome={l.nomeCompleto} fotoUrl={l.fotoUrl} tamanho={36} />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-zinc-900">
+                <p className="truncate text-sm font-medium text-ink">
                   {l.nomeCompleto}
                 </p>
-                <p className="text-xs text-zinc-500">Líder desde {l.desde}</p>
+                <p className="text-xs text-ink-subtle">Líder desde {l.desde}</p>
               </div>
               <form
                 action={rmLiderAction}
@@ -119,22 +119,22 @@ export function GerirEquipe({
       </section>
 
       {/* Membros */}
-      <section className="rounded-2xl border border-zinc-200 bg-white p-5">
-        <h2 className="text-base font-semibold text-zinc-900">
+      <section className="rounded-2xl border border-edge-soft bg-surface p-5">
+        <h2 className="text-base font-semibold text-ink">
           Membros ({membrosDaEquipe.length})
         </h2>
-        <p className="mt-0.5 text-xs text-zinc-500">
+        <p className="mt-0.5 text-xs text-ink-subtle">
           Cada membro pertence a uma única equipe ativa por vez.
         </p>
 
-        <ul className="mt-3 divide-y divide-zinc-100">
+        <ul className="mt-3 divide-y divide-edge-soft">
           {membrosDaEquipe.length === 0 && (
-            <li className="py-3 text-sm text-zinc-500">Nenhum membro na equipe.</li>
+            <li className="py-3 text-sm text-ink-subtle">Nenhum membro na equipe.</li>
           )}
           {membrosDaEquipe.map((m) => (
             <li key={m.id} className="flex items-center gap-3 py-2.5">
               <Avatar nome={m.nomeCompleto} fotoUrl={m.fotoUrl} tamanho={36} />
-              <p className="min-w-0 flex-1 truncate text-sm font-medium text-zinc-900">
+              <p className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
                 {m.nomeCompleto}
               </p>
               <form

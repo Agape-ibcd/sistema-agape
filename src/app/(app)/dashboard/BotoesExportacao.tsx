@@ -6,17 +6,20 @@ import type { EscopoDashboard } from "@/lib/dashboard";
 export function BotoesExportacao({
   query,
   escopo,
+  mostrarAgenda = true,
 }: {
   query: string;
   escopo: EscopoDashboard;
+  // Exportar agenda/escalas exige ver_calendario (monitor não tem).
+  mostrarAgenda?: boolean;
 }) {
   const q = query ? `?${query}` : "";
   const btn =
-    "rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:border-emerald-300 hover:bg-emerald-50";
+    "rounded-lg border border-edge bg-surface px-3 py-1.5 text-xs font-medium text-ink-soft hover:border-brand-edge hover:bg-brand-faint";
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+      <span className="text-xs font-semibold uppercase tracking-wide text-ink-subtle">
         Exportar:
       </span>
       <a className={btn} href={`/api/exportar/presencas${q}`}>
@@ -38,9 +41,11 @@ export function BotoesExportacao({
           Resumo por equipe (xlsx)
         </a>
       )}
-      <a className={btn} href={`/api/exportar/agenda${q}`}>
-        Agenda/escalas (xlsx)
-      </a>
+      {mostrarAgenda && (
+        <a className={btn} href={`/api/exportar/agenda${q}`}>
+          Agenda/escalas (xlsx)
+        </a>
+      )}
       <a className={btn} href={`/imprimir/dashboard${q}`} target="_blank" rel="noopener">
         Dashboard (PDF)
       </a>

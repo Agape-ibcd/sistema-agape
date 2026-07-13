@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { useActionState } from "react";
 import { useSearchParams } from "next/navigation";
 import { login } from "./actions";
+import { Rodape } from "@/components/Rodape";
 
 function LoginForm() {
   const [estado, formAction, pendente] = useActionState(login, null);
@@ -13,14 +14,14 @@ function LoginForm() {
   return (
     <form
       action={formAction}
-      className="space-y-4 rounded-2xl bg-white p-6 shadow-sm"
+      className="space-y-4 rounded-2xl bg-surface p-6 shadow-sm"
     >
       <input type="hidden" name="redirect" value={redirect} />
 
       <div>
         <label
           htmlFor="email"
-          className="mb-1 block text-sm font-medium text-zinc-700"
+          className="mb-1 block text-sm font-medium text-ink-soft"
         >
           E-mail
         </label>
@@ -30,7 +31,7 @@ function LoginForm() {
           type="email"
           autoComplete="email"
           required
-          className="w-full rounded-xl border border-zinc-300 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+          className="w-full rounded-xl border border-edge px-3 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-ring"
           placeholder="voce@exemplo.com"
         />
       </div>
@@ -38,7 +39,7 @@ function LoginForm() {
       <div>
         <label
           htmlFor="senha"
-          className="mb-1 block text-sm font-medium text-zinc-700"
+          className="mb-1 block text-sm font-medium text-ink-soft"
         >
           Senha
         </label>
@@ -48,13 +49,13 @@ function LoginForm() {
           type="password"
           autoComplete="current-password"
           required
-          className="w-full rounded-xl border border-zinc-300 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+          className="w-full rounded-xl border border-edge px-3 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-ring"
           placeholder="••••••••"
         />
       </div>
 
       {estado && !estado.ok && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="rounded-lg bg-danger-faint px-3 py-2 text-sm text-danger-text">
           {estado.message}
         </p>
       )}
@@ -62,7 +63,7 @@ function LoginForm() {
       <button
         type="submit"
         disabled={pendente}
-        className="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+        className="w-full rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-strong disabled:opacity-60"
       >
         {pendente ? "Entrando…" : "Entrar"}
       </button>
@@ -72,27 +73,30 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="flex flex-1 items-center justify-center bg-zinc-50 px-4 py-12">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-emerald-700">
-            Ministério Ágape
-          </h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            Igreja Batista Casa de Deus · Jundiaí/SP
-          </p>
-        </div>
+    <div className="flex flex-1 flex-col bg-surface-2">
+      <div className="flex flex-1 items-center justify-center px-4 py-12">
+        <div className="w-full max-w-sm">
+          <div className="mb-8 text-center">
+            <h1 className="text-2xl font-bold text-brand-text">
+              Ministério Ágape
+            </h1>
+            <p className="mt-1 text-sm text-ink-subtle">
+              Igreja Batista Casa de Deus · Jundiaí/SP
+            </p>
+          </div>
 
-        <Suspense
-          fallback={
-            <div className="rounded-2xl bg-white p-6 text-center text-sm text-zinc-500 shadow-sm">
-              Carregando…
-            </div>
-          }
-        >
-          <LoginForm />
-        </Suspense>
+          <Suspense
+            fallback={
+              <div className="rounded-2xl bg-surface p-6 text-center text-sm text-ink-subtle shadow-sm">
+                Carregando…
+              </div>
+            }
+          >
+            <LoginForm />
+          </Suspense>
+        </div>
       </div>
+      <Rodape />
     </div>
   );
 }

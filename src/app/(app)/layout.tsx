@@ -23,6 +23,7 @@ export default async function AppLayout({
         nome: usuario.nomeCompleto,
         nivelRotulo: ROTULO_NIVEL[usuario.nivelAcesso],
         equipe: usuario.equipeNome,
+        fotoUrl: usuario.fotoUrl,
       }}
     >
       {children}

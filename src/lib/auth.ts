@@ -39,6 +39,10 @@ export async function getUsuarioAtual(): Promise<UsuarioAtual | null> {
 
   if (!membro) return null;
 
+  // Membro inativo perde o acesso ao sistema — vale também para sessões que
+  // já estavam abertas quando a inativação aconteceu.
+  if (membro.status === "inativo") return null;
+
   return {
     authUserId: user.id,
     email: membro.email,

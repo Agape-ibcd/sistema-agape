@@ -28,7 +28,8 @@ import type { Prisma, Pontualidade } from "@prisma/client";
 const DIA_MS = 86_400_000;
 
 // ── Escopo por nível de acesso ───────────────────────────────────────────
-// geral   → admin/super_admin: vê tudo, filtra qualquer equipe/membro.
+// geral   → admin/super_admin/monitor: vê tudo, filtra qualquer equipe/membro
+//           (o monitor é só leitura — exportar/visualizar, nunca gravar).
 // equipe  → líder: travado na própria equipe.
 // proprio → membro: travado no próprio cadastro.
 export type EscopoDashboard = "geral" | "equipe" | "proprio";
@@ -443,7 +444,8 @@ export async function opcoesDeFiltro(
     membros = (
       await prisma.membro.findMany({
         where: {
-          status: "ativo",
+          // Afastados entram no filtro: têm histórico a consultar.
+          status: { not: "inativo" },
           ...(equipeParaMembros ? { equipeId: equipeParaMembros } : {}),
         },
         orderBy: { nomeCompleto: "asc" },

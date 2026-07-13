@@ -15,7 +15,9 @@ export const ITENS_MENU: ItemMenu[] = [
   // próprio", conforme o plano.
   { href: "/dashboard", label: "Dashboard" },
   { href: "/presenca", label: "Registrar Presença", permissao: "registrar_presenca_propria", etapa: 4 },
-  { href: "/eventos", label: "Eventos e Escalas", permissao: "gerenciar_escalas", etapa: 3 },
+  // Leitura basta para o item aparecer (nível monitor); os controles de
+  // escrita dentro das telas exigem as permissões específicas.
+  { href: "/eventos", label: "Eventos e Escalas", permissao: "ver_calendario", etapa: 3 },
   { href: "/membros", label: "Membros", permissao: "gerenciar_membros", etapa: 3 },
   { href: "/equipes", label: "Equipes", permissao: "gerenciar_membros", etapa: 3 },
   { href: "/aniversariantes", label: "Aniversariantes", permissao: "painel_aniversariantes" },

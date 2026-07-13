@@ -20,14 +20,14 @@ export function EventoAvulsoForm({ tipos }: Props) {
     : "—";
 
   const inputCls =
-    "w-full rounded-xl border border-zinc-300 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200";
-  const labelCls = "mb-1 block text-sm font-medium text-zinc-700";
+    "w-full rounded-xl border border-edge px-3 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-ring";
+  const labelCls = "mb-1 block text-sm font-medium text-ink-soft";
 
   return (
     <>
       <form
         action={formAction}
-        className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-5"
+        className="space-y-4 rounded-2xl border border-edge-soft bg-surface p-5"
       >
         <div>
           <label htmlFor="tipoEventoId" className={labelCls}>
@@ -72,9 +72,9 @@ export function EventoAvulsoForm({ tipos }: Props) {
               onChange={(e) => setHorario(e.target.value)}
               className={inputCls}
             />
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-ink-subtle">
               Chegada da equipe:{" "}
-              <span className="font-semibold text-emerald-700">{chegada}</span>
+              <span className="font-semibold text-brand-text">{chegada}</span>
             </p>
           </div>
         </div>
@@ -95,7 +95,7 @@ export function EventoAvulsoForm({ tipos }: Props) {
         <button
           type="submit"
           disabled={pendente}
-          className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+          className="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-strong disabled:opacity-60"
         >
           {pendente ? "Criando…" : "Criar evento"}
         </button>

@@ -16,11 +16,11 @@ export default async function NovoEventoPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <header className="mb-6">
-        <Link href="/eventos" className="text-sm text-emerald-700 hover:underline">
+        <Link href="/eventos" className="text-sm text-brand-text hover:underline">
           ← Calendário
         </Link>
-        <h1 className="mt-1 text-2xl font-bold text-zinc-900">Novo evento avulso</h1>
-        <p className="mt-1 text-sm text-zinc-600">
+        <h1 className="mt-1 text-2xl font-bold text-ink">Novo evento avulso</h1>
+        <p className="mt-1 text-sm text-ink-soft">
           Cria uma única instância no calendário — ideal para campanhas,
           conferências e eventos especiais.
         </p>
