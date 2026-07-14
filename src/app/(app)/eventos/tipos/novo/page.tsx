@@ -11,7 +11,7 @@ export default async function NovoTipoEventoPage() {
         <Link href="/eventos/tipos" className="text-sm text-brand-text hover:underline">
           ← Tipos de evento
         </Link>
-        <h1 className="mt-1 text-2xl font-bold text-ink">Novo tipo de evento</h1>
+        <h1 className="mt-1 text-3xl font-display font-semibold uppercase tracking-wide text-ink">Novo tipo de evento</h1>
       </header>
       <TipoEventoForm tipo={null} />
     </div>

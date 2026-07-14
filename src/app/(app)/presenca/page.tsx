@@ -42,7 +42,7 @@ export default async function PresencaPage({
   if (!podeQualquer && !usuario.equipeId) {
     return (
       <div className="mx-auto max-w-3xl">
-        <h1 className="text-2xl font-bold text-ink">Registrar Presença</h1>
+        <h1 className="text-3xl font-display font-semibold uppercase tracking-wide text-ink">Registrar Presença</h1>
         <div className="mt-6 rounded-2xl border border-warn-edge bg-warn-faint p-6 text-sm text-warn-text">
           Você não está vinculado a uma equipe. Peça a um administrador para
           associar seu cadastro a uma equipe antes de registrar presenças.
@@ -173,7 +173,7 @@ export default async function PresencaPage({
   return (
     <div className="mx-auto max-w-3xl">
       <header className="mb-4">
-        <h1 className="text-2xl font-bold text-ink">Registrar Presença</h1>
+        <h1 className="text-3xl font-display font-semibold uppercase tracking-wide text-ink">Registrar Presença</h1>
         <p className="mt-1 text-sm text-ink-soft">
           Escolha o evento — o sistema mostra a(s) equipe(s) escalada(s) e seus
           membros.
@@ -297,12 +297,12 @@ export default async function PresencaPage({
                         ref: formatarDataISO(inicioSemana),
                         eventoId: e.id,
                       })}
-                      className={`block rounded-2xl border bg-surface p-4 transition hover:border-brand-edge hover:bg-brand-faint ${ehHoje ? "border-brand-edge ring-1 ring-brand-ring" : "border-edge-soft"}`}
+                      className={`block rounded-2xl border bg-surface p-4 transition hover:border-brand-edge hover:bg-brand-faint ${ehHoje ? "border-accent-edge ring-1 ring-accent-edge" : "border-edge-soft"}`}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-sm font-medium text-ink">
                           {ehHoje && (
-                            <span className="mr-2 rounded-full bg-brand px-2 py-0.5 text-xs font-semibold text-white">
+                            <span className="mr-2 rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-white">
                               Hoje
                             </span>
                           )}

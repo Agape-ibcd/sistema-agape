@@ -27,7 +27,7 @@ function CardAniversariante({ a }: { a: Aniversariante }) {
     <li
       className={`flex items-center gap-3 rounded-2xl border p-4 ${
         a.ehHoje
-          ? "border-brand-edge bg-brand-faint ring-1 ring-brand-ring"
+          ? "border-accent-edge bg-accent-faint ring-1 ring-accent-edge"
           : passou
             ? "border-edge-soft bg-surface opacity-70"
             : "border-edge-soft bg-surface"
@@ -38,7 +38,7 @@ function CardAniversariante({ a }: { a: Aniversariante }) {
         <p className="flex flex-wrap items-center gap-2 truncate text-sm font-semibold text-ink">
           {a.nome}
           {a.ehHoje && (
-            <span className="rounded-full bg-brand px-2 py-0.5 text-xs font-semibold text-white">
+            <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-white">
               Hoje 🎉
             </span>
           )}
@@ -94,7 +94,7 @@ export default async function AniversariantesPage({
     <div className="mx-auto max-w-3xl">
       <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-ink">Aniversariantes</h1>
+          <h1 className="text-3xl font-display font-semibold uppercase tracking-wide text-ink">Aniversariantes</h1>
           <p className="mt-1 text-sm text-ink-soft">
             {nomeMes(mes)} · {lista.length} aniversariante(s)
           </p>

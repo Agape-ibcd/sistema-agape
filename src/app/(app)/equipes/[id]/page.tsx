@@ -79,7 +79,7 @@ export default async function EquipePage({
             style={{ backgroundColor: equipe.corHex ?? "#a1a1aa" }}
             aria-hidden
           />
-          <h1 className="text-2xl font-bold text-ink">{equipe.nome}</h1>
+          <h1 className="text-3xl font-display font-semibold uppercase tracking-wide text-ink">{equipe.nome}</h1>
           {equipe.status === "inativa" && (
             <span className="rounded-full bg-surface-3 px-2.5 py-0.5 text-xs font-medium text-ink-soft">
               Inativa

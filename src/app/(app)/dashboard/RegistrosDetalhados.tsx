@@ -58,7 +58,7 @@ export function RegistrosDetalhados({
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                       r.situacao === "Presente"
-                        ? "bg-brand-soft text-brand-text"
+                        ? "bg-success-soft text-success-text"
                         : "bg-danger-soft text-danger-text"
                     }`}
                   >

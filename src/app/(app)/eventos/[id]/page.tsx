@@ -9,7 +9,7 @@ import { EventoForm } from "./EventoForm";
 
 const BADGE_STATUS = {
   agendado: ["Agendado", "bg-brand-soft text-brand-text"],
-  realizado: ["Realizado", "bg-info-soft text-info-text"],
+  realizado: ["Realizado", "bg-success-soft text-success-text"],
   cancelado: ["Cancelado", "bg-danger-soft text-danger-text"],
 } as const;
 
@@ -57,7 +57,7 @@ export default async function EventoPage({
           ← Calendário
         </Link>
         <div className="mt-1 flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-bold text-ink">
+          <h1 className="text-3xl font-display font-semibold uppercase tracking-wide text-ink">
             {evento.descricaoEspecifica ?? evento.tipoEvento.nome}
           </h1>
           <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${corStatus}`}>

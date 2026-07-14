@@ -32,7 +32,7 @@ export default async function TiposEventoPage() {
         </Link>
         <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-ink">Tipos de evento</h1>
+            <h1 className="text-3xl font-display font-semibold uppercase tracking-wide text-ink">Tipos de evento</h1>
             <p className="mt-1 text-sm text-ink-soft">
               Modelos recorrentes que alimentam o calendário.
             </p>

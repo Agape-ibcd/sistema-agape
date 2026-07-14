@@ -41,7 +41,7 @@ export default async function MembrosPage({
     <div className="mx-auto max-w-4xl">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-ink">Membros</h1>
+          <h1 className="text-3xl font-display font-semibold uppercase tracking-wide text-ink">Membros</h1>
           <p className="mt-1 text-sm text-ink-soft">
             {membros.length} membro(s) na seleção atual.
           </p>

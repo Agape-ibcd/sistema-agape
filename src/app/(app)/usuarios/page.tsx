@@ -16,7 +16,7 @@ export default async function UsuariosPage() {
   return (
     <div className="mx-auto max-w-4xl">
       <header className="mb-6">
-        <h1 className="text-2xl font-bold text-ink">Usuários e Acessos</h1>
+        <h1 className="text-3xl font-display font-semibold uppercase tracking-wide text-ink">Usuários e Acessos</h1>
         <p className="mt-1 text-sm text-ink-soft">
           Níveis de acesso (RBAC) e contas de login. Toda alteração é auditada.
         </p>

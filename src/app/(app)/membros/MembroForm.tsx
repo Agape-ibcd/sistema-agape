@@ -273,7 +273,7 @@ function PainelStatus({
           <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-ink">
             Status:
             {membro.status === "ativo" && (
-              <span className="rounded-full bg-brand-soft px-2 py-0.5 text-xs font-semibold text-brand-text">
+              <span className="rounded-full bg-success-soft px-2 py-0.5 text-xs font-semibold text-success-text">
                 Ativo
               </span>
             )}

@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { useSearchParams } from "next/navigation";
 import { login } from "./actions";
 import { Rodape } from "@/components/Rodape";
+import { AgapeLogo } from "@/components/AgapeLogo";
 
 function LoginForm() {
   const [estado, formAction, pendente] = useActionState(login, null);
@@ -73,16 +74,24 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="flex flex-1 flex-col bg-surface-2">
+    <div className="agape-dots flex flex-1 flex-col bg-surface-2">
       <div className="flex flex-1 items-center justify-center px-4 py-12">
         <div className="w-full max-w-sm">
-          <div className="mb-8 text-center">
-            <h1 className="text-2xl font-bold text-brand-text">
-              Ministério Ágape
-            </h1>
-            <p className="mt-1 text-sm text-ink-subtle">
+          <div className="mb-8 flex flex-col items-center text-center">
+            <AgapeLogo markSize={72} />
+            <p className="mt-3 text-sm text-ink-subtle">
               Igreja Batista Casa de Deus · Jundiaí/SP
             </p>
+            {/* Versículo — estilo "verse" da marca (serif itálico, filete dourado) */}
+            <blockquote className="mt-5 border-l-2 border-warn pl-4 text-left">
+              <p className="font-serif text-base italic text-ink-soft">
+                “Acolhei-vos uns aos outros, como também Cristo nos acolheu, para
+                glória de Deus.”
+              </p>
+              <cite className="mt-1 block text-xs font-semibold not-italic tracking-wide text-warn-text">
+                Romanos 15:7
+              </cite>
+            </blockquote>
           </div>
 
           <Suspense

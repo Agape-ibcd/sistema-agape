@@ -17,7 +17,7 @@ export default async function NovoMembroPage() {
         <Link href="/membros" className="text-sm text-brand-text hover:underline">
           ← Membros
         </Link>
-        <h1 className="mt-1 text-2xl font-bold text-ink">Novo membro</h1>
+        <h1 className="mt-1 text-3xl font-display font-semibold uppercase tracking-wide text-ink">Novo membro</h1>
       </header>
       <MembroForm membro={null} equipes={equipes} />
     </div>

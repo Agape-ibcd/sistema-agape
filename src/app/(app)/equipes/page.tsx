@@ -22,7 +22,7 @@ export default async function EquipesPage() {
     <div className="mx-auto max-w-4xl">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-ink">Equipes</h1>
+          <h1 className="text-3xl font-display font-semibold uppercase tracking-wide text-ink">Equipes</h1>
           <p className="mt-1 text-sm text-ink-soft">
             {equipes.length} equipe(s) cadastrada(s).
           </p>

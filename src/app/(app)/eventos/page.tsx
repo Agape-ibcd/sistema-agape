@@ -127,7 +127,7 @@ export default async function EventosPage({
     <div className="mx-auto max-w-6xl">
       <header className="mb-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold text-ink">Eventos e Escalas</h1>
+          <h1 className="text-3xl font-display font-semibold uppercase tracking-wide text-ink">Eventos e Escalas</h1>
           <div className="flex flex-wrap gap-2">
             {podeGerirEscalas && (
               <Link href="/eventos/rodizio" className={navBtn}>
@@ -206,7 +206,7 @@ export default async function EventosPage({
                     <p
                       className={`mb-1 text-right text-xs font-medium ${
                         ehHoje
-                          ? "ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-brand text-white"
+                          ? "ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-accent text-white"
                           : mesAtual
                             ? "text-ink-soft"
                             : "text-ink-faint"
@@ -303,7 +303,7 @@ function DiaLista({
     <section className="rounded-2xl border border-edge-soft bg-surface p-3">
       <h2 className="mb-2 text-sm font-semibold text-ink">
         {ehHoje && (
-          <span className="mr-2 rounded-full bg-brand px-2 py-0.5 text-xs font-semibold text-white">
+          <span className="mr-2 rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-white">
             Hoje
           </span>
         )}

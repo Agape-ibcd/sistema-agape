@@ -6,20 +6,28 @@
 
 /* ──────────────────────────────────────────────────────────────────────────
    Tokens semânticos de cor — fonte única da paleta do app.
-   Para trocar a paleta no futuro, basta editar os valores abaixo (e as
-   cores dos gráficos em src/lib/coresGraficos.ts).
+   PALETA: Design System do Ministério Ágape (Igreja Batista Casa de Deus).
+   Para trocar a paleta no futuro, edite os valores abaixo (e as cores dos
+   gráficos em src/lib/coresGraficos.ts).
 
-   Neutros (base zinc):
+   Papéis (identidade Ágape aplicada a um painel administrativo):
+     brand    Navy #0D2B5C — PRIMÁRIO: botões, menu ativo, links, foco
+     success  Verde #2E7D52 — positivo: presente, pontual, ativo
+     warn     Dourado #B8860B — atenção: atrasado, afastado, sem escala
+     danger   Vermelho Ágape #E1352A — destrutivo: excluir, inativar, revogar
+     accent   Vermelho Ágape — assinatura "Ágape", destaque "Hoje", aniversário
+     info     tons de navy suaves — avisos neutros
+
+   Neutros: papel institucional (#F4F4F4 / #fff) + tinta suave (#1A1A1A/charcoal).
+
      surface    fundo de cartões/painéis        ink        texto principal
      surface-2  fundo da página / faixas        ink-soft   texto secundário
      surface-3  hover/preenchimentos sutis      ink-subtle legendas e apoios
      edge       bordas de inputs                ink-faint  texto apagado
      edge-soft  bordas/divisórias leves         overlay    fundo de modais
 
-   Marca (base emerald) e status (danger/warn/info):
-     brand, brand-strong (hover), brand-faint (fundo suave), brand-soft
-     (chips), brand-edge (bordas), brand-ring (anel de foco), brand-text.
-     danger/warn/info seguem o mesmo padrão.
+   Cada família tem: base, -strong (hover), -text, -faint (fundo suave),
+   -soft (chips), -edge (bordas), -ring (anel de foco).
 
    `.tema-claro` força os valores claros numa subárvore mesmo com o tema
    escuro ativo — usado na rota de impressão (/imprimir), que sai sempre clara.
@@ -29,82 +37,119 @@
   color-scheme: light;
 
   --surface: #ffffff;
-  --surface-2: #fafafa;
-  --surface-3: #f4f4f5;
-  --ink: #18181b;
-  --ink-soft: #52525b;
-  --ink-subtle: #71717a;
-  --ink-faint: #a1a1aa;
-  --edge: #d4d4d8;
-  --edge-soft: #e4e4e7;
-  --overlay: rgb(0 0 0 / 0.4);
+  --surface-2: #f4f4f4; /* cinza-papel institucional (fundo da página) */
+  --surface-3: #eceae4; /* preenchimento/hover sutil, tom papel */
+  --ink: #1a1a1a; /* preto suave (corpo) */
+  --ink-soft: #3a3a3a; /* charcoal (secundário) */
+  --ink-subtle: #6b6b6b;
+  --ink-faint: #9a9791;
+  --edge: #cdcbc4; /* gray-300 */
+  --edge-soft: #e3e1dc; /* gray-200 */
+  --overlay: rgb(13 43 92 / 0.38); /* véu navy translúcido */
 
-  --brand: #059669;
-  --brand-strong: #047857;
-  --brand-text: #047857;
-  --brand-faint: #ecfdf5;
-  --brand-soft: #d1fae5;
-  --brand-edge: #6ee7b7;
-  --brand-ring: #a7f3d0;
+  /* PRIMÁRIO — Navy institucional Casa de Deus */
+  --brand: #0d2b5c;
+  --brand-strong: #0a2148;
+  --brand-text: #143a78;
+  --brand-faint: #eef2f8;
+  --brand-soft: #dbe3ef;
+  --brand-edge: #9fb2d0;
+  --brand-ring: #b9c7e0;
 
-  --danger: #dc2626;
-  --danger-strong: #b91c1c;
-  --danger-text: #b91c1c;
-  --danger-faint: #fef2f2;
-  --danger-soft: #fee2e2;
-  --danger-edge: #fca5a5;
+  /* POSITIVO — Verde */
+  --success: #2e7d52;
+  --success-strong: #24623f;
+  --success-text: #1f6b45;
+  --success-faint: #edf6f0;
+  --success-soft: #d3e8db;
+  --success-edge: #a3cdb3;
+  --success-ring: #b7d9c4;
 
-  --warn: #f59e0b;
-  --warn-text: #b45309;
-  --warn-faint: #fffbeb;
-  --warn-soft: #fef3c7;
-  --warn-edge: #fde68a;
+  /* DESTRUTIVO — Vermelho Ágape */
+  --danger: #e1352a;
+  --danger-strong: #c5281e;
+  --danger-text: #c5281e;
+  --danger-faint: #fdecea;
+  --danger-soft: #f8d5d2;
+  --danger-edge: #ef8079;
 
-  --info-text: #0369a1;
-  --info-faint: #f0f9ff;
-  --info-soft: #e0f2fe;
-  --info-edge: #bae6fd;
+  /* ATENÇÃO — Dourado */
+  --warn: #b8860b;
+  --warn-text: #8a6608;
+  --warn-faint: #fbf4e2;
+  --warn-soft: #f1e4bf;
+  --warn-edge: #e2cd8c;
+
+  /* NEUTRO/INFORMATIVO — navy suave */
+  --info-text: #143a78;
+  --info-faint: #eef2f8;
+  --info-soft: #dbe3ef;
+  --info-edge: #9fb2d0;
+
+  /* ACENTO — Vermelho Ágape (assinatura, "Hoje", aniversário) */
+  --accent: #e1352a;
+  --accent-strong: #c5281e;
+  --accent-text: #c5281e;
+  --accent-faint: #fdecea;
+  --accent-soft: #f8d5d2;
+  --accent-edge: #ef8079;
 }
 
 .dark {
   color-scheme: dark;
 
-  --surface: #18181b;
-  --surface-2: #09090b;
-  --surface-3: #27272a;
-  --ink: #f4f4f5;
-  --ink-soft: #d4d4d8;
-  --ink-subtle: #a1a1aa;
-  --ink-faint: #71717a;
-  --edge: #3f3f46;
-  --edge-soft: #27272a;
-  --overlay: rgb(0 0 0 / 0.65);
+  --surface: #191b21; /* grafite-navy */
+  --surface-2: #101218;
+  --surface-3: #262a33;
+  --ink: #f3f1ec; /* off-white quente */
+  --ink-soft: #cfccc4;
+  --ink-subtle: #9a988f;
+  --ink-faint: #6c6a63;
+  --edge: #3a3f49;
+  --edge-soft: #262a33;
+  --overlay: rgb(0 0 0 / 0.66);
 
-  --brand: #059669;
-  --brand-strong: #047857;
-  --brand-text: #34d399;
-  --brand-faint: rgb(16 185 129 / 0.1);
-  --brand-soft: rgb(16 185 129 / 0.18);
-  --brand-edge: rgb(52 211 153 / 0.4);
-  --brand-ring: rgb(16 185 129 / 0.35);
+  /* Navy mais claro para saltar sobre o grafite */
+  --brand: #3f6fb8;
+  --brand-strong: #33609f;
+  --brand-text: #8fb2e6;
+  --brand-faint: rgb(63 111 184 / 0.12);
+  --brand-soft: rgb(63 111 184 / 0.22);
+  --brand-edge: rgb(143 178 230 / 0.4);
+  --brand-ring: rgb(63 111 184 / 0.4);
 
-  --danger: #dc2626;
-  --danger-strong: #b91c1c;
-  --danger-text: #f87171;
-  --danger-faint: rgb(239 68 68 / 0.1);
-  --danger-soft: rgb(239 68 68 / 0.18);
-  --danger-edge: rgb(248 113 113 / 0.4);
+  --success: #3fa06a;
+  --success-strong: #2e7d52;
+  --success-text: #6fce9c;
+  --success-faint: rgb(63 160 106 / 0.12);
+  --success-soft: rgb(63 160 106 / 0.2);
+  --success-edge: rgb(111 206 156 / 0.4);
+  --success-ring: rgb(63 160 106 / 0.38);
 
-  --warn: #f59e0b;
-  --warn-text: #fbbf24;
-  --warn-faint: rgb(245 158 11 / 0.1);
-  --warn-soft: rgb(245 158 11 / 0.18);
-  --warn-edge: rgb(251 191 36 / 0.4);
+  --danger: #e1352a;
+  --danger-strong: #c5281e;
+  --danger-text: #f2867e;
+  --danger-faint: rgb(225 53 42 / 0.12);
+  --danger-soft: rgb(225 53 42 / 0.2);
+  --danger-edge: rgb(239 128 121 / 0.42);
 
-  --info-text: #38bdf8;
-  --info-faint: rgb(14 165 233 / 0.1);
-  --info-soft: rgb(14 165 233 / 0.18);
-  --info-edge: rgb(56 189 248 / 0.4);
+  --warn: #cc9a1f;
+  --warn-text: #e6c477;
+  --warn-faint: rgb(204 154 31 / 0.12);
+  --warn-soft: rgb(204 154 31 / 0.2);
+  --warn-edge: rgb(230 196 119 / 0.4);
+
+  --info-text: #8fb2e6;
+  --info-faint: rgb(63 111 184 / 0.12);
+  --info-soft: rgb(63 111 184 / 0.22);
+  --info-edge: rgb(143 178 230 / 0.4);
+
+  --accent: #ef5a50;
+  --accent-strong: #e1352a;
+  --accent-text: #f2867e;
+  --accent-faint: rgb(225 53 42 / 0.12);
+  --accent-soft: rgb(225 53 42 / 0.2);
+  --accent-edge: rgb(239 128 121 / 0.42);
 }
 
 @theme inline {
@@ -127,6 +172,14 @@
   --color-brand-edge: var(--brand-edge);
   --color-brand-ring: var(--brand-ring);
 
+  --color-success: var(--success);
+  --color-success-strong: var(--success-strong);
+  --color-success-text: var(--success-text);
+  --color-success-faint: var(--success-faint);
+  --color-success-soft: var(--success-soft);
+  --color-success-edge: var(--success-edge);
+  --color-success-ring: var(--success-ring);
+
   --color-danger: var(--danger);
   --color-danger-strong: var(--danger-strong);
   --color-danger-text: var(--danger-text);
@@ -145,9 +198,21 @@
   --color-info-soft: var(--info-soft);
   --color-info-edge: var(--info-edge);
 
-  --font-sans:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial,
-    sans-serif;
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-text: var(--accent-text);
+  --color-accent-faint: var(--accent-faint);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-edge: var(--accent-edge);
+
+  /* Famílias tipográficas da marca (ligadas em src/app/layout.tsx via
+     next/font, que injeta as vars --font-oswald/-montserrat/-kaushan/-cormorant
+     no <html>). @theme compõe as famílias semânticas e gera as utilities
+     font-sans / font-display / font-script / font-serif. */
+  --font-sans: var(--font-montserrat), "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-oswald), "Arial Narrow", sans-serif;
+  --font-script: var(--font-kaushan), cursive;
+  --font-serif: var(--font-cormorant), Georgia, serif;
 }
 
 body {
@@ -169,4 +234,32 @@ select option,
 select optgroup {
   background-color: var(--surface);
   color: var(--ink);
+}
+
+/* Motivo "dot-grid": cluster de pontos da marca, usado em fundos (login,
+   estados vazios). Aplique via a classe utilitária .agape-dots. */
+.agape-dots {
+  background-image: radial-gradient(var(--edge) 1.2px, transparent 1.4px);
+  background-size: 22px 22px;
+}
+
+/* Crédito Lebrai no rodapé: brilho neon dourado ao passar o mouse sobre o
+   logo ou o site. */
+.link-lebrai .lebrai-logo,
+.link-lebrai .lebrai-site {
+  transition:
+    filter 0.25s ease,
+    text-shadow 0.25s ease,
+    color 0.25s ease;
+}
+.link-lebrai:hover .lebrai-logo,
+.link-lebrai:focus-visible .lebrai-logo {
+  filter: drop-shadow(0 0 4px #e8c766) drop-shadow(0 0 11px #b8860b);
+}
+.link-lebrai:hover .lebrai-site,
+.link-lebrai:focus-visible .lebrai-site {
+  color: #e8c766;
+  text-shadow:
+    0 0 6px #e8c766,
+    0 0 14px #b8860b;
 }

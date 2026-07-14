@@ -24,7 +24,7 @@ export default async function PerfilPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <header className="mb-6">
-        <h1 className="text-2xl font-bold text-ink">Meu Perfil</h1>
+        <h1 className="text-3xl font-display font-semibold uppercase tracking-wide text-ink">Meu Perfil</h1>
         <p className="mt-1 text-sm text-ink-soft">
           Dados cadastrais e informações da sua conta.
         </p>

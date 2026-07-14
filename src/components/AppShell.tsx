@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import type { ItemMenu } from "@/lib/nav";
 import { ThemeToggle } from "@/components/ThemeProvider";
 import { Avatar } from "@/components/Avatar";
+import { AgapeLogo } from "@/components/AgapeLogo";
 import { Rodape } from "@/components/Rodape";
 
 type Props = {
@@ -53,9 +54,7 @@ export function AppShell({ itens, usuario, children }: Props) {
     <div className="flex min-h-full flex-1 flex-col md:flex-row">
       {/* Topo (mobile) */}
       <header className="flex items-center justify-between border-b border-edge-soft bg-surface px-4 py-3 md:hidden">
-        <div className="flex items-center gap-2">
-          <span className="text-lg font-bold text-brand-text">Ágape</span>
-        </div>
+        <AgapeLogo markSize={34} />
         <div className="flex items-center gap-1">
           <ThemeToggle />
           <button
@@ -83,10 +82,7 @@ export function AppShell({ itens, usuario, children }: Props) {
       {/* Barra lateral (desktop) */}
       <aside className="hidden w-64 shrink-0 flex-col border-r border-edge-soft bg-surface p-4 md:flex">
         <div className="mb-4 flex items-start justify-between gap-2 px-1">
-          <div>
-            <p className="text-xl font-bold text-brand-text">Ministério Ágape</p>
-            <p className="text-xs text-ink-subtle">IBCD · Jundiaí/SP</p>
-          </div>
+          <AgapeLogo markSize={40} subtitulo="IBCD · Jundiaí/SP" />
           <ThemeToggle className="-mr-1" />
         </div>
         <PainelUsuario usuario={usuario} />

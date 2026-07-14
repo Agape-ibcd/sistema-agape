@@ -182,12 +182,24 @@ export type SerieEquipe = {
   taxaPresenca: number;
 };
 
+// Detalhamento por equipe dentro de um tipo de culto (para o hover/relatório).
+export type SerieEquipeMini = {
+  equipeId: string;
+  nome: string;
+  corHex: string | null;
+  convocacoes: number;
+  presentes: number;
+  taxaPresenca: number;
+};
+
 export type SerieTipo = {
   tipoEventoId: string;
   nome: string;
   convocacoes: number;
   presentes: number;
   taxaPresenca: number;
+  // Equipes escaladas neste tipo de culto, com presença e % de cada uma.
+  equipes: SerieEquipeMini[];
 };
 
 export type SerieEvento = {
@@ -239,6 +251,9 @@ export function seriesPorEquipe(linhas: LinhaPresenca[]): SerieEquipe[] {
 
 export function seriesPorTipo(linhas: LinhaPresenca[]): SerieTipo[] {
   const mapa = new Map<string, SerieTipo>();
+  // Detalhamento equipe→números dentro de cada tipo.
+  const equipesPorTipo = new Map<string, Map<string, SerieEquipeMini>>();
+
   for (const l of linhas) {
     const id = l.evento.tipoEvento.id;
     let s = mapa.get(id);
@@ -249,14 +264,38 @@ export function seriesPorTipo(linhas: LinhaPresenca[]): SerieTipo[] {
         convocacoes: 0,
         presentes: 0,
         taxaPresenca: 0,
+        equipes: [],
       };
       mapa.set(id, s);
+      equipesPorTipo.set(id, new Map());
     }
     s.convocacoes += 1;
     if (l.presente) s.presentes += 1;
+
+    const eqMap = equipesPorTipo.get(id)!;
+    let e = eqMap.get(l.equipeId);
+    if (!e) {
+      e = {
+        equipeId: l.equipeId,
+        nome: l.equipe.nome,
+        corHex: l.equipe.corHex,
+        convocacoes: 0,
+        presentes: 0,
+        taxaPresenca: 0,
+      };
+      eqMap.set(l.equipeId, e);
+    }
+    e.convocacoes += 1;
+    if (l.presente) e.presentes += 1;
   }
+
   const arr = [...mapa.values()];
-  arr.forEach((s) => (s.taxaPresenca = pct(s.presentes, s.convocacoes)));
+  for (const s of arr) {
+    s.taxaPresenca = pct(s.presentes, s.convocacoes);
+    const eqMap = equipesPorTipo.get(s.tipoEventoId)!;
+    for (const e of eqMap.values()) e.taxaPresenca = pct(e.presentes, e.convocacoes);
+    s.equipes = [...eqMap.values()].sort((a, b) => b.presentes - a.presentes);
+  }
   return arr.sort((a, b) => b.convocacoes - a.convocacoes);
 }
 

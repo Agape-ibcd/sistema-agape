@@ -37,7 +37,7 @@ function KpiCard({
     <div
       className={`rounded-2xl border p-4 ${
         destaque
-          ? "border-brand-edge bg-brand-faint"
+          ? "border-success-edge bg-success-faint"
           : "border-edge-soft bg-surface"
       }`}
     >
@@ -45,8 +45,8 @@ function KpiCard({
         {rotulo}
       </p>
       <p
-        className={`mt-1 text-2xl font-bold tabular-nums ${
-          destaque ? "text-brand-text" : "text-ink"
+        className={`mt-1 font-display text-3xl font-semibold tabular-nums ${
+          destaque ? "text-success-text" : "text-ink"
         }`}
       >
         {valor}
@@ -75,7 +75,7 @@ export default async function DashboardPage({
     <div className="mx-auto max-w-6xl">
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-ink">
+          <h1 className="text-3xl font-display font-semibold uppercase tracking-wide text-ink">
             {TITULO[escopo]}
           </h1>
           <p className="mt-1 text-sm text-ink-soft">
@@ -148,6 +148,7 @@ export default async function DashboardPage({
           porEvento={dados.porEvento}
           composicao={dados.composicao}
           mostrarEquipes={escopo === "geral"}
+          periodo={periodo}
         />
       </section>
 

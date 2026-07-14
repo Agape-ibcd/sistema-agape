@@ -16,30 +16,32 @@ export type CoresGraficos = {
   tooltipTexto: string;
 };
 
+// Paleta Ágape: presença/pontual = verde (positivo), atraso = dourado,
+// ausência = vermelho Ágape, linha de evolução = navy (primário).
 const CLARO: CoresGraficos = {
-  presenca: "#059669", // emerald-600
-  pontual: "#10b981", // emerald-500
-  atraso: "#f59e0b", // amber-500
-  ausencia: "#f43f5e", // rose-500
-  linha: "#0ea5e9", // sky-500
-  grade: "#f4f4f5", // zinc-100
-  eixo: "#71717a", // zinc-500
+  presenca: "#2e7d52", // verde sucesso
+  pontual: "#3fa06a", // verde mais claro
+  atraso: "#b8860b", // dourado
+  ausencia: "#e1352a", // vermelho Ágape
+  linha: "#0d2b5c", // navy institucional
+  grade: "#e3e1dc", // gray-200 (papel)
+  eixo: "#6b6b6b",
   tooltipFundo: "#ffffff",
-  tooltipBorda: "#e4e4e7", // zinc-200
-  tooltipTexto: "#18181b", // zinc-900
+  tooltipBorda: "#e3e1dc",
+  tooltipTexto: "#1a1a1a",
 };
 
 const ESCURO: CoresGraficos = {
-  presenca: "#10b981", // emerald-500 (mais viva sobre fundo escuro)
-  pontual: "#34d399", // emerald-400
-  atraso: "#fbbf24", // amber-400
-  ausencia: "#fb7185", // rose-400
-  linha: "#38bdf8", // sky-400
-  grade: "#27272a", // zinc-800
-  eixo: "#a1a1aa", // zinc-400
-  tooltipFundo: "#18181b", // zinc-900
-  tooltipBorda: "#3f3f46", // zinc-700
-  tooltipTexto: "#f4f4f5", // zinc-100
+  presenca: "#3fa06a", // verde vivo sobre grafite
+  pontual: "#6fce9c",
+  atraso: "#d6a93a", // dourado claro
+  ausencia: "#ef5a50", // vermelho Ágape claro
+  linha: "#6f97d6", // navy claro
+  grade: "#262a33",
+  eixo: "#9a988f",
+  tooltipFundo: "#191b21",
+  tooltipBorda: "#3a3f49",
+  tooltipTexto: "#f3f1ec",
 };
 
 export function coresGraficos(tema: Tema): CoresGraficos {

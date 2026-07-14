@@ -198,7 +198,7 @@ function IndicadorSave({
   if (status === "salvando")
     return <span className="text-xs text-ink-subtle">salvando…</span>;
   if (status === "salvo")
-    return <span className="text-xs font-medium text-brand-text">salvo ✓</span>;
+    return <span className="text-xs font-medium text-success-text">salvo ✓</span>;
   return (
     <button
       type="button"
@@ -406,7 +406,7 @@ function LinhaPresenca({
         <Segmentado
           valor={naoLancado ? null : presente ? "sim" : "nao"}
           opcoes={[
-            { valor: "sim", rotulo: "Presente", corAtiva: "bg-brand text-white" },
+            { valor: "sim", rotulo: "Presente", corAtiva: "bg-success text-white" },
             { valor: "nao", rotulo: "Ausente", corAtiva: "bg-warn text-white" },
           ]}
           onEscolher={(v) => {
@@ -423,7 +423,7 @@ function LinhaPresenca({
                 {
                   valor: "pontual",
                   rotulo: "Pontual",
-                  corAtiva: "bg-brand text-white",
+                  corAtiva: "bg-success text-white",
                 },
                 {
                   valor: "atrasado",

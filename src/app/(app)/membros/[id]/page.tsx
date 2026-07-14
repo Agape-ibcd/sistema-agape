@@ -33,7 +33,7 @@ export default async function EditarMembroPage({
           ← Membros
         </Link>
         <div className="mt-1 flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-bold text-ink">{membro.nomeCompleto}</h1>
+          <h1 className="text-3xl font-display font-semibold uppercase tracking-wide text-ink">{membro.nomeCompleto}</h1>
           <span className="rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-medium text-brand-text">
             {ROTULO_NIVEL[membro.nivelAcesso]}
           </span>

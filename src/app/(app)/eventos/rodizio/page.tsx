@@ -60,7 +60,7 @@ export default async function RodizioPage() {
         <Link href="/eventos" className="text-sm text-brand-text hover:underline">
           ← Voltar ao calendário
         </Link>
-        <h1 className="mt-2 text-2xl font-bold text-ink">Rodízio de escalas</h1>
+        <h1 className="mt-2 text-3xl font-display font-semibold uppercase tracking-wide text-ink">Rodízio de escalas</h1>
         <p className="mt-1 text-sm text-ink-soft">
           Revezamento automático das equipes: aos domingos cada equipe cobre o
           seu turno; nos demais dias da semana (e nos eventos avulsos) as duas
