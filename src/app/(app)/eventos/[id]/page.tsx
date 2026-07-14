@@ -82,6 +82,7 @@ export default async function EventoPage({
       <div className="space-y-6">
         <EscalasPanel
           eventoId={evento.id}
+          dataEventoISO={formatarDataISO(evento.dataEvento)}
           escalas={evento.escalas.map((e) => ({
             id: e.id,
             equipeNome: e.equipe.nome,

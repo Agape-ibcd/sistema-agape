@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useActionState } from "react";
-import { escalarEquipe, propagarEscala, removerEscala } from "../actions";
+import Link from "next/link";
+import {
+  escalarEquipe,
+  propagarEscala,
+  removerEscala,
+  trocarEscala,
+} from "../actions";
 import { FeedbackModal } from "@/components/FeedbackModal";
 
 type Escala = {
@@ -15,6 +21,7 @@ type Escala = {
 
 type Props = {
   eventoId: string;
+  dataEventoISO: string; // "YYYY-MM-DD" — p/ o atalho de registro de presença
   escalas: Escala[];
   equipesDisponiveis: { id: string; nome: string; corHex: string | null }[];
   cancelado: boolean;
@@ -31,6 +38,7 @@ const ROTULO_TIPO_ESCALA = {
 
 export function EscalasPanel({
   eventoId,
+  dataEventoISO,
   escalas,
   equipesDisponiveis,
   cancelado,
@@ -39,8 +47,11 @@ export function EscalasPanel({
   const [estadoEscalar, escalarAction, pEscalar] = useActionState(escalarEquipe, null);
   const [estadoPropagar, propagarAction, pPropagar] = useActionState(propagarEscala, null);
   const [estadoRemover, removerAction, pRemover] = useActionState(removerEscala, null);
+  const [estadoTrocar, trocarAction, pTrocar] = useActionState(trocarEscala, null);
   // ts da pergunta de propagação já respondida/dispensada.
   const [propagacaoDispensada, setPropagacaoDispensada] = useState<number | null>(null);
+  // Escala com o painel "trocar equipe" aberto.
+  const [trocandoId, setTrocandoId] = useState<string | null>(null);
 
   const inputCls =
     "w-full rounded-xl border border-edge px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-ring";
@@ -64,35 +75,101 @@ export function EscalasPanel({
           </li>
         )}
         {escalas.map((e) => (
-          <li key={e.id} className="flex items-center gap-3 py-2.5">
-            <span
-              className="h-3.5 w-3.5 shrink-0 rounded-full border border-edge-soft"
-              style={{ backgroundColor: e.corHex ?? "#a1a1aa" }}
-              aria-hidden
-            />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-ink">{e.equipeNome}</p>
-              <p className="text-xs text-ink-subtle">
-                {ROTULO_TIPO_ESCALA[e.tipoEscala]}
-                {e.origem === "rodizio" ? " · rodízio" : ""}
-                {e.observacao ? ` · ${e.observacao}` : ""}
-              </p>
+          <li key={e.id} className="py-2.5">
+            <div className="flex items-center gap-3">
+              <span
+                className="h-3.5 w-3.5 shrink-0 rounded-full border border-edge-soft"
+                style={{ backgroundColor: e.corHex ?? "#a1a1aa" }}
+                aria-hidden
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-ink">{e.equipeNome}</p>
+                <p className="text-xs text-ink-subtle">
+                  {ROTULO_TIPO_ESCALA[e.tipoEscala]}
+                  {e.origem === "rodizio" ? " · rodízio" : ""}
+                  {e.observacao ? ` · ${e.observacao}` : ""}
+                </p>
+              </div>
+              {!somenteLeitura && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {/* Atalho: registro de presença já no evento/equipe certos */}
+                  <Link
+                    href={`/presenca?ref=${dataEventoISO}&eventoId=${eventoId}`}
+                    className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-strong"
+                  >
+                    Presença
+                  </Link>
+                  {equipesDisponiveis.length > 0 && !cancelado && (
+                    <button
+                      type="button"
+                      onClick={() => setTrocandoId(trocandoId === e.id ? null : e.id)}
+                      className="rounded-lg border border-edge px-3 py-1.5 text-xs font-medium text-ink-soft hover:bg-surface-2"
+                    >
+                      Trocar
+                    </button>
+                  )}
+                  <form
+                    action={removerAction}
+                    onSubmit={(ev) => {
+                      if (!window.confirm(`Remover a equipe ${e.equipeNome} da escala?`))
+                        ev.preventDefault();
+                    }}
+                  >
+                    <input type="hidden" name="escalaId" value={e.id} />
+                    <button
+                      type="submit"
+                      disabled={pRemover}
+                      className="rounded-lg border border-edge px-3 py-1.5 text-xs font-medium text-ink-soft hover:border-danger-edge hover:bg-danger-faint hover:text-danger-text disabled:opacity-60"
+                    >
+                      Remover
+                    </button>
+                  </form>
+                </div>
+              )}
             </div>
-            {!somenteLeitura && (
+
+            {/* Trocar equipe: remove esta e escala a nova (bloqueado se já há
+                presenças ativas da equipe atual neste evento). */}
+            {trocandoId === e.id && !somenteLeitura && (
               <form
-                action={removerAction}
+                action={trocarAction}
                 onSubmit={(ev) => {
-                  if (!window.confirm(`Remover a equipe ${e.equipeNome} da escala?`))
+                  const sel = ev.currentTarget.elements.namedItem(
+                    "novaEquipeId",
+                  ) as HTMLSelectElement;
+                  const nome =
+                    sel.selectedOptions[0]?.textContent ?? "a nova equipe";
+                  if (
+                    !window.confirm(
+                      `Trocar ${e.equipeNome} por ${nome} neste evento?`,
+                    )
+                  )
                     ev.preventDefault();
                 }}
+                className="mt-2 flex flex-wrap items-center gap-2 rounded-xl bg-surface-2 p-3"
               >
                 <input type="hidden" name="escalaId" value={e.id} />
+                <select
+                  name="novaEquipeId"
+                  required
+                  defaultValue=""
+                  className={`${inputCls} min-w-40 flex-1`}
+                >
+                  <option value="" disabled>
+                    Trocar por…
+                  </option>
+                  {equipesDisponiveis.map((eq) => (
+                    <option key={eq.id} value={eq.id}>
+                      {eq.nome}
+                    </option>
+                  ))}
+                </select>
                 <button
                   type="submit"
-                  disabled={pRemover}
-                  className="rounded-lg border border-edge px-3 py-1.5 text-xs font-medium text-ink-soft hover:border-danger-edge hover:bg-danger-faint hover:text-danger-text disabled:opacity-60"
+                  disabled={pTrocar}
+                  className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-60"
                 >
-                  Remover
+                  {pTrocar ? "Trocando…" : "Trocar"}
                 </button>
               </form>
             )}
@@ -194,6 +271,12 @@ export function EscalasPanel({
       {!estadoEscalar?.propagacao && <FeedbackModal estado={estadoEscalar} />}
       <FeedbackModal estado={estadoPropagar} />
       <FeedbackModal estado={estadoRemover} />
+      <FeedbackModal
+        estado={estadoTrocar}
+        onFechar={(ev) => {
+          if (ev.ok) setTrocandoId(null);
+        }}
+      />
     </section>
   );
 }

@@ -413,3 +413,91 @@ export async function alternarStatusEvento(
     );
   }
 }
+
+// Troca a equipe de uma escala existente (remover + escalar em uma transação).
+// Bloqueia se a equipe atual já tem lançamentos ativos de presença no evento —
+// nesse caso o certo é excluí-los antes, ou escalar a nova equipe em paralelo.
+export async function trocarEscala(
+  _prev: EstadoAcao,
+  formData: FormData,
+): Promise<EstadoAcao> {
+  const usuario = await requirePermissao("gerenciar_escalas");
+  const escalaId = String(formData.get("escalaId") ?? "");
+  const novaEquipeId = String(formData.get("novaEquipeId") ?? "");
+  if (!novaEquipeId) return falha("Selecione a nova equipe.");
+
+  try {
+    const escala = await prisma.escalaEquipeEvento.findUnique({
+      where: { id: escalaId },
+      include: {
+        equipe: { select: { nome: true } },
+        evento: { select: { id: true, status: true } },
+      },
+    });
+    if (!escala) return falha("Escala não encontrada.");
+    if (escala.evento.status === "cancelado") {
+      return falha("Evento cancelado — reative-o para alterar a escala.");
+    }
+    if (novaEquipeId === escala.equipeId) {
+      return falha("A nova equipe é a mesma que já está escalada.");
+    }
+
+    const nova = await prisma.equipe.findUnique({ where: { id: novaEquipeId } });
+    if (!nova || nova.status !== "ativa") {
+      return falha("Equipe não encontrada ou inativa.");
+    }
+
+    const jaEscalada = await prisma.escalaEquipeEvento.findFirst({
+      where: { eventoId: escala.eventoId, equipeId: novaEquipeId },
+    });
+    if (jaEscalada) {
+      return falha(`${nova.nome} já está escalada neste evento.`);
+    }
+
+    const presencasAtivas = await prisma.presenca.count({
+      where: {
+        eventoId: escala.eventoId,
+        equipeId: escala.equipeId,
+        excluidoEm: null,
+      },
+    });
+    if (presencasAtivas > 0) {
+      return falha(
+        `Há ${presencasAtivas} lançamento(s) de presença da equipe ${escala.equipe.nome} neste evento. Exclua-os antes de trocar — ou escale a nova equipe em paralelo, sem remover a atual.`,
+      );
+    }
+
+    await prisma.$transaction([
+      prisma.escalaEquipeEvento.delete({ where: { id: escalaId } }),
+      prisma.escalaEquipeEvento.create({
+        data: {
+          eventoId: escala.eventoId,
+          equipeId: novaEquipeId,
+          tipoEscala: escala.tipoEscala,
+          origem: "manual", // troca feita por pessoa → evento vira personalizado
+          observacao: escala.observacao,
+          criadoPor: usuario.membroId,
+        },
+      }),
+    ]);
+
+    await writeAudit({
+      usuarioId: usuario.membroId,
+      acao: "trocar_escala",
+      tabelaAfetada: "escala_equipe_evento",
+      registroId: escalaId,
+      dadosAnteriores: { eventoId: escala.eventoId, equipe: escala.equipe.nome },
+      dadosNovos: { eventoId: escala.eventoId, equipe: nova.nome },
+    });
+
+    revalidarCalendario(escala.eventoId);
+    revalidatePath("/presenca");
+    return sucesso(
+      `Escala alterada: ${escala.equipe.nome} → ${nova.nome}.`,
+    );
+  } catch (erro) {
+    return falha(
+      `Erro ao trocar a escala: ${erro instanceof Error ? erro.message : "falha desconhecida"}`,
+    );
+  }
+}

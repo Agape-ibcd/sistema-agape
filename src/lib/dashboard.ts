@@ -2,6 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { can } from "@/lib/rbac";
 import { parseDataISO, formatarDataISO } from "@/lib/recorrencia";
+import { intervaloPeriodo, PERIODO_PADRAO } from "@/lib/periodos";
 import type { UsuarioAtual } from "@/lib/auth";
 import type { Prisma, Pontualidade } from "@prisma/client";
 
@@ -24,8 +25,6 @@ import type { Prisma, Pontualidade } from "@prisma/client";
 // exportações podem opcionalmente incluir linhas excluídas (com status), mas
 // elas nunca entram nos KPIs.
 // ─────────────────────────────────────────────────────────────────────────
-
-const DIA_MS = 86_400_000;
 
 // ── Escopo por nível de acesso ───────────────────────────────────────────
 // geral   → admin/super_admin/monitor: vê tudo, filtra qualquer equipe/membro
@@ -56,11 +55,6 @@ export type FiltrosDashboard = {
   membroId: string | null;
 };
 
-function hojeUTC(): Date {
-  const a = new Date();
-  return new Date(Date.UTC(a.getFullYear(), a.getMonth(), a.getDate()));
-}
-
 // Resolve os filtros a partir da querystring APLICANDO as restrições de escopo
 // no servidor — nunca confia no que veio do cliente para equipe/membro.
 export function resolverFiltros(
@@ -69,10 +63,10 @@ export function resolverFiltros(
 ): FiltrosDashboard {
   const escopo = escopoDoUsuario(usuario);
 
-  const hoje = hojeUTC();
-  const padraoInicio = new Date(hoje.getTime() - 90 * DIA_MS);
-  const inicio = (params.inicio && parseDataISO(params.inicio)) || padraoInicio;
-  const fim = (params.fim && parseDataISO(params.fim)) || hoje;
+  // Padrão sem período na URL: a SEMANA ATUAL (domingo a sábado).
+  const padrao = intervaloPeriodo(PERIODO_PADRAO);
+  const inicio = (params.inicio && parseDataISO(params.inicio)) || padrao.inicio;
+  const fim = (params.fim && parseDataISO(params.fim)) || padrao.fim;
 
   let equipeId: string | null = params.equipe?.trim() || null;
   let membroId: string | null = params.membro?.trim() || null;

@@ -55,6 +55,10 @@ type Props = {
   equipeId: string;
   horarioChegadaSugerido: string;
   membros: MembroLinha[];
+  // Nome/cor da equipe no título — a página mostra uma lista por equipe
+  // escalada quando o evento tem mais de uma.
+  equipeNome?: string;
+  corHex?: string | null;
 };
 
 type StatusSave = "ocioso" | "pendente" | "salvando" | "salvo" | "erro";
@@ -64,6 +68,8 @@ export function ListaPresenca({
   equipeId,
   horarioChegadaSugerido,
   membros,
+  equipeNome,
+  corHex,
 }: Props) {
   const [estadoExcluir, excluirAction] = useActionState(excluirPresenca, null);
   const [estadoRestaurar, restaurarAction] = useActionState(
@@ -85,8 +91,19 @@ export function ListaPresenca({
   return (
     <section className="rounded-2xl border border-edge-soft bg-surface p-4 sm:p-5">
       <div className="mb-1 flex items-center justify-between gap-2">
-        <h2 className="text-base font-semibold text-ink">Presença da equipe</h2>
-        <span className="rounded-full bg-surface-3 px-2.5 py-0.5 text-xs font-medium text-ink-soft">
+        <h2 className="flex min-w-0 items-center gap-2 text-base font-semibold text-ink">
+          {corHex !== undefined && (
+            <span
+              className="h-3 w-3 shrink-0 rounded-full border border-edge-soft"
+              style={{ backgroundColor: corHex ?? "#a1a1aa" }}
+              aria-hidden
+            />
+          )}
+          <span className="truncate">
+            {equipeNome ? `Presença · ${equipeNome}` : "Presença da equipe"}
+          </span>
+        </h2>
+        <span className="shrink-0 rounded-full bg-surface-3 px-2.5 py-0.5 text-xs font-medium text-ink-soft">
           {totalLancados} de {membros.length} lançados
         </span>
       </div>

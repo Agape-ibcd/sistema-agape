@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { formatarDataISO } from "@/lib/recorrencia";
+import { PERIODOS, intervaloPeriodo, type PeriodoId } from "@/lib/periodos";
 import type {
   EscopoDashboard,
   FiltrosDashboard as Filtros,
@@ -38,6 +39,30 @@ export function FiltrosDashboard({
     iniciar(() => router.push(qs ? `/dashboard?${qs}` : "/dashboard"));
   }
 
+  const inicioAtual = formatarDataISO(filtros.inicio);
+  const fimAtual = formatarDataISO(filtros.fim);
+
+  // Aplica um período pré-configurado, preservando equipe/tipo/membro atuais.
+  function aplicarPeriodo(id: PeriodoId) {
+    const { inicio, fim } = intervaloPeriodo(id);
+    const p = new URLSearchParams();
+    p.set("inicio", formatarDataISO(inicio));
+    p.set("fim", formatarDataISO(fim));
+    if (filtros.equipeId) p.set("equipe", filtros.equipeId);
+    if (filtros.tipoEventoId) p.set("tipo", filtros.tipoEventoId);
+    if (filtros.membroId) p.set("membro", filtros.membroId);
+    iniciar(() => router.push(`/dashboard?${p.toString()}`));
+  }
+
+  // Marca o botão cujo intervalo bate com o período atualmente aplicado.
+  function ehAtivo(id: PeriodoId): boolean {
+    const { inicio, fim } = intervaloPeriodo(id);
+    return (
+      formatarDataISO(inicio) === inicioAtual &&
+      formatarDataISO(fim) === fimAtual
+    );
+  }
+
   // Rechaveia o form quando os filtros resolvidos mudam, para os campos
   // (não controlados) refletirem a URL — inclusive ao "Limpar".
   const chave = [
@@ -57,17 +82,40 @@ export function FiltrosDashboard({
   const mostrarMembro = escopo !== "proprio";
 
   return (
-    <form
-      key={chave}
-      onChange={(e) => aplicar(e.currentTarget)}
-      onSubmit={(e) => {
-        e.preventDefault();
-        aplicar(e.currentTarget);
-      }}
-      className={`mb-6 flex flex-wrap items-end gap-3 rounded-2xl border border-edge-soft bg-surface p-4 transition-opacity ${
-        pendente ? "opacity-60" : ""
-      }`}
-    >
+    <div className="mb-6 space-y-3">
+      {/* Períodos pré-configurados (aplicam início/fim preservando os demais filtros) */}
+      <div className="flex flex-wrap gap-2">
+        {PERIODOS.map((p) => {
+          const ativo = ehAtivo(p.id);
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => aplicarPeriodo(p.id)}
+              aria-pressed={ativo}
+              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                ativo
+                  ? "border-brand bg-brand text-white"
+                  : "border-edge bg-surface text-ink-soft hover:bg-surface-2"
+              }`}
+            >
+              {p.rotulo}
+            </button>
+          );
+        })}
+      </div>
+
+      <form
+        key={chave}
+        onChange={(e) => aplicar(e.currentTarget)}
+        onSubmit={(e) => {
+          e.preventDefault();
+          aplicar(e.currentTarget);
+        }}
+        className={`flex flex-wrap items-end gap-3 rounded-2xl border border-edge-soft bg-surface p-4 transition-opacity ${
+          pendente ? "opacity-60" : ""
+        }`}
+      >
       <label className={labelCls}>
         Início
         <input
@@ -155,6 +203,7 @@ export function FiltrosDashboard({
           Limpar
         </button>
       </div>
-    </form>
+      </form>
+    </div>
   );
 }

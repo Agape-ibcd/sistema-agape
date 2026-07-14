@@ -3,13 +3,16 @@ import { prisma } from "@/lib/prisma";
 import { requirePermissao } from "@/lib/auth";
 import { can } from "@/lib/rbac";
 import { formatarDataISO, parseDataISO } from "@/lib/recorrencia";
-import { SeletorEquipe } from "./SeletorEquipe";
 import { ListaPresenca, type MembroLinha } from "./ListaPresenca";
 
 // ─────────────────────────────────────────────────────────────────────────
-// Registro de presença (Etapa 4) — mobile-first.
-// Navegação por querystring: ?ref=YYYY-MM-DD (semana) &equipeId=… &eventoId=…
-// Líder: travado na própria equipe. Admin/super_admin: escolhe a equipe.
+// Registro de presença — fluxo "EVENTO primeiro" (mobile-first):
+// a semana lista os eventos; ao escolher um, o sistema mostra a(s) equipe(s)
+// ESCALADAS nele com seus membros — sem precisar acertar a equipe antes.
+// Navegação por querystring: ?ref=YYYY-MM-DD (semana) &eventoId=…
+// Líder: vê apenas os eventos onde a própria equipe está escalada.
+// Admin/super: vê todos os eventos da semana (inclusive sem escala, com
+// aviso e atalho para escalar).
 // ─────────────────────────────────────────────────────────────────────────
 
 const DIA_MS = 86_400_000;
@@ -28,37 +31,15 @@ function domingoDaSemana(d: Date): Date {
 export default async function PresencaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ref?: string; equipeId?: string; eventoId?: string }>;
+  searchParams: Promise<{ ref?: string; eventoId?: string; equipeId?: string }>;
 }) {
   const usuario = await requirePermissao("registrar_presenca_propria");
   const params = await searchParams;
   const podeQualquer = can(usuario.nivelAcesso, "registrar_presenca_qualquer");
-
-  // ── Equipe em foco ───────────────────────────────────────────────────
-  let equipes: { id: string; nome: string }[] = [];
-  let equipeIdFoco: string | null = null;
-
-  if (podeQualquer) {
-    equipes = await prisma.equipe.findMany({
-      where: { status: "ativa" },
-      orderBy: { nome: "asc" },
-      select: { id: true, nome: true },
-    });
-    const pedido = params.equipeId;
-    if (pedido && equipes.some((e) => e.id === pedido)) {
-      equipeIdFoco = pedido;
-    } else if (usuario.equipeId && equipes.some((e) => e.id === usuario.equipeId)) {
-      equipeIdFoco = usuario.equipeId;
-    } else {
-      equipeIdFoco = equipes[0]?.id ?? null;
-    }
-  } else {
-    // Líder: sempre a própria equipe, sem seletor.
-    equipeIdFoco = usuario.equipeId;
-  }
+  const podeEscalar = can(usuario.nivelAcesso, "gerenciar_escalas");
 
   // Líder sem equipe vinculada.
-  if (!podeQualquer && !equipeIdFoco) {
+  if (!podeQualquer && !usuario.equipeId) {
     return (
       <div className="mx-auto max-w-3xl">
         <h1 className="text-2xl font-bold text-ink">Registrar Presença</h1>
@@ -69,23 +50,6 @@ export default async function PresencaPage({
       </div>
     );
   }
-
-  // Admin sem nenhuma equipe ativa cadastrada.
-  if (!equipeIdFoco) {
-    return (
-      <div className="mx-auto max-w-3xl">
-        <h1 className="text-2xl font-bold text-ink">Registrar Presença</h1>
-        <div className="mt-6 rounded-2xl border border-warn-edge bg-warn-faint p-6 text-sm text-warn-text">
-          Nenhuma equipe ativa cadastrada.
-        </div>
-      </div>
-    );
-  }
-
-  const equipeNomeFoco =
-    equipes.find((e) => e.id === equipeIdFoco)?.nome ??
-    usuario.equipeNome ??
-    "";
 
   // ── Janela da semana ──────────────────────────────────────────────────
   const hoje = hojeUTC();
@@ -98,25 +62,30 @@ export default async function PresencaPage({
 
   const qs = (extra: Record<string, string>) => {
     const p = new URLSearchParams();
-    if (podeQualquer && equipeIdFoco) p.set("equipeId", equipeIdFoco);
     for (const [k, v] of Object.entries(extra)) p.set(k, v);
     return `/presenca?${p.toString()}`;
   };
 
-  // Eventos da semana onde a equipe em foco está escalada (exclui cancelados).
+  // Eventos da semana (exclui cancelados). Líder: só onde a equipe dele está
+  // escalada. Admin: todos — inclusive sem escala, para poder corrigir.
   const eventos = await prisma.evento.findMany({
     where: {
       dataEvento: { gte: inicioSemana, lte: fimSemana },
       status: { not: "cancelado" },
-      escalas: { some: { equipeId: equipeIdFoco } },
+      ...(podeQualquer
+        ? {}
+        : { escalas: { some: { equipeId: usuario.equipeId! } } }),
     },
     include: {
       tipoEvento: { select: { nome: true } },
-      escalas: { include: { equipe: { select: { nome: true } } } },
-      _count: {
-        select: {
-          presencas: { where: { excluidoEm: null, equipeId: equipeIdFoco } },
+      escalas: {
+        include: {
+          equipe: { select: { id: true, nome: true, corHex: true } },
         },
+        orderBy: { dataCriacao: "asc" },
+      },
+      _count: {
+        select: { presencas: { where: { excluidoEm: null } } },
       },
     },
     orderBy: [{ dataEvento: "asc" }, { horarioInicio: "asc" }],
@@ -127,60 +96,78 @@ export default async function PresencaPage({
   const navBtn =
     "rounded-lg border border-edge bg-surface px-3 py-1.5 text-sm font-medium text-ink-soft hover:bg-surface-2";
 
-  // ── Evento selecionado → lista de presença ────────────────────────────
+  // ── Evento selecionado → uma lista de presença por equipe escalada ────
   const eventoSelecionado = params.eventoId
     ? eventos.find((e) => e.id === params.eventoId)
     : undefined;
 
-  let membrosLinha: MembroLinha[] = [];
+  let secoes: {
+    equipe: { id: string; nome: string; corHex: string | null };
+    membros: MembroLinha[];
+  }[] = [];
+
   if (eventoSelecionado) {
-    const [membros, presencas] = await Promise.all([
-      prisma.membro.findMany({
-        where: { equipeId: equipeIdFoco, status: "ativo" },
-        orderBy: { nomeCompleto: "asc" },
-        select: { id: true, nomeCompleto: true },
-      }),
-      prisma.presenca.findMany({
-        where: { eventoId: eventoSelecionado.id, equipeId: equipeIdFoco },
-        orderBy: { dataRegistro: "asc" },
-      }),
-    ]);
+    // Líder lança apenas a própria equipe (o servidor valida de novo na action).
+    const equipesDoEvento = eventoSelecionado.escalas
+      .map((esc) => esc.equipe)
+      .filter((eq) => podeQualquer || eq.id === usuario.equipeId);
+    const equipeIds = equipesDoEvento.map((eq) => eq.id);
 
-    membrosLinha = membros.map((m) => {
-      const doMembro = presencas.filter((p) => p.membroId === m.id);
-      const ativo = doMembro.find((p) => p.excluidoEm === null) ?? null;
-      // Excluído mais recente (só relevante quando não há ativo).
-      const excluido =
-        doMembro
-          .filter((p) => p.excluidoEm !== null)
-          .sort(
-            (a, b) =>
-              (b.excluidoEm?.getTime() ?? 0) - (a.excluidoEm?.getTime() ?? 0),
-          )[0] ?? null;
+    if (equipeIds.length > 0) {
+      const [membros, presencas] = await Promise.all([
+        prisma.membro.findMany({
+          where: { equipeId: { in: equipeIds }, status: "ativo" },
+          orderBy: { nomeCompleto: "asc" },
+          select: { id: true, nomeCompleto: true, equipeId: true },
+        }),
+        prisma.presenca.findMany({
+          where: { eventoId: eventoSelecionado.id, equipeId: { in: equipeIds } },
+          orderBy: { dataRegistro: "asc" },
+        }),
+      ]);
 
-      return {
-        id: m.id,
-        nome: m.nomeCompleto,
-        ativo: ativo
-          ? {
-              id: ativo.id,
-              presente: ativo.presente,
-              pontualidade: ativo.pontualidade,
-              horarioChegada: ativo.horarioChegada,
-              justificativaAusencia: ativo.justificativaAusencia,
-            }
-          : null,
-        excluido:
-          !ativo && excluido
-            ? {
-                id: excluido.id,
-                presente: excluido.presente,
-                pontualidade: excluido.pontualidade,
-                motivoExclusao: excluido.motivoExclusao,
-              }
-            : null,
-      };
-    });
+      secoes = equipesDoEvento.map((eq) => ({
+        equipe: eq,
+        membros: membros
+          .filter((m) => m.equipeId === eq.id)
+          .map((m) => {
+            const doMembro = presencas.filter(
+              (p) => p.membroId === m.id && p.equipeId === eq.id,
+            );
+            const ativo = doMembro.find((p) => p.excluidoEm === null) ?? null;
+            const excluido =
+              doMembro
+                .filter((p) => p.excluidoEm !== null)
+                .sort(
+                  (a, b) =>
+                    (b.excluidoEm?.getTime() ?? 0) -
+                    (a.excluidoEm?.getTime() ?? 0),
+                )[0] ?? null;
+            return {
+              id: m.id,
+              nome: m.nomeCompleto,
+              ativo: ativo
+                ? {
+                    id: ativo.id,
+                    presente: ativo.presente,
+                    pontualidade: ativo.pontualidade,
+                    horarioChegada: ativo.horarioChegada,
+                    justificativaAusencia: ativo.justificativaAusencia,
+                  }
+                : null,
+              excluido:
+                !ativo && excluido
+                  ? {
+                      id: excluido.id,
+                      presente: excluido.presente,
+                      pontualidade: excluido.pontualidade,
+                      motivoExclusao: excluido.motivoExclusao,
+                    }
+                  : null,
+            };
+          }),
+      }));
+    }
   }
 
   return (
@@ -188,19 +175,16 @@ export default async function PresencaPage({
       <header className="mb-4">
         <h1 className="text-2xl font-bold text-ink">Registrar Presença</h1>
         <p className="mt-1 text-sm text-ink-soft">
-          Equipe: <span className="font-medium text-ink">{equipeNomeFoco}</span>
+          Escolha o evento — o sistema mostra a(s) equipe(s) escalada(s) e seus
+          membros.
+          {!podeQualquer && usuario.equipeNome
+            ? ` Sua equipe: ${usuario.equipeNome}.`
+            : ""}
         </p>
       </header>
 
-      {/* Seletor de equipe (admin) */}
-      {podeQualquer && equipes.length > 0 && (
-        <div className="mb-4 max-w-xs">
-          <SeletorEquipe equipes={equipes} equipeIdAtual={equipeIdFoco} />
-        </div>
-      )}
-
       {eventoSelecionado ? (
-        // ── Lista de presença de um evento ─────────────────────────────
+        // ── Lançamento do evento selecionado ───────────────────────────
         <div className="space-y-4">
           <Link
             href={qs({ ref: formatarDataISO(inicioSemana) })}
@@ -225,20 +209,49 @@ export default async function PresencaPage({
               Início {eventoSelecionado.horarioInicio} · Chegada{" "}
               {eventoSelecionado.horarioChegadaEquipe}
             </p>
-            {eventoSelecionado.escalas.length > 1 && (
-              <p className="mt-2 rounded-lg bg-info-faint px-3 py-2 text-xs text-info-text">
-                Este evento tem mais de uma equipe escalada. Você está lançando a
-                presença da equipe <strong>{equipeNomeFoco}</strong>.
-              </p>
-            )}
           </div>
 
-          <ListaPresenca
-            eventoId={eventoSelecionado.id}
-            equipeId={equipeIdFoco}
-            horarioChegadaSugerido={eventoSelecionado.horarioChegadaEquipe}
-            membros={membrosLinha}
-          />
+          {eventoSelecionado.escalas.length === 0 ? (
+            // Nenhuma equipe escalada: sinaliza e oferece a correção.
+            <div className="rounded-2xl border border-warn-edge bg-warn-faint p-6 text-sm text-warn-text">
+              <p className="font-semibold">
+                Nenhuma equipe escalada neste evento.
+              </p>
+              <p className="mt-1">
+                Sem escala não há quem convocar — escale uma equipe para liberar
+                o registro de presença.
+              </p>
+              {podeEscalar ? (
+                <Link
+                  href={`/eventos/${eventoSelecionado.id}`}
+                  className="mt-3 inline-block rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong"
+                >
+                  Escalar equipe
+                </Link>
+              ) : (
+                <p className="mt-2 text-xs">
+                  Peça a um administrador para escalar a equipe.
+                </p>
+              )}
+            </div>
+          ) : secoes.length === 0 ? (
+            // Líder cujo time não está escalado neste evento (via link direto).
+            <div className="rounded-2xl border border-warn-edge bg-warn-faint p-6 text-sm text-warn-text">
+              Sua equipe não está escalada neste evento.
+            </div>
+          ) : (
+            secoes.map((s) => (
+              <ListaPresenca
+                key={s.equipe.id}
+                eventoId={eventoSelecionado.id}
+                equipeId={s.equipe.id}
+                equipeNome={s.equipe.nome}
+                corHex={s.equipe.corHex}
+                horarioChegadaSugerido={eventoSelecionado.horarioChegadaEquipe}
+                membros={s.membros}
+              />
+            ))
+          )}
         </div>
       ) : (
         // ── Lista de eventos da semana ─────────────────────────────────
@@ -252,7 +265,7 @@ export default async function PresencaPage({
               ←
             </Link>
             <Link href={qs({ ref: formatarDataISO(hoje) })} className={navBtn}>
-              Hoje
+              Atual
             </Link>
             <Link
               href={qs({ ref: formatarDataISO(refProximo) })}
@@ -268,8 +281,9 @@ export default async function PresencaPage({
 
           {eventos.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-edge bg-surface p-8 text-center text-sm text-ink-subtle">
-              Nenhum evento da equipe {equipeNomeFoco} nesta semana. Use as setas
-              para navegar entre as semanas.
+              {podeQualquer
+                ? "Nenhum evento nesta semana. Use as setas para navegar entre as semanas."
+                : `Nenhum evento com a equipe ${usuario.equipeNome ?? ""} escalada nesta semana. Use as setas para navegar.`}
             </div>
           ) : (
             <ul className="space-y-2">
@@ -310,6 +324,28 @@ export default async function PresencaPage({
                           ? `${e._count.presencas} presença(s) lançada(s)`
                           : "sem lançamentos"}
                       </p>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {e.escalas.length === 0 && (
+                          <span className="rounded-full bg-warn-soft px-2 py-0.5 text-xs font-medium text-warn-text">
+                            Sem equipe escalada
+                          </span>
+                        )}
+                        {e.escalas.map((esc) => (
+                          <span
+                            key={esc.id}
+                            className="inline-flex items-center gap-1 rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-soft"
+                          >
+                            <span
+                              className="h-2 w-2 rounded-full border border-edge-soft"
+                              style={{
+                                backgroundColor: esc.equipe.corHex ?? "#a1a1aa",
+                              }}
+                              aria-hidden
+                            />
+                            {esc.equipe.nome}
+                          </span>
+                        ))}
+                      </div>
                     </Link>
                   </li>
                 );
