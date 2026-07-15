@@ -253,10 +253,13 @@ select optgroup {
 }
 
 /* Sino de notificações do cabeçalho: balanço + brilho neon quando há
-   aniversariante do dia ou lembrete de escala pendente. */
-:root,
+   aniversariante do dia ou lembrete de escala pendente. Azul no tema claro
+   (contrasta com o fundo claro), amarelo neon no tema escuro. */
+:root {
+  --neon-sino: #1a6dff;
+}
 .dark {
-  --neon-amarelo: #f5e400;
+  --neon-sino: #f5e400;
 }
 
 @keyframes sino-balancar {
@@ -282,8 +285,8 @@ select optgroup {
 }
 
 .sino-alerta {
-  color: var(--neon-amarelo);
-  filter: drop-shadow(0 0 6px var(--neon-amarelo));
+  color: var(--neon-sino);
+  filter: drop-shadow(0 0 6px var(--neon-sino));
   animation: sino-balancar 1.6s ease-in-out infinite;
   transform-origin: top center;
 }

@@ -3,15 +3,17 @@ import { prisma } from "@/lib/prisma";
 import { hojeSaoPaulo, aniversariantesDoMes } from "@/lib/aniversariantes";
 
 // Notificações do sino no cabeçalho: aniversariantes do dia + lembrete de
-// escala (próximos eventos em que a equipe do usuário está escalada).
-// Escala é por equipe (não por membro) — ver EscalaEquipeEvento no schema —
-// então o lembrete só existe para usuários com equipeId (líder/membro).
+// escala (próximos eventos com equipe escalada). Escala é por equipe (não
+// por membro) — ver EscalaEquipeEvento no schema. Líder/membro veem só a
+// própria equipe; quem não tem equipeId (admin/super_admin) vê todas as
+// equipes escaladas — é o caso de uso de visão geral desse nível de acesso.
 
 const JANELA_DIAS_ESCALA = 3; // hoje + próximos N dias
 
 export type LembreteEscala = {
   eventoId: string;
   tipoEventoNome: string;
+  equipeNome: string;
   dataBR: string; // dd/mm
   diasAte: number; // 0 = hoje
 };
@@ -31,10 +33,6 @@ export async function carregarNotificacoes(usuario: {
     .filter((a) => a.ehHoje)
     .map((a) => ({ id: a.id, nome: a.nome }));
 
-  if (!usuario.equipeId) {
-    return { aniversariantesHoje, escalas: [] };
-  }
-
   const inicio = new Date(Date.UTC(hoje.ano, hoje.mes - 1, hoje.dia));
   const fim = new Date(
     Date.UTC(hoje.ano, hoje.mes - 1, hoje.dia + JANELA_DIAS_ESCALA),
@@ -42,13 +40,14 @@ export async function carregarNotificacoes(usuario: {
 
   const escalas = await prisma.escalaEquipeEvento.findMany({
     where: {
-      equipeId: usuario.equipeId,
+      ...(usuario.equipeId ? { equipeId: usuario.equipeId } : {}),
       evento: {
         status: "agendado",
         dataEvento: { gte: inicio, lte: fim },
       },
     },
     select: {
+      equipe: { select: { nome: true } },
       evento: {
         select: {
           id: true,
@@ -60,7 +59,7 @@ export async function carregarNotificacoes(usuario: {
     orderBy: { evento: { dataEvento: "asc" } },
   });
 
-  const lembretes: LembreteEscala[] = escalas.map(({ evento }) => {
+  const lembretes: LembreteEscala[] = escalas.map(({ equipe, evento }) => {
     const dia = evento.dataEvento.getUTCDate();
     const mes = evento.dataEvento.getUTCMonth() + 1;
     const diasAte = Math.round(
@@ -75,6 +74,7 @@ export async function carregarNotificacoes(usuario: {
     return {
       eventoId: evento.id,
       tipoEventoNome: evento.tipoEvento.nome,
+      equipeNome: equipe.nome,
       dataBR: `${String(dia).padStart(2, "0")}/${String(mes).padStart(2, "0")}`,
       diasAte,
     };

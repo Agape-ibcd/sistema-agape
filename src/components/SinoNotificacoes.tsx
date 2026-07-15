@@ -5,17 +5,27 @@ import Link from "next/link";
 import type { Notificacoes } from "@/lib/notificacoes";
 
 // Sino de notificações do cabeçalho: aniversariantes do dia + lembrete de
-// escala. Balança e brilha em amarelo neon (classe `sino-alerta`, ver
-// globals.css) enquanto houver algum lembrete pendente.
+// escala. Balança e brilha em neon (classe `sino-alerta`, ver globals.css —
+// azul no tema claro, amarelo no escuro) enquanto houver lembrete pendente
+// E o usuário ainda não tiver clicado em nenhuma notificação. O "lido" fica
+// em localStorage por dia (as notificações são diárias) para não voltar a
+// piscar ao navegar entre páginas.
 export function SinoNotificacoes({
   aniversariantesHoje,
   escalas,
 }: Notificacoes) {
   const [aberto, setAberto] = useState(false);
+  const [lido, setLido] = useState(false);
   const raiz = useRef<HTMLDivElement>(null);
 
   const total = aniversariantesHoje.length + escalas.length;
   const temAlerta = total > 0;
+  const chaveLido = `sino-lido-${new Date().toLocaleDateString("en-CA")}`;
+
+  useEffect(() => {
+    if (localStorage.getItem(chaveLido)) setLido(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!aberto) return;
@@ -34,6 +44,14 @@ export function SinoNotificacoes({
       document.removeEventListener("keydown", aoTeclar);
     };
   }, [aberto]);
+
+  function marcarComoLido() {
+    localStorage.setItem(chaveLido, "1");
+    setLido(true);
+    setAberto(false);
+  }
+
+  const piscando = temAlerta && !lido;
 
   return (
     <div ref={raiz} className="relative">
@@ -56,7 +74,7 @@ export function SinoNotificacoes({
           strokeLinecap="round"
           strokeLinejoin="round"
           aria-hidden
-          className={temAlerta ? "sino-alerta" : ""}
+          className={piscando ? "sino-alerta" : ""}
         >
           <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
           <path d="M13.73 21a2 2 0 0 1-3.46 0" />
@@ -87,7 +105,7 @@ export function SinoNotificacoes({
                 <li key={`aniv-${a.id}`}>
                   <Link
                     href="/aniversariantes"
-                    onClick={() => setAberto(false)}
+                    onClick={marcarComoLido}
                     className="flex items-start gap-2 rounded-xl p-2 text-sm hover:bg-surface-3"
                   >
                     <span aria-hidden>🎂</span>
@@ -103,24 +121,25 @@ export function SinoNotificacoes({
                 </li>
               ))}
               {escalas.map((e) => (
-                <li key={`escala-${e.eventoId}`}>
+                <li key={`escala-${e.eventoId}-${e.equipeNome}`}>
                   <Link
                     href="/eventos"
-                    onClick={() => setAberto(false)}
+                    onClick={marcarComoLido}
                     className="flex items-start gap-2 rounded-xl p-2 text-sm hover:bg-surface-3"
                   >
                     <span aria-hidden>📋</span>
                     <span>
                       <span className="font-medium text-ink">
-                        {e.tipoEventoNome}
+                        {e.equipeNome}
                       </span>{" "}
                       <span className="text-ink-subtle">
+                        escalada em {e.tipoEventoNome} —{" "}
                         {e.diasAte === 0
                           ? "hoje"
                           : e.diasAte === 1
                             ? "amanhã"
                             : `em ${e.diasAte} dias`}{" "}
-                        ({e.dataBR}) — sua equipe está escalada
+                        ({e.dataBR})
                       </span>
                     </span>
                   </Link>

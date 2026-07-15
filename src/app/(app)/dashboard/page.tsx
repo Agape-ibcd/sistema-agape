@@ -102,7 +102,7 @@ export default async function DashboardPage({
 
       <FiltrosDashboard filtros={filtros} opcoes={dados.opcoes} escopo={escopo} />
 
-      {/* KPIs principais — presença e pontualidade primeiro, coloridas por faixa */}
+      {/* KPIs principais — presença, pontualidade, ausência e atrasos, coloridas por faixa */}
       <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiCard
           rotulo="Taxa de presença"
@@ -117,20 +117,6 @@ export default async function DashboardPage({
           faixa={faixaDaTaxa(kpis.taxaPontualidade)}
         />
         <KpiCard
-          rotulo="Convocações"
-          valor={String(kpis.convocacoes)}
-          sub="lançamentos no período"
-        />
-        <KpiCard
-          rotulo="Membros ativos"
-          valor={String(kpis.membrosAtivos)}
-          sub="distintos na presença"
-        />
-      </div>
-
-      {/* KPIs secundários */}
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <KpiCard
           rotulo="Taxa de ausência"
           valor={fmt(kpis.taxaAusencia)}
           sub={`${kpis.ausentes} ausência(s)`}
@@ -139,6 +125,15 @@ export default async function DashboardPage({
           rotulo="Atrasos"
           valor={fmt(kpis.taxaAtrasos)}
           sub={`${kpis.atrasados} atraso(s)`}
+        />
+      </div>
+
+      {/* KPIs secundários */}
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <KpiCard
+          rotulo="Convocações"
+          valor={String(kpis.convocacoes)}
+          sub="lançamentos no período"
         />
         <KpiCard rotulo="Presentes" valor={String(kpis.presentes)} />
         <KpiCard
