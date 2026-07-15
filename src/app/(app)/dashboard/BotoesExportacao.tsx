@@ -1,7 +1,11 @@
-import type { EscopoDashboard } from "@/lib/dashboard";
+"use client";
 
-// Botões de exportação — todos carregam a querystring dos filtros atuais, de
-// modo que o arquivo gerado respeita exatamente a seleção da tela.
+import type { EscopoDashboard } from "@/lib/dashboard";
+import { Popover } from "@/components/Popover";
+
+// Botão único "Exportar" que abre o painel com as opções — evita a fileira de
+// botões antiga. Cada link carrega a querystring dos filtros atuais, de modo
+// que o arquivo gerado respeita exatamente a seleção da tela.
 
 export function BotoesExportacao({
   query,
@@ -14,41 +18,47 @@ export function BotoesExportacao({
   mostrarAgenda?: boolean;
 }) {
   const q = query ? `?${query}` : "";
-  const btn =
-    "rounded-lg border border-edge bg-surface px-3 py-1.5 text-xs font-medium text-ink-soft hover:border-brand-edge hover:bg-brand-faint";
+  const item =
+    "block rounded-lg px-3 py-2 text-sm font-medium text-ink-soft transition hover:bg-brand-faint hover:text-brand-text";
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs font-semibold uppercase tracking-wide text-ink-subtle">
-        Exportar:
-      </span>
-      <a className={btn} href={`/api/exportar/presencas${q}`}>
-        Presença (xlsx)
-      </a>
-      <a
-        className={btn}
-        href={`/api/exportar/presencas${q}${q ? "&" : "?"}formato=csv`}
-      >
-        Presença (csv)
-      </a>
-      {escopo !== "proprio" && (
-        <a className={btn} href={`/api/exportar/resumo-membros${q}`}>
-          Resumo por membro (xlsx)
-        </a>
+    <Popover rotulo="Exportar" align="right">
+      {() => (
+        <div className="flex flex-col gap-0.5">
+          <a className={item} href={`/api/exportar/presencas${q}`}>
+            Presença (xlsx)
+          </a>
+          <a
+            className={item}
+            href={`/api/exportar/presencas${q}${q ? "&" : "?"}formato=csv`}
+          >
+            Presença (csv)
+          </a>
+          {escopo !== "proprio" && (
+            <a className={item} href={`/api/exportar/resumo-membros${q}`}>
+              Resumo por membro (xlsx)
+            </a>
+          )}
+          {escopo === "geral" && (
+            <a className={item} href={`/api/exportar/resumo-equipes${q}`}>
+              Resumo por equipe (xlsx)
+            </a>
+          )}
+          {mostrarAgenda && (
+            <a className={item} href={`/api/exportar/agenda${q}`}>
+              Agenda/escalas (xlsx)
+            </a>
+          )}
+          <a
+            className={item}
+            href={`/imprimir/dashboard${q}`}
+            target="_blank"
+            rel="noopener"
+          >
+            Dashboard (PDF)
+          </a>
+        </div>
       )}
-      {escopo === "geral" && (
-        <a className={btn} href={`/api/exportar/resumo-equipes${q}`}>
-          Resumo por equipe (xlsx)
-        </a>
-      )}
-      {mostrarAgenda && (
-        <a className={btn} href={`/api/exportar/agenda${q}`}>
-          Agenda/escalas (xlsx)
-        </a>
-      )}
-      <a className={btn} href={`/imprimir/dashboard${q}`} target="_blank" rel="noopener">
-        Dashboard (PDF)
-      </a>
-    </div>
+    </Popover>
   );
 }
