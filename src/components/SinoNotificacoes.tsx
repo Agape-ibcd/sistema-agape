@@ -1,31 +1,41 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Notificacoes } from "@/lib/notificacoes";
 
 // Sino de notificações do cabeçalho: aniversariantes do dia + lembrete de
 // escala. Balança e brilha em neon (classe `sino-alerta`, ver globals.css —
-// azul no tema claro, amarelo no escuro) enquanto houver lembrete pendente
-// E o usuário ainda não tiver clicado em nenhuma notificação. O "lido" fica
-// em localStorage por dia (as notificações são diárias) para não voltar a
-// piscar ao navegar entre páginas.
+// azul no tema claro, amarelo no escuro) enquanto houver ALGUM lembrete
+// ainda não lido. Cada notificação clicada é marcada como lida
+// individualmente (localStorage por dia, já que os lembretes são diários) —
+// o contador cai um a um e o sino só para de balançar quando todas forem
+// lidas.
 export function SinoNotificacoes({
   aniversariantesHoje,
   escalas,
-}: Notificacoes) {
+  flutuante = false,
+}: Notificacoes & { flutuante?: boolean }) {
   const [aberto, setAberto] = useState(false);
-  const [lido, setLido] = useState(false);
+  const [lidos, setLidos] = useState<Set<string>>(new Set());
   const raiz = useRef<HTMLDivElement>(null);
-
-  const total = aniversariantesHoje.length + escalas.length;
-  const temAlerta = total > 0;
-  const chaveLido = `sino-lido-${new Date().toLocaleDateString("en-CA")}`;
+  const painel = useRef<HTMLDivElement>(null);
+  const chaveLidos = `sino-lidos-${new Date().toLocaleDateString("en-CA")}`;
 
   useEffect(() => {
-    if (localStorage.getItem(chaveLido)) setLido(true);
+    const salvo = localStorage.getItem(chaveLidos);
+    if (salvo) setLidos(new Set(JSON.parse(salvo) as string[]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const aniversariantesPendentes = aniversariantesHoje.filter(
+    (a) => !lidos.has(`aniv-${a.id}`),
+  );
+  const escalasPendentes = escalas.filter(
+    (e) => !lidos.has(`escala-${e.eventoId}-${e.equipeNome}`),
+  );
+  const total = aniversariantesPendentes.length + escalasPendentes.length;
+  const temAlerta = total > 0;
 
   useEffect(() => {
     if (!aberto) return;
@@ -45,13 +55,36 @@ export function SinoNotificacoes({
     };
   }, [aberto]);
 
-  function marcarComoLido() {
-    localStorage.setItem(chaveLido, "1");
-    setLido(true);
+  // Mantém o painel dentro da viewport (idêntico ao Popover): parte
+  // alinhado à direita do sino, mas desloca se estourar a borda esquerda ou
+  // direita da tela — crítico na barra lateral do desktop, perto da borda
+  // esquerda.
+  useLayoutEffect(() => {
+    if (!aberto || !raiz.current || !painel.current) return;
+    const wrapper = raiz.current.getBoundingClientRect();
+    const p = painel.current.getBoundingClientRect();
+    const margem = 8;
+    const larguraTela = document.documentElement.clientWidth;
+    const desejado = wrapper.right - p.width;
+    const min = margem;
+    const max = larguraTela - p.width - margem;
+    const alvo = Math.min(Math.max(desejado, min), max);
+    painel.current.style.left = `${alvo - wrapper.left}px`;
+  }, [aberto]);
+
+  function marcarComoLido(chave: string) {
+    setLidos((atual) => {
+      const novo = new Set(atual);
+      novo.add(chave);
+      localStorage.setItem(chaveLidos, JSON.stringify([...novo]));
+      return novo;
+    });
     setAberto(false);
   }
 
-  const piscando = temAlerta && !lido;
+  // No modo flutuante (menu lateral oculto) o sino só existe enquanto há
+  // lembrete pendente — some sozinho assim que tudo for lido.
+  if (flutuante && !temAlerta) return null;
 
   return (
     <div ref={raiz} className="relative">
@@ -62,7 +95,9 @@ export function SinoNotificacoes({
         }
         aria-expanded={aberto}
         onClick={() => setAberto((v) => !v)}
-        className="relative rounded-lg p-2 text-ink-soft hover:bg-surface-3"
+        className={`relative rounded-lg p-2 text-ink-soft hover:bg-surface-3 ${
+          flutuante ? "border border-edge-soft bg-surface shadow-lg" : ""
+        }`}
       >
         <svg
           width="22"
@@ -74,7 +109,7 @@ export function SinoNotificacoes({
           strokeLinecap="round"
           strokeLinejoin="round"
           aria-hidden
-          className={piscando ? "sino-alerta" : ""}
+          className={temAlerta ? "sino-alerta" : ""}
         >
           <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
           <path d="M13.73 21a2 2 0 0 1-3.46 0" />
@@ -88,8 +123,10 @@ export function SinoNotificacoes({
 
       {aberto && (
         <div
+          ref={painel}
           role="menu"
-          className="absolute right-0 z-20 mt-2 w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-edge-soft bg-surface p-3 shadow-lg"
+          style={{ left: 0 }}
+          className="absolute z-20 mt-2 w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-edge-soft bg-surface p-3 shadow-lg"
         >
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-subtle">
             Notificações
@@ -101,11 +138,11 @@ export function SinoNotificacoes({
             </p>
           ) : (
             <ul className="flex flex-col gap-2">
-              {aniversariantesHoje.map((a) => (
+              {aniversariantesPendentes.map((a) => (
                 <li key={`aniv-${a.id}`}>
                   <Link
                     href="/aniversariantes"
-                    onClick={marcarComoLido}
+                    onClick={() => marcarComoLido(`aniv-${a.id}`)}
                     className="flex items-start gap-2 rounded-xl p-2 text-sm hover:bg-surface-3"
                   >
                     <span aria-hidden>🎂</span>
@@ -120,11 +157,13 @@ export function SinoNotificacoes({
                   </Link>
                 </li>
               ))}
-              {escalas.map((e) => (
+              {escalasPendentes.map((e) => (
                 <li key={`escala-${e.eventoId}-${e.equipeNome}`}>
                   <Link
                     href="/eventos"
-                    onClick={marcarComoLido}
+                    onClick={() =>
+                      marcarComoLido(`escala-${e.eventoId}-${e.equipeNome}`)
+                    }
                     className="flex items-start gap-2 rounded-xl p-2 text-sm hover:bg-surface-3"
                   >
                     <span aria-hidden>📋</span>

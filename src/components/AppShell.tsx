@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ItemMenu } from "@/lib/nav";
@@ -23,11 +23,28 @@ type Props = {
   children: React.ReactNode;
 };
 
+const CHAVE_MENU_OCULTO = "menu-lateral-oculto";
+
 // Casca responsiva (mobile-first): topo com menu-hambúrguer no celular e
 // barra lateral fixa no desktop. O menu já chega filtrado por nível de acesso.
 export function AppShell({ itens, usuario, notificacoes, children }: Props) {
   const [menuAberto, setMenuAberto] = useState(false);
+  // Barra lateral (desktop) pode ser ocultada para ganhar espaço de tela —
+  // preferência persistida no navegador.
+  const [menuOculto, setMenuOculto] = useState(false);
   const pathname = usePathname();
+
+  useEffect(() => {
+    if (localStorage.getItem(CHAVE_MENU_OCULTO) === "1") setMenuOculto(true);
+  }, []);
+
+  function alternarMenuOculto() {
+    setMenuOculto((v) => {
+      const novo = !v;
+      localStorage.setItem(CHAVE_MENU_OCULTO, novo ? "1" : "0");
+      return novo;
+    });
+  }
 
   const linkClasses = (href: string) => {
     const ativo = pathname === href || pathname.startsWith(`${href}/`);
@@ -84,17 +101,46 @@ export function AppShell({ itens, usuario, notificacoes, children }: Props) {
       )}
 
       {/* Barra lateral (desktop) */}
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-edge-soft bg-surface p-4 md:flex">
-        <div className="mb-4 flex items-start justify-between gap-2 px-1">
-          <AgapeLogo markSize={40} subtitulo="IBCD · Jundiaí/SP" />
-          <div className="flex items-center gap-1">
-            <SinoNotificacoes {...notificacoes} />
-            <ThemeToggle className="-mr-1" />
+      {!menuOculto && (
+        <aside className="hidden w-64 shrink-0 flex-col border-r border-edge-soft bg-surface p-4 md:flex">
+          <div className="mb-4 flex items-start justify-between gap-2 px-1">
+            <AgapeLogo markSize={40} subtitulo="IBCD · Jundiaí/SP" />
+            <div className="flex items-center gap-1">
+              <SinoNotificacoes {...notificacoes} />
+              <ThemeToggle className="-mr-1" />
+            </div>
+          </div>
+          <PainelUsuario usuario={usuario} />
+          <div className="mt-4 flex-1">{listaLinks}</div>
+          <button
+            type="button"
+            onClick={alternarMenuOculto}
+            className="mt-2 flex items-center gap-1.5 rounded-xl px-2 py-2 text-xs font-medium text-ink-subtle hover:bg-surface-3"
+          >
+            <IconeOcultarMenu />
+            Ocultar menu
+          </button>
+        </aside>
+      )}
+
+      {/* Menu oculto (desktop): botão para reabrir + sino flutuante quando
+          há lembrete pendente. Só existe em telas md+; no celular o menu
+          continua sendo o hambúrguer de sempre. */}
+      {menuOculto && (
+        <div className="hidden md:contents">
+          <button
+            type="button"
+            aria-label="Mostrar menu"
+            onClick={alternarMenuOculto}
+            className="fixed left-2 top-1/2 z-30 -translate-y-1/2 rounded-full border border-edge-soft bg-surface p-2 text-ink-soft shadow-lg hover:bg-surface-3"
+          >
+            <IconeMostrarMenu />
+          </button>
+          <div className="fixed right-4 top-4 z-30">
+            <SinoNotificacoes {...notificacoes} flutuante />
           </div>
         </div>
-        <PainelUsuario usuario={usuario} />
-        <div className="mt-4 flex-1">{listaLinks}</div>
-      </aside>
+      )}
 
       {/* Conteúdo + rodapé */}
       <div className="flex min-w-0 flex-1 flex-col bg-surface-2">
@@ -136,5 +182,45 @@ function PainelUsuario({
         </form>
       </div>
     </div>
+  );
+}
+
+function IconeOcultarMenu() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M9 4v16" />
+      <path d="m14 10-2 2 2 2" />
+    </svg>
+  );
+}
+
+function IconeMostrarMenu() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M9 4v16" />
+      <path d="m11 10 2 2-2 2" />
+    </svg>
   );
 }
