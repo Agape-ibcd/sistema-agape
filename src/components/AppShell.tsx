@@ -111,15 +111,17 @@ export function AppShell({ itens, usuario, notificacoes, children }: Props) {
             </div>
           </div>
           <PainelUsuario usuario={usuario} />
-          <div className="mt-4 flex-1">{listaLinks}</div>
-          <button
-            type="button"
-            onClick={alternarMenuOculto}
-            className="mt-2 flex items-center gap-1.5 rounded-xl px-2 py-2 text-xs font-medium text-ink-subtle hover:bg-surface-3"
-          >
-            <IconeOcultarMenu />
-            Ocultar menu
-          </button>
+          <div className="mt-4">
+            {listaLinks}
+            <button
+              type="button"
+              onClick={alternarMenuOculto}
+              className="mt-1 flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-medium text-ink-subtle hover:bg-surface-3"
+            >
+              <IconeOcultarMenu />
+              Ocultar menu
+            </button>
+          </div>
         </aside>
       )}
 
