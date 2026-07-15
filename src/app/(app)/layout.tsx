@@ -3,6 +3,7 @@ import { can } from "@/lib/rbac";
 import { ROTULO_NIVEL } from "@/lib/rbac";
 import { ITENS_MENU } from "@/lib/nav";
 import { AppShell } from "@/components/AppShell";
+import { carregarNotificacoes } from "@/lib/notificacoes";
 
 export default async function AppLayout({
   children,
@@ -16,6 +17,8 @@ export default async function AppLayout({
     (item) => !item.permissao || can(usuario.nivelAcesso, item.permissao),
   );
 
+  const notificacoes = await carregarNotificacoes(usuario);
+
   return (
     <AppShell
       itens={itens}
@@ -25,6 +28,7 @@ export default async function AppLayout({
         equipe: usuario.equipeNome,
         fotoUrl: usuario.fotoUrl,
       }}
+      notificacoes={notificacoes}
     >
       {children}
     </AppShell>

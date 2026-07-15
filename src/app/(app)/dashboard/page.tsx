@@ -10,6 +10,7 @@ import { GraficosDashboard } from "./Graficos";
 import { TabelaDesempenho } from "./TabelaDesempenho";
 import { BotoesExportacao } from "./BotoesExportacao";
 import { RegistrosDetalhados } from "./RegistrosDetalhados";
+import { faixaDaTaxa, CLASSES_FAIXA, type FaixaCor } from "@/lib/kpiCores";
 
 // Dashboard analítico (Etapa 5). Três visões por nível, resolvidas no servidor:
 //  • geral   (admin/super_admin) — todas as equipes, filtros livres.
@@ -27,18 +28,25 @@ function KpiCard({
   valor,
   sub,
   destaque,
+  faixa,
 }: {
   rotulo: string;
   valor: string;
   sub?: string;
   destaque?: boolean;
+  // Quando informado, colore o card por faixa de taxa (ver src/lib/kpiCores.ts)
+  // em vez do destaque verde fixo.
+  faixa?: FaixaCor;
 }) {
+  const cores = faixa ? CLASSES_FAIXA[faixa] : null;
   return (
     <div
       className={`rounded-2xl border p-4 ${
-        destaque
-          ? "border-success-edge bg-success-faint"
-          : "border-edge-soft bg-surface"
+        cores
+          ? `${cores.border} ${cores.bg}`
+          : destaque
+            ? "border-success-edge bg-success-faint"
+            : "border-edge-soft bg-surface"
       }`}
     >
       <p className="text-xs font-medium uppercase tracking-wide text-ink-subtle">
@@ -46,7 +54,7 @@ function KpiCard({
       </p>
       <p
         className={`mt-1 font-display text-3xl font-semibold tabular-nums ${
-          destaque ? "text-success-text" : "text-ink"
+          cores ? cores.text : destaque ? "text-success-text" : "text-ink"
         }`}
       >
         {valor}
@@ -94,8 +102,20 @@ export default async function DashboardPage({
 
       <FiltrosDashboard filtros={filtros} opcoes={dados.opcoes} escopo={escopo} />
 
-      {/* KPIs principais */}
+      {/* KPIs principais — presença e pontualidade primeiro, coloridas por faixa */}
       <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <KpiCard
+          rotulo="Taxa de presença"
+          valor={fmt(kpis.taxaPresenca)}
+          sub={`${kpis.presentes} de ${kpis.convocacoes}`}
+          faixa={faixaDaTaxa(kpis.taxaPresenca)}
+        />
+        <KpiCard
+          rotulo="Pontualidade"
+          valor={fmt(kpis.taxaPontualidade)}
+          sub={`${kpis.pontuais} de ${kpis.presentes} presentes`}
+          faixa={faixaDaTaxa(kpis.taxaPontualidade)}
+        />
         <KpiCard
           rotulo="Convocações"
           valor={String(kpis.convocacoes)}
@@ -105,18 +125,6 @@ export default async function DashboardPage({
           rotulo="Membros ativos"
           valor={String(kpis.membrosAtivos)}
           sub="distintos na presença"
-        />
-        <KpiCard
-          rotulo="Taxa de presença"
-          valor={fmt(kpis.taxaPresenca)}
-          sub={`${kpis.presentes} de ${kpis.convocacoes}`}
-          destaque
-        />
-        <KpiCard
-          rotulo="Pontualidade"
-          valor={fmt(kpis.taxaPontualidade)}
-          sub={`${kpis.pontuais} de ${kpis.presentes} presentes`}
-          destaque
         />
       </div>
 

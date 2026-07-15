@@ -80,6 +80,12 @@
   --warn-soft: #f1e4bf;
   --warn-edge: #e2cd8c;
 
+  /* LARANJA — faixas intermediárias de indicadores (ex.: KPIs do dashboard) */
+  --orange-text: #a8560f;
+  --orange-faint: #fdf0e6;
+  --orange-soft: #f6dcc2;
+  --orange-edge: #e8b384;
+
   /* NEUTRO/INFORMATIVO — navy suave */
   --info-text: #143a78;
   --info-faint: #eef2f8;
@@ -139,6 +145,11 @@
   --warn-soft: rgb(204 154 31 / 0.2);
   --warn-edge: rgb(230 196 119 / 0.4);
 
+  --orange-text: #e69256;
+  --orange-faint: rgb(230 146 86 / 0.12);
+  --orange-soft: rgb(230 146 86 / 0.2);
+  --orange-edge: rgb(230 146 86 / 0.4);
+
   --info-text: #8fb2e6;
   --info-faint: rgb(63 111 184 / 0.12);
   --info-soft: rgb(63 111 184 / 0.22);
@@ -193,6 +204,11 @@
   --color-warn-soft: var(--warn-soft);
   --color-warn-edge: var(--warn-edge);
 
+  --color-orange-text: var(--orange-text);
+  --color-orange-faint: var(--orange-faint);
+  --color-orange-soft: var(--orange-soft);
+  --color-orange-edge: var(--orange-edge);
+
   --color-info-text: var(--info-text);
   --color-info-faint: var(--info-faint);
   --color-info-soft: var(--info-soft);
@@ -234,6 +250,42 @@ select option,
 select optgroup {
   background-color: var(--surface);
   color: var(--ink);
+}
+
+/* Sino de notificações do cabeçalho: balanço + brilho neon quando há
+   aniversariante do dia ou lembrete de escala pendente. */
+:root,
+.dark {
+  --neon-amarelo: #f5e400;
+}
+
+@keyframes sino-balancar {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  15% {
+    transform: rotate(-14deg);
+  }
+  30% {
+    transform: rotate(11deg);
+  }
+  45% {
+    transform: rotate(-9deg);
+  }
+  60% {
+    transform: rotate(6deg);
+  }
+  75% {
+    transform: rotate(-3deg);
+  }
+}
+
+.sino-alerta {
+  color: var(--neon-amarelo);
+  filter: drop-shadow(0 0 6px var(--neon-amarelo));
+  animation: sino-balancar 1.6s ease-in-out infinite;
+  transform-origin: top center;
 }
 
 /* Motivo "dot-grid": cluster de pontos da marca, usado em fundos (login,

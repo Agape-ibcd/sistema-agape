@@ -8,6 +8,8 @@ import { ThemeToggle } from "@/components/ThemeProvider";
 import { Avatar } from "@/components/Avatar";
 import { AgapeLogo } from "@/components/AgapeLogo";
 import { Rodape } from "@/components/Rodape";
+import { SinoNotificacoes } from "@/components/SinoNotificacoes";
+import type { Notificacoes } from "@/lib/notificacoes";
 
 type Props = {
   itens: ItemMenu[];
@@ -17,12 +19,13 @@ type Props = {
     equipe: string | null;
     fotoUrl: string | null;
   };
+  notificacoes: Notificacoes;
   children: React.ReactNode;
 };
 
 // Casca responsiva (mobile-first): topo com menu-hambúrguer no celular e
 // barra lateral fixa no desktop. O menu já chega filtrado por nível de acesso.
-export function AppShell({ itens, usuario, children }: Props) {
+export function AppShell({ itens, usuario, notificacoes, children }: Props) {
   const [menuAberto, setMenuAberto] = useState(false);
   const pathname = usePathname();
 
@@ -56,6 +59,7 @@ export function AppShell({ itens, usuario, children }: Props) {
       <header className="flex items-center justify-between border-b border-edge-soft bg-surface px-4 py-3 md:hidden">
         <AgapeLogo markSize={34} />
         <div className="flex items-center gap-1">
+          <SinoNotificacoes {...notificacoes} />
           <ThemeToggle />
           <button
             type="button"
@@ -83,7 +87,10 @@ export function AppShell({ itens, usuario, children }: Props) {
       <aside className="hidden w-64 shrink-0 flex-col border-r border-edge-soft bg-surface p-4 md:flex">
         <div className="mb-4 flex items-start justify-between gap-2 px-1">
           <AgapeLogo markSize={40} subtitulo="IBCD · Jundiaí/SP" />
-          <ThemeToggle className="-mr-1" />
+          <div className="flex items-center gap-1">
+            <SinoNotificacoes {...notificacoes} />
+            <ThemeToggle className="-mr-1" />
+          </div>
         </div>
         <PainelUsuario usuario={usuario} />
         <div className="mt-4 flex-1">{listaLinks}</div>

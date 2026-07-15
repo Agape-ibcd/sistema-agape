@@ -373,6 +373,11 @@ export function GraficosDashboard({
     backgroundColor: cores.tooltipFundo,
     color: cores.tooltipTexto,
   };
+  // Recharts colore cada item do tooltip com a cor da própria série (ex.:
+  // corHex da equipe), que pode ficar ilegível sobre o fundo escuro do tema
+  // dark. Forçamos o texto do item para a cor de tooltip do tema.
+  const tooltipItemStyle = { color: cores.tooltipTexto };
+  const tooltipLabelStyle = { color: cores.tooltipTexto };
 
   const dadosComposicao = [
     { nome: "Pontuais", valor: composicao.pontuais, cor: cores.pontual },
@@ -455,6 +460,8 @@ export function GraficosDashboard({
               <YAxis domain={[0, 100]} tick={eixoPct} />
               <Tooltip
                 contentStyle={tooltipStyle}
+                itemStyle={tooltipItemStyle}
+                labelStyle={tooltipLabelStyle}
                 formatter={(v) => [fmtPct(Number(v)), "Presença"]}
               />
               <Bar
@@ -489,6 +496,8 @@ export function GraficosDashboard({
             <YAxis domain={[0, 100]} tick={eixoPct} />
             <Tooltip
               contentStyle={tooltipStyle}
+              itemStyle={tooltipItemStyle}
+              labelStyle={tooltipLabelStyle}
               labelFormatter={(_, payload) =>
                 (payload?.[0]?.payload as SerieEvento | undefined)?.rotulo ?? ""
               }
@@ -529,6 +538,8 @@ export function GraficosDashboard({
             </Pie>
             <Tooltip
               contentStyle={tooltipStyle}
+              itemStyle={tooltipItemStyle}
+              labelStyle={tooltipLabelStyle}
               formatter={(v, n) => [`${Number(v)} lançamento(s)`, n]}
             />
             <Legend wrapperStyle={{ fontSize: 12 }} />
