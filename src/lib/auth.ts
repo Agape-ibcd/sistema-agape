@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -19,7 +20,11 @@ export type UsuarioAtual = {
 
 // Retorna o usuário logado (ou null). Combina a sessão do Supabase Auth com o
 // registro correspondente em MEMBROS (vínculo por auth_user_id, fallback por email).
-export async function getUsuarioAtual(): Promise<UsuarioAtual | null> {
+// `cache()` dedupe por requisição: layout + page chamam isso independentemente
+// a cada navegação — sem isso, cada clique no menu repetia a consulta ao
+// Supabase Auth e ao Prisma duas vezes. O cache é por requisição (não entre
+// usuários nem entre navegações), então nenhuma verificação deixa de rodar.
+export const getUsuarioAtual = cache(async (): Promise<UsuarioAtual | null> => {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -53,7 +58,7 @@ export async function getUsuarioAtual(): Promise<UsuarioAtual | null> {
     equipeNome: membro.equipe?.nome ?? null,
     fotoUrl: membro.fotoUrl,
   };
-}
+});
 
 // Exige sessão válida; redireciona ao login caso contrário.
 export async function requireUsuario(): Promise<UsuarioAtual> {
