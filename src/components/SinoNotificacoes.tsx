@@ -4,18 +4,26 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Notificacoes } from "@/lib/notificacoes";
 
+const SEM_NOTIFICACOES: Notificacoes = { aniversariantesHoje: [], escalas: [] };
+const INTERVALO_ATUALIZACAO_MS = 5 * 60 * 1000;
+
 // Sino de notificações do cabeçalho: aniversariantes do dia + lembrete de
-// escala. Balança e brilha em neon (classe `sino-alerta`, ver globals.css —
-// azul no tema claro, amarelo no escuro) enquanto houver ALGUM lembrete
-// ainda não lido. Cada notificação clicada é marcada como lida
-// individualmente (localStorage por dia, já que os lembretes são diários) —
-// o contador cai um a um e o sino só para de balançar quando todas forem
-// lidas.
+// escala. Busca os dados pelo navegador (rota /api/notificacoes) em vez de
+// no layout do servidor — assim a consulta ao banco não entra no caminho
+// crítico de toda navegação (aniversariantes/escalas não mudam a cada
+// clique de menu). Atualiza a cada 5 minutos.
+//
+// Balança e brilha em neon (classe `sino-alerta`, ver globals.css — azul no
+// tema claro, amarelo no escuro) enquanto houver ALGUM lembrete ainda não
+// lido. Cada notificação clicada é marcada como lida individualmente
+// (localStorage por dia) — o contador cai um a um e o sino só para de
+// balançar quando todas forem lidas.
 export function SinoNotificacoes({
-  aniversariantesHoje,
-  escalas,
   flutuante = false,
-}: Notificacoes & { flutuante?: boolean }) {
+}: {
+  flutuante?: boolean;
+}) {
+  const [dados, setDados] = useState<Notificacoes>(SEM_NOTIFICACOES);
   const [aberto, setAberto] = useState(false);
   const [lidos, setLidos] = useState<Set<string>>(new Set());
   const raiz = useRef<HTMLDivElement>(null);
@@ -28,10 +36,31 @@ export function SinoNotificacoes({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const aniversariantesPendentes = aniversariantesHoje.filter(
+  useEffect(() => {
+    let cancelado = false;
+    async function buscar() {
+      try {
+        const res = await fetch("/api/notificacoes");
+        if (!res.ok) return;
+        const json = (await res.json()) as Notificacoes;
+        if (!cancelado) setDados(json);
+      } catch {
+        // Silencioso — o sino só deixa de mostrar novidades até a próxima
+        // tentativa; não interfere na navegação.
+      }
+    }
+    buscar();
+    const intervalo = setInterval(buscar, INTERVALO_ATUALIZACAO_MS);
+    return () => {
+      cancelado = true;
+      clearInterval(intervalo);
+    };
+  }, []);
+
+  const aniversariantesPendentes = dados.aniversariantesHoje.filter(
     (a) => !lidos.has(`aniv-${a.id}`),
   );
-  const escalasPendentes = escalas.filter(
+  const escalasPendentes = dados.escalas.filter(
     (e) => !lidos.has(`escala-${e.eventoId}-${e.equipeNome}`),
   );
   const total = aniversariantesPendentes.length + escalasPendentes.length;

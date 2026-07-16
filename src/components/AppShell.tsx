@@ -9,7 +9,7 @@ import { Avatar } from "@/components/Avatar";
 import { AgapeLogo } from "@/components/AgapeLogo";
 import { Rodape } from "@/components/Rodape";
 import { SinoNotificacoes } from "@/components/SinoNotificacoes";
-import type { Notificacoes } from "@/lib/notificacoes";
+import { IndicadorNavegacao } from "@/components/IndicadorNavegacao";
 
 type Props = {
   itens: ItemMenu[];
@@ -19,7 +19,6 @@ type Props = {
     equipe: string | null;
     fotoUrl: string | null;
   };
-  notificacoes: Notificacoes;
   children: React.ReactNode;
 };
 
@@ -27,7 +26,7 @@ const CHAVE_MENU_OCULTO = "menu-lateral-oculto";
 
 // Casca responsiva (mobile-first): topo com menu-hambúrguer no celular e
 // barra lateral fixa no desktop. O menu já chega filtrado por nível de acesso.
-export function AppShell({ itens, usuario, notificacoes, children }: Props) {
+export function AppShell({ itens, usuario, children }: Props) {
   const [menuAberto, setMenuAberto] = useState(false);
   // Barra lateral (desktop) pode ser ocultada para ganhar espaço de tela —
   // preferência persistida no navegador.
@@ -72,11 +71,13 @@ export function AppShell({ itens, usuario, notificacoes, children }: Props) {
 
   return (
     <div className="flex min-h-full flex-1 flex-col md:flex-row">
+      <IndicadorNavegacao />
+
       {/* Topo (mobile) */}
       <header className="flex items-center justify-between border-b border-edge-soft bg-surface px-4 py-3 md:hidden">
         <AgapeLogo markSize={34} />
         <div className="flex items-center gap-1">
-          <SinoNotificacoes {...notificacoes} />
+          <SinoNotificacoes />
           <ThemeToggle />
           <button
             type="button"
@@ -106,7 +107,7 @@ export function AppShell({ itens, usuario, notificacoes, children }: Props) {
           <div className="mb-4 flex items-start justify-between gap-2 px-1">
             <AgapeLogo markSize={40} subtitulo="IBCD · Jundiaí/SP" />
             <div className="flex items-center gap-1">
-              <SinoNotificacoes {...notificacoes} />
+              <SinoNotificacoes />
               <ThemeToggle className="-mr-1" />
             </div>
           </div>
@@ -139,7 +140,7 @@ export function AppShell({ itens, usuario, notificacoes, children }: Props) {
             <IconeMostrarMenu />
           </button>
           <div className="fixed right-4 top-4 z-30">
-            <SinoNotificacoes {...notificacoes} flutuante />
+            <SinoNotificacoes flutuante />
           </div>
         </div>
       )}
