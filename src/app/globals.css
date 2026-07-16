@@ -291,6 +291,24 @@ select optgroup {
   transform-origin: top center;
 }
 
+/* Coração pulsando — indicador de carregamento entre navegações (loading.tsx). */
+@keyframes coracao-pulsar {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+}
+
+.coracao-pulsar {
+  animation: coracao-pulsar 1s ease-in-out infinite;
+  transform-origin: center;
+}
+
 /* Motivo "dot-grid": cluster de pontos da marca, usado em fundos (login,
    estados vazios). Aplique via a classe utilitária .agape-dots. */
 .agape-dots {
