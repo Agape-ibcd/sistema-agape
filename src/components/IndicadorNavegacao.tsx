@@ -46,12 +46,12 @@ export function IndicadorNavegacao() {
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed inset-x-0 top-4 z-40 flex justify-center"
+      className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center"
     >
-      <div className="flex items-center gap-2 rounded-full border border-edge-soft bg-surface/95 px-4 py-2 shadow-lg backdrop-blur">
+      <div className="flex items-center gap-2 rounded-full border border-edge-soft bg-surface/95 px-5 py-3 shadow-xl backdrop-blur">
         <svg
-          width="20"
-          height="20"
+          width="28"
+          height="28"
           viewBox="0 0 24 24"
           style={{ fill: "var(--accent)" }}
           aria-hidden
