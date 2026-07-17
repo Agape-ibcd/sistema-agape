@@ -1,13 +1,165 @@
+import { prisma } from "@/lib/prisma";
 import { requirePermissao } from "@/lib/auth";
-import { EmConstrucao } from "@/components/EmConstrucao";
+import { RegraNotificacaoForm, type RegraDados } from "./RegraNotificacaoForm";
+import { TestarAniversarioBotao } from "./TestarAniversarioBotao";
+import type { GatilhoNotificacao } from "@prisma/client";
+
+const ORDEM: GatilhoNotificacao[] = [
+  "aniversario_dia",
+  "nova_escala",
+  "escala_alterada",
+  "lembrete_vespera",
+];
+
+const META: Record<
+  GatilhoNotificacao,
+  { titulo: string; descricao: string; implementado: boolean; usaHorario: boolean }
+> = {
+  aniversario_dia: {
+    titulo: "Aniversário do dia",
+    descricao: "Mensagem de felicitação enviada no dia do aniversário do membro.",
+    implementado: true,
+    usaHorario: true,
+  },
+  nova_escala: {
+    titulo: "Nova escala — confirmação de presença",
+    descricao:
+      "Avisa o membro ao ser escalado e pede a confirmação de presença. Envio chega numa próxima rodada.",
+    implementado: false,
+    usaHorario: false,
+  },
+  escala_alterada: {
+    titulo: "Escala ou evento alterado",
+    descricao:
+      "Avisa quando uma escala é trocada ou um evento é cancelado/alterado. Envio chega numa próxima rodada.",
+    implementado: false,
+    usaHorario: false,
+  },
+  lembrete_vespera: {
+    titulo: "Lembrete véspera (D-1)",
+    descricao:
+      "Lembrete enviado na véspera para quem está escalado no dia seguinte. Envio chega numa próxima rodada.",
+    implementado: false,
+    usaHorario: true,
+  },
+};
+
+const ROTULO_STATUS: Record<string, string> = {
+  enviado: "Enviado",
+  falhou: "Falhou",
+  pulado: "Pulado",
+};
 
 export default async function ConfiguracoesPage() {
   await requirePermissao("configuracoes_sistema");
+
+  const regras = await prisma.configNotificacao.findMany();
+  const porGatilho = new Map(regras.map((r) => [r.gatilho, r]));
+
+  const logs = await prisma.logNotificacao.findMany({
+    orderBy: { criadoEm: "desc" },
+    take: 20,
+    include: { membro: { select: { nomeCompleto: true } } },
+  });
+
   return (
-    <EmConstrucao
-      titulo="Configurações"
-      etapa={6}
-      descricao="Parâmetros do sistema, notificações e integrações."
-    />
+    <div className="mx-auto max-w-3xl">
+      <header className="mb-6">
+        <h1 className="text-3xl font-display font-semibold uppercase tracking-wide text-ink">
+          Configurações
+        </h1>
+        <p className="mt-1 text-sm text-ink-soft">
+          Notificações automáticas. Canal Telegram chega numa próxima rodada.
+        </p>
+      </header>
+
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-edge-soft bg-surface-2 p-4">
+        <p className="text-sm text-ink-soft">
+          Só o gatilho <strong>Aniversário do dia</strong> está enviando de
+          verdade agora. Use o botão para testar sem esperar a execução diária
+          automática.
+        </p>
+        <TestarAniversarioBotao />
+      </div>
+
+      <div className="space-y-5">
+        {ORDEM.map((gatilho) => {
+          const regra = porGatilho.get(gatilho);
+          if (!regra) return null;
+          const meta = META[gatilho];
+          const dados: RegraDados = {
+            id: regra.id,
+            titulo: meta.titulo,
+            descricao: meta.descricao,
+            implementado: meta.implementado,
+            ativo: regra.ativo,
+            niveisAlvo: regra.niveisAlvo,
+            canais: regra.canais,
+            assunto: regra.assunto,
+            mensagem: regra.mensagem,
+            horarioEnvio: regra.horarioEnvio,
+            usaHorario: meta.usaHorario,
+          };
+          return <RegraNotificacaoForm key={regra.id} regra={dados} />;
+        })}
+      </div>
+
+      <section className="mt-8">
+        <h2 className="mb-3 text-lg font-semibold text-ink">Últimos envios</h2>
+        {logs.length === 0 ? (
+          <p className="rounded-2xl border border-dashed border-edge p-6 text-center text-sm text-ink-subtle">
+            Nenhum envio registrado ainda.
+          </p>
+        ) : (
+          <div className="overflow-x-auto rounded-2xl border border-edge-soft bg-surface">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-surface-2 text-xs uppercase text-ink-subtle">
+                <tr>
+                  <th className="px-4 py-2">Quando</th>
+                  <th className="px-4 py-2">Membro</th>
+                  <th className="px-4 py-2">Status</th>
+                  <th className="px-4 py-2">Detalhe</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-edge-soft">
+                {logs.map((log) => (
+                  <tr key={log.id}>
+                    <td className="whitespace-nowrap px-4 py-2 text-ink-soft">
+                      {log.criadoEm.toLocaleString("pt-BR", {
+                        timeZone: "America/Sao_Paulo",
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </td>
+                    <td className="px-4 py-2 text-ink">{log.membro.nomeCompleto}</td>
+                    <td className="px-4 py-2">
+                      <span
+                        className={
+                          log.status === "enviado"
+                            ? "text-success-text"
+                            : log.status === "falhou"
+                              ? "text-danger-text"
+                              : "text-ink-subtle"
+                        }
+                      >
+                        {ROTULO_STATUS[log.status] ?? log.status}
+                      </span>
+                    </td>
+                    <td
+                      className="max-w-xs truncate px-4 py-2 text-ink-subtle"
+                      title={log.detalhe ?? ""}
+                    >
+                      {log.detalhe ?? "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
   );
 }

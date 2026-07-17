@@ -22,6 +22,6 @@ export const ITENS_MENU: ItemMenu[] = [
   { href: "/equipes", label: "Equipes", permissao: "gerenciar_membros", etapa: 3 },
   { href: "/aniversariantes", label: "Aniversariantes", permissao: "painel_aniversariantes" },
   { href: "/usuarios", label: "Usuários e Acessos", permissao: "gerenciar_usuarios", etapa: 3 },
-  { href: "/configuracoes", label: "Configurações", permissao: "configuracoes_sistema", etapa: 6 },
+  { href: "/configuracoes", label: "Configurações", permissao: "configuracoes_sistema" },
   { href: "/perfil", label: "Meu Perfil" },
 ];

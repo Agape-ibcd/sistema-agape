@@ -1,0 +1,79 @@
+import "dotenv/config";
+import { PrismaClient } from "@prisma/client";
+
+// ─────────────────────────────────────────────────────────────────────────
+// Etapa 6 — Semeia as 4 regras de ConfigNotificacao (idempotente: só cria a
+// que ainda não existir, nunca sobrescreve o que o usuário já configurou
+// pelo painel /configuracoes). Só `aniversario_dia` nasce ativo — os demais
+// gatilhos existem para configuração antecipada, mas o disparo ainda não
+// está implementado (chega numa próxima rodada).
+// ─────────────────────────────────────────────────────────────────────────
+
+const prisma = new PrismaClient();
+
+const REGRAS_PADRAO = [
+  {
+    gatilho: "aniversario_dia" as const,
+    ativo: true,
+    niveisAlvo: [],
+    canais: ["email"] as const,
+    assunto: "🎂 Feliz Aniversário, {{nome}}!",
+    mensagem:
+      "Olá, {{nome}}!\n\nToda a equipe do Ministério Ágape deseja um feliz aniversário! Que este novo ano de vida seja repleto de bênçãos.\n\nCom carinho,\nMinistério Ágape — Casa de Deus Jundiaí",
+    horarioEnvio: "09:00",
+  },
+  {
+    gatilho: "nova_escala" as const,
+    ativo: false,
+    niveisAlvo: [],
+    canais: ["email"] as const,
+    assunto: "Você foi escalado(a) — confirme sua presença",
+    mensagem:
+      "Olá, {{nome}}!\n\nVocê foi escalado(a) para {{evento}} em {{data}}. Por favor, confirme sua presença.\n\nMinistério Ágape",
+    horarioEnvio: null,
+  },
+  {
+    gatilho: "escala_alterada" as const,
+    ativo: false,
+    niveisAlvo: [],
+    canais: ["email"] as const,
+    assunto: "Alteração na sua escala",
+    mensagem:
+      "Olá, {{nome}}!\n\nHouve uma alteração na escala de {{evento}} em {{data}}. Confira os detalhes no sistema.\n\nMinistério Ágape",
+    horarioEnvio: null,
+  },
+  {
+    gatilho: "lembrete_vespera" as const,
+    ativo: false,
+    niveisAlvo: [],
+    canais: ["email"] as const,
+    assunto: "Lembrete: você está escalado(a) amanhã",
+    mensagem:
+      "Olá, {{nome}}!\n\nLembrando que você está escalado(a) para {{evento}} amanhã, {{data}}.\n\nMinistério Ágape",
+    horarioEnvio: "18:00",
+  },
+];
+
+async function main() {
+  for (const regra of REGRAS_PADRAO) {
+    const existente = await prisma.configNotificacao.findUnique({
+      where: { gatilho: regra.gatilho },
+    });
+    if (existente) {
+      console.log(`Regra "${regra.gatilho}" já existia — mantida sem alteração.`);
+      continue;
+    }
+    await prisma.configNotificacao.create({
+      data: { ...regra, niveisAlvo: [...regra.niveisAlvo], canais: [...regra.canais] },
+    });
+    console.log(`Regra "${regra.gatilho}" criada (ativo=${regra.ativo}).`);
+  }
+  console.log("\nSetup de notificações concluído.");
+}
+
+main()
+  .catch((erro) => {
+    console.error(erro);
+    process.exitCode = 1;
+  })
+  .finally(() => prisma.$disconnect());

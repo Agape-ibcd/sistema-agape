@@ -15,7 +15,7 @@ generator client {
   // Gerador clássico: instala o client em node_modules/@prisma/client (caminho
   // padrão). É o setup mais compatível com Next.js + Vercel serverless — o
   // empacotamento do motor é automático, sem file-tracing manual.
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   // "native" = dev local (Windows); "rhel-openssl-3.0.x" = runtime da Vercel.
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
@@ -94,6 +94,29 @@ enum OrigemEscala {
   rodizio // criada pelo motor de rodízio — pode ser corrigida por ele
 }
 
+// Etapa 6 — Notificações. Um gatilho por linha em ConfigNotificacao (regra
+// única e editável no painel /configuracoes). Só `aniversario_dia` tem envio
+// implementado nesta rodada; os demais existem no painel para configuração
+// antecipada, mas o disparo chega numa próxima rodada (Telegram + cron de
+// escala/lembrete).
+enum GatilhoNotificacao {
+  aniversario_dia
+  nova_escala // membro escalado — pede confirmação de presença
+  escala_alterada // escala/evento alterado ou cancelado
+  lembrete_vespera // D-1 às 18h
+}
+
+enum CanalNotificacao {
+  email
+  telegram
+}
+
+enum StatusEnvio {
+  enviado
+  falhou
+  pulado // e-mail sintético, canal desativado pelo membro, etc.
+}
+
 // ─────────────────────────────── MEMBROS ───────────────────────────────
 
 model Membro {
@@ -117,9 +140,10 @@ model Membro {
   telegramChatId  String?      @map("telegram_chat_id") @db.VarChar(50)
   ultimoAcesso    DateTime?    @map("ultimo_acesso")
 
-  equipe     Equipe?       @relation("MembroEquipe", fields: [equipeId], references: [id], onDelete: SetNull)
-  liderancas EquipeLider[]
-  presencas  Presenca[]    @relation("PresencaMembro")
+  equipe       Equipe?          @relation("MembroEquipe", fields: [equipeId], references: [id], onDelete: SetNull)
+  liderancas   EquipeLider[]
+  presencas    Presenca[]       @relation("PresencaMembro")
+  notificacoes LogNotificacao[]
 
   @@index([equipeId])
   @@index([status])
@@ -284,6 +308,50 @@ model RodizioEscala {
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
 
   @@map("rodizio_escala")
+}
+
+// ─────────────────────────── CONFIG_NOTIFICACAO ───────────────────────────
+// Uma linha por gatilho (regra única, editável no painel /configuracoes).
+// `niveisAlvo` vazio = todos os níveis recebem; `canais` controla por onde
+// sai (só `email` funciona nesta rodada — `telegram` fica pronto p/ a
+// próxima). `mensagem` aceita placeholders simples ({{nome}}, {{data}}...)
+// resolvidos em src/lib/notificacoesEnvio.ts.
+
+model ConfigNotificacao {
+  id            String             @id @default(uuid()) @db.Uuid
+  gatilho       GatilhoNotificacao @unique
+  ativo         Boolean            @default(false)
+  niveisAlvo    NivelAcesso[]      @map("niveis_alvo")
+  canais        CanalNotificacao[]
+  assunto       String?            @db.VarChar(200)
+  mensagem      String?            @db.Text
+  horarioEnvio  String?            @map("horario_envio") @db.VarChar(5) // "HH:MM", só informativo p/ gatilhos diários
+  atualizadoPor String?            @map("atualizado_por") @db.Uuid
+  atualizadoEm  DateTime           @updatedAt @map("atualizado_em")
+
+  @@map("config_notificacao")
+}
+
+// ─────────────────────────────── LOG_NOTIFICACAO ───────────────────────────
+// Trilha de envios (separada do AuditLog, que é sobre ações de usuário no
+// sistema — aqui é sobre comunicação enviada aos membros).
+
+model LogNotificacao {
+  id           String             @id @default(uuid()) @db.Uuid
+  gatilho      GatilhoNotificacao
+  membroId     String             @map("membro_id") @db.Uuid
+  canal        CanalNotificacao
+  status       StatusEnvio
+  destino      String             @db.VarChar(200) // e-mail ou chat_id usado no envio
+  detalhe      String?            @db.Text // motivo de falha/pulo, id do provedor
+  referenciaId String?            @map("referencia_id") @db.VarChar(100) // eventoId/escalaId quando aplicável
+  criadoEm     DateTime           @default(now()) @map("criado_em")
+
+  membro Membro @relation(fields: [membroId], references: [id], onDelete: Cascade)
+
+  @@index([membroId])
+  @@index([gatilho, criadoEm])
+  @@map("log_notificacao")
 }
 
 // ─────────────────────────────── AUDIT_LOG ───────────────────────────────
