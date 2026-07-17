@@ -1,8 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// Rotas públicas que não exigem sessão.
-const ROTAS_PUBLICAS = ["/login", "/auth"];
+// Rotas públicas que não exigem sessão do Supabase. `/api/cron` tem o
+// próprio esquema de autenticação (header Authorization: Bearer CRON_SECRET,
+// checado na própria rota) — quem chama é o Vercel Cron / pg_cron do
+// Supabase, sem cookie de sessão nenhum, então precisa escapar do redirect
+// para /login que este middleware aplicaria a qualquer rota privada.
+const ROTAS_PUBLICAS = ["/login", "/auth", "/api/cron"];
 
 // Renova a sessão do Supabase a cada requisição e protege rotas privadas.
 // Segue o padrão recomendado pelo @supabase/ssr para Next.js App Router.
