@@ -20,7 +20,7 @@ const REGRAS_PADRAO = [
     assunto: "🎂 Feliz Aniversário, {{nome}}!",
     mensagem:
       "Olá, {{nome}}!\n\nToda a equipe do Ministério Ágape deseja um feliz aniversário! Que este novo ano de vida seja repleto de bênçãos.\n\nCom carinho,\nMinistério Ágape — Casa de Deus Jundiaí",
-    horarioEnvio: "09:00",
+    horarioEnvio: "06:00",
   },
   {
     gatilho: "nova_escala" as const,

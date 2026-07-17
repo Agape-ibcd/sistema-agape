@@ -318,16 +318,22 @@ model RodizioEscala {
 // resolvidos em src/lib/notificacoesEnvio.ts.
 
 model ConfigNotificacao {
-  id            String             @id @default(uuid()) @db.Uuid
-  gatilho       GatilhoNotificacao @unique
-  ativo         Boolean            @default(false)
-  niveisAlvo    NivelAcesso[]      @map("niveis_alvo")
-  canais        CanalNotificacao[]
-  assunto       String?            @db.VarChar(200)
-  mensagem      String?            @db.Text
-  horarioEnvio  String?            @map("horario_envio") @db.VarChar(5) // "HH:MM", só informativo p/ gatilhos diários
-  atualizadoPor String?            @map("atualizado_por") @db.Uuid
-  atualizadoEm  DateTime           @updatedAt @map("atualizado_em")
+  id              String             @id @default(uuid()) @db.Uuid
+  gatilho         GatilhoNotificacao @unique
+  ativo           Boolean            @default(false)
+  niveisAlvo      NivelAcesso[]      @map("niveis_alvo")
+  canais          CanalNotificacao[]
+  assunto         String?            @db.VarChar(200)
+  mensagem        String?            @db.Text
+  horarioEnvio    String?            @map("horario_envio") @db.VarChar(5) // "HH:MM" — horário-alvo do disparo diário (fuso São Paulo)
+  // Marca a última vez que o motor de disparo REALMENTE rodou o envio deste
+  // gatilho (independente de ter achado destinatários) — é o dedupe que
+  // evita mandar 2x no mesmo dia quando o disparo é checado a cada poucos
+  // minutos (pg_cron do Supabase), em vez de 1x fixo (limite do Vercel Cron
+  // no plano Hobby). Ver src/lib/notificacoesEnvio.ts.
+  ultimoDisparoEm DateTime?          @map("ultimo_disparo_em")
+  atualizadoPor   String?            @map("atualizado_por") @db.Uuid
+  atualizadoEm    DateTime           @updatedAt @map("atualizado_em")
 
   @@map("config_notificacao")
 }

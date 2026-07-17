@@ -15,6 +15,7 @@
     "migrate:dry": "tsx scripts/migrate.ts --dry-run",
     "setup:etapa3": "tsx scripts/setup-etapa3.ts",
     "setup:notificacoes": "tsx scripts/setup-notificacoes.ts",
+    "setup:pgcron": "tsx scripts/setup-pgcron-notificacoes.ts",
     "test:recorrencia": "tsx scripts/test-recorrencia.ts",
     "test:rodizio": "tsx scripts/test-rodizio.ts"
   },

@@ -122,7 +122,9 @@ export function RegraNotificacaoForm({ regra }: { regra: RegraDados }) {
               className={inputCls}
             />
             <p className="mt-1 text-xs text-ink-subtle">
-              Aproximado — o sistema roda essa checagem 1x ao dia.
+              {regra.implementado
+                ? "O sistema confere a cada poucos minutos e dispara assim que bater esse horário (não repete no mesmo dia)."
+                : "Só vale quando o envio deste gatilho for implementado."}
             </p>
           </div>
         )}
