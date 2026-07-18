@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import { useActionState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { login } from "./actions";
 import { Rodape } from "@/components/Rodape";
@@ -68,6 +69,15 @@ function LoginForm() {
       >
         {pendente ? "Entrando…" : "Entrar"}
       </button>
+
+      <p className="text-center text-sm">
+        <Link
+          href="/recuperar-senha"
+          className="text-brand-text hover:underline"
+        >
+          Esqueci minha senha
+        </Link>
+      </p>
     </form>
   );
 }

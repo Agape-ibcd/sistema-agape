@@ -14,6 +14,7 @@ import { NextResponse, type NextRequest } from "next/server";
 // segurança é o token opaco com expiração checado na própria página.
 const ROTAS_PUBLICAS = [
   "/login",
+  "/recuperar-senha", // recuperação por código, sem sessão (Sessão 2)
   "/auth",
   "/api/cron",
   "/api/telegram/webhook",

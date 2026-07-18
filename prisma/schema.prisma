@@ -161,6 +161,7 @@ model Membro {
   presencas     Presenca[]           @relation("PresencaMembro")
   notificacoes  LogNotificacao[]
   confirmacoes  ConfirmacaoEscala[]
+  recuperacoes  RecuperacaoSenha[]
 
   @@index([equipeId])
   @@index([status])
@@ -399,6 +400,30 @@ model ConfirmacaoEscala {
   @@index([escalaId])
   @@index([membroId])
   @@map("confirmacao_escala")
+}
+
+// ─────────────────────────── RECUPERACAO_SENHA ───────────────────────────
+// Recuperação de senha por código (Sessão 2). Fluxo público, sem sessão:
+// o membro pede um código de 6 dígitos (enviado por e-mail e/ou Telegram),
+// digita-o (máx. 5 tentativas), e então define a nova senha. O código é
+// guardado só como HASH (SHA-256) — nunca em texto. Ao acertar o código,
+// gera-se `tokenReset` (opaco, uso único) que autoriza a troca da senha;
+// não há sessão/acesso ao sistema antes de a nova senha ser definida e o
+// login refeito.
+model RecuperacaoSenha {
+  id         String    @id @default(uuid()) @db.Uuid
+  membroId   String    @map("membro_id") @db.Uuid
+  codigoHash String    @map("codigo_hash") @db.VarChar(64) // sha256 hex do código
+  tokenReset String?   @unique @map("token_reset") @db.VarChar(64) // gerado após acertar o código
+  expiraEm   DateTime  @map("expira_em")
+  tentativas Int       @default(0)
+  usado      Boolean   @default(false)
+  criadoEm   DateTime  @default(now()) @map("criado_em")
+
+  membro Membro @relation(fields: [membroId], references: [id], onDelete: Cascade)
+
+  @@index([membroId])
+  @@map("recuperacao_senha")
 }
 
 // ─────────────────────────────── AUDIT_LOG ───────────────────────────────
