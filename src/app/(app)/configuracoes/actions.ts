@@ -16,10 +16,7 @@ const NIVEIS_VALIDOS: NivelAcesso[] = [
   "membro",
 ];
 
-// Salva uma regra de ConfigNotificacao (uma linha por gatilho). O canal
-// Telegram ainda não é editável pela tela (chega na próxima rodada) — o
-// valor gravado no banco é preservado tal como está, só `email` é
-// alternado pelo checkbox do formulário.
+// Salva uma regra de ConfigNotificacao (uma linha por gatilho).
 export async function salvarConfigNotificacao(
   _prev: EstadoAcao,
   formData: FormData,
@@ -28,6 +25,7 @@ export async function salvarConfigNotificacao(
   const id = String(formData.get("id") ?? "");
   const ativo = formData.get("ativo") === "on";
   const canalEmail = formData.get("canalEmail") === "on";
+  const canalTelegram = formData.get("canalTelegram") === "on";
   const assunto = String(formData.get("assunto") ?? "").trim();
   const mensagem = String(formData.get("mensagem") ?? "").trim();
   const horarioEnvio = String(formData.get("horarioEnvio") ?? "").trim();
@@ -45,6 +43,8 @@ export async function salvarConfigNotificacao(
     const canais = new Set(atual.canais);
     if (canalEmail) canais.add("email");
     else canais.delete("email");
+    if (canalTelegram) canais.add("telegram");
+    else canais.delete("telegram");
 
     await prisma.configNotificacao.update({
       where: { id },

@@ -26,6 +26,9 @@ export type RegraDados = {
   mensagem: string | null;
   horarioEnvio: string | null;
   usaHorario: boolean;
+  // nova_escala/escala_alterada notificam TODOS os escalados, sem filtrar
+  // por nível — o seletor de níveis-alvo não faz sentido pra eles.
+  usaNiveisAlvo: boolean;
 };
 
 const inputCls =
@@ -66,29 +69,35 @@ export function RegraNotificacaoForm({ regra }: { regra: RegraDados }) {
           </label>
         </div>
 
-        <div>
-          <p className={labelCls}>Enviar para (nível de acesso)</p>
-          <div className="flex flex-wrap gap-2">
-            {NIVEIS.map((n) => (
-              <label
-                key={n}
-                className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-edge-soft px-3 py-1.5 text-sm has-[:checked]:border-brand has-[:checked]:bg-brand-faint"
-              >
-                <input
-                  type="checkbox"
-                  name="niveisAlvo"
-                  value={n}
-                  defaultChecked={regra.niveisAlvo.includes(n)}
-                  className="accent-brand"
-                />
-                {ROTULO_NIVEL[n]}
-              </label>
-            ))}
+        {regra.usaNiveisAlvo ? (
+          <div>
+            <p className={labelCls}>Enviar para (nível de acesso)</p>
+            <div className="flex flex-wrap gap-2">
+              {NIVEIS.map((n) => (
+                <label
+                  key={n}
+                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-edge-soft px-3 py-1.5 text-sm has-[:checked]:border-brand has-[:checked]:bg-brand-faint"
+                >
+                  <input
+                    type="checkbox"
+                    name="niveisAlvo"
+                    value={n}
+                    defaultChecked={regra.niveisAlvo.includes(n)}
+                    className="accent-brand"
+                  />
+                  {ROTULO_NIVEL[n]}
+                </label>
+              ))}
+            </div>
+            <p className="mt-1 text-xs text-ink-subtle">
+              Nenhum marcado = envia para todos os níveis.
+            </p>
           </div>
-          <p className="mt-1 text-xs text-ink-subtle">
-            Nenhum marcado = envia para todos os níveis.
+        ) : (
+          <p className="text-xs text-ink-subtle">
+            Notifica todos os membros escalados, sem filtro de nível de acesso.
           </p>
-        </div>
+        )}
 
         <div className="flex flex-wrap gap-4">
           <label className="flex items-center gap-2 text-sm text-ink-soft">
@@ -100,12 +109,14 @@ export function RegraNotificacaoForm({ regra }: { regra: RegraDados }) {
             />
             E-mail
           </label>
-          <label
-            className="flex cursor-not-allowed items-center gap-2 text-sm text-ink-faint"
-            title="Chega na próxima rodada (Telegram Bot)"
-          >
-            <input type="checkbox" disabled className="accent-brand" />
-            Telegram (em breve)
+          <label className="flex items-center gap-2 text-sm text-ink-soft">
+            <input
+              type="checkbox"
+              name="canalTelegram"
+              defaultChecked={regra.canais.includes("telegram")}
+              className="accent-brand"
+            />
+            Telegram
           </label>
         </div>
 

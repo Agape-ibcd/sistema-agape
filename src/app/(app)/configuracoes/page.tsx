@@ -13,34 +13,43 @@ const ORDEM: GatilhoNotificacao[] = [
 
 const META: Record<
   GatilhoNotificacao,
-  { titulo: string; descricao: string; implementado: boolean; usaHorario: boolean }
+  {
+    titulo: string;
+    descricao: string;
+    implementado: boolean;
+    usaHorario: boolean;
+    usaNiveisAlvo: boolean;
+  }
 > = {
   aniversario_dia: {
     titulo: "Aniversário do dia",
     descricao: "Mensagem de felicitação enviada no dia do aniversário do membro.",
     implementado: true,
     usaHorario: true,
+    usaNiveisAlvo: true,
   },
   nova_escala: {
     titulo: "Nova escala — confirmação de presença",
     descricao:
-      "Avisa o membro ao ser escalado e pede a confirmação de presença. Envio chega numa próxima rodada.",
-    implementado: false,
+      "Avisa o membro ao ser escalado (manualmente — o rodízio em lote não dispara aqui) e pede confirmação de presença por um link.",
+    implementado: true,
     usaHorario: false,
+    usaNiveisAlvo: false,
   },
   escala_alterada: {
     titulo: "Escala ou evento alterado",
-    descricao:
-      "Avisa quando uma escala é trocada ou um evento é cancelado/alterado. Envio chega numa próxima rodada.",
-    implementado: false,
+    descricao: "Avisa quando uma escala é trocada, removida, ou um evento é cancelado/reativado/tem o horário alterado.",
+    implementado: true,
     usaHorario: false,
+    usaNiveisAlvo: false,
   },
   lembrete_vespera: {
     titulo: "Lembrete véspera (D-1)",
     descricao:
-      "Lembrete enviado na véspera para quem está escalado no dia seguinte. Envio chega numa próxima rodada.",
-    implementado: false,
+      "Lembrete enviado na véspera para quem está escalado no dia seguinte (um resumo por pessoa, mesmo com vários compromissos).",
+    implementado: true,
     usaHorario: true,
+    usaNiveisAlvo: false,
   },
 };
 
@@ -69,15 +78,16 @@ export default async function ConfiguracoesPage() {
           Configurações
         </h1>
         <p className="mt-1 text-sm text-ink-soft">
-          Notificações automáticas. Canal Telegram chega numa próxima rodada.
+          Notificações automáticas por e-mail e Telegram.
         </p>
       </header>
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-edge-soft bg-surface-2 p-4">
         <p className="text-sm text-ink-soft">
-          Só o gatilho <strong>Aniversário do dia</strong> está enviando de
-          verdade agora. Use o botão para testar sem esperar a execução diária
-          automática.
+          <strong>Aniversário do dia</strong> e <strong>Lembrete véspera</strong>{" "}
+          rodam sozinhos no horário configurado abaixo. Use o botão para testar
+          o aniversário sem esperar a execução automática — os gatilhos de
+          escala disparam na hora, direto na tela de Eventos.
         </p>
         <TestarAniversarioBotao />
       </div>
@@ -99,6 +109,7 @@ export default async function ConfiguracoesPage() {
             mensagem: regra.mensagem,
             horarioEnvio: regra.horarioEnvio,
             usaHorario: meta.usaHorario,
+            usaNiveisAlvo: meta.usaNiveisAlvo,
           };
           return <RegraNotificacaoForm key={regra.id} regra={dados} />;
         })}

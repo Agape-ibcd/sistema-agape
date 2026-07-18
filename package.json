@@ -16,6 +16,7 @@
     "setup:etapa3": "tsx scripts/setup-etapa3.ts",
     "setup:notificacoes": "tsx scripts/setup-notificacoes.ts",
     "setup:pgcron": "tsx scripts/setup-pgcron-notificacoes.ts",
+    "setup:telegram": "tsx scripts/setup-telegram-webhook.ts",
     "test:recorrencia": "tsx scripts/test-recorrencia.ts",
     "test:rodizio": "tsx scripts/test-rodizio.ts"
   },

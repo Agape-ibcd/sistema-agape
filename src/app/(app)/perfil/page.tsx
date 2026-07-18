@@ -4,6 +4,7 @@ import { can, ROTULO_NIVEL } from "@/lib/rbac";
 import { formatarDataISO } from "@/lib/recorrencia";
 import { PerfilForm } from "./PerfilForm";
 import { SenhaForm } from "./SenhaForm";
+import { TelegramVinculo } from "./TelegramVinculo";
 
 export default async function PerfilPage() {
   const usuario = await requireUsuario();
@@ -16,6 +17,7 @@ export default async function PerfilPage() {
       observacao: true,
       dataNascimento: true,
       fotoUrl: true,
+      telegramChatId: true,
     },
   });
   // Monitor é só leitura em todo o sistema — inclusive no próprio perfil.
@@ -82,15 +84,18 @@ export default async function PerfilPage() {
       </dl>
 
       {podeEditar ? (
-        <PerfilForm
-          nome={membro?.nomeCompleto ?? "?"}
-          fotoUrl={membro?.fotoUrl ?? null}
-          celular={membro?.celularWhatsapp ?? ""}
-          observacao={membro?.observacao ?? ""}
-          dataNascimento={
-            membro?.dataNascimento ? formatarDataISO(membro.dataNascimento) : ""
-          }
-        />
+        <>
+          <PerfilForm
+            nome={membro?.nomeCompleto ?? "?"}
+            fotoUrl={membro?.fotoUrl ?? null}
+            celular={membro?.celularWhatsapp ?? ""}
+            observacao={membro?.observacao ?? ""}
+            dataNascimento={
+              membro?.dataNascimento ? formatarDataISO(membro.dataNascimento) : ""
+            }
+          />
+          <TelegramVinculo vinculado={!!membro?.telegramChatId} />
+        </>
       ) : (
         <p className="rounded-2xl border border-info-edge bg-info-faint p-4 text-sm text-info-text">
           Seu nível de acesso é somente leitura — para alterar dados do seu

@@ -117,6 +117,17 @@ enum StatusEnvio {
   pulado // e-mail sintético, canal desativado pelo membro, etc.
 }
 
+// Confirmação de presença (Etapa 6 parte 2 — gatilho nova_escala). Uma linha
+// por (escala, membro da equipe escalada): token opaco com expiração, sem
+// exigir login (link enviado por e-mail/Telegram, respondido numa página
+// pública). Não confundir com o model `Presenca` (registro de comparecimento
+// já ocorrido) — isto é a confirmação PRÉVIA (RSVP).
+enum StatusConfirmacaoEscala {
+  pendente
+  confirmado
+  recusado
+}
+
 // ─────────────────────────────── MEMBROS ───────────────────────────────
 
 model Membro {
@@ -138,12 +149,18 @@ model Membro {
   notifTelegram   Boolean      @default(false) @map("notif_telegram")
   notifPush       Boolean      @default(false) @map("notif_push")
   telegramChatId  String?      @map("telegram_chat_id") @db.VarChar(50)
+  // Token opaco de vínculo do Telegram (deep link t.me/<bot>?start=<token>),
+  // gerado em /perfil e consumido pelo webhook no /start — expira sozinho se
+  // o membro não completar o vínculo.
+  telegramLinkToken  String?   @unique @map("telegram_link_token") @db.VarChar(64)
+  telegramLinkExpira DateTime? @map("telegram_link_expira")
   ultimoAcesso    DateTime?    @map("ultimo_acesso")
 
-  equipe       Equipe?          @relation("MembroEquipe", fields: [equipeId], references: [id], onDelete: SetNull)
-  liderancas   EquipeLider[]
-  presencas    Presenca[]       @relation("PresencaMembro")
-  notificacoes LogNotificacao[]
+  equipe        Equipe?              @relation("MembroEquipe", fields: [equipeId], references: [id], onDelete: SetNull)
+  liderancas    EquipeLider[]
+  presencas     Presenca[]           @relation("PresencaMembro")
+  notificacoes  LogNotificacao[]
+  confirmacoes  ConfirmacaoEscala[]
 
   @@index([equipeId])
   @@index([status])
@@ -248,6 +265,7 @@ model EscalaEquipeEvento {
 
   evento Evento @relation(fields: [eventoId], references: [id], onDelete: Cascade)
   equipe Equipe @relation(fields: [equipeId], references: [id], onDelete: Cascade)
+  confirmacoes ConfirmacaoEscala[]
 
   @@unique([eventoId, equipeId])
   @@index([equipeId])
@@ -358,6 +376,29 @@ model LogNotificacao {
   @@index([membroId])
   @@index([gatilho, criadoEm])
   @@map("log_notificacao")
+}
+
+// ─────────────────────────── CONFIRMACAO_ESCALA ───────────────────────────
+// RSVP prévio do gatilho `nova_escala`: uma linha por (escala, membro da
+// equipe escalada). `expiraEm` = fim do dia do evento (confirmar depois não
+// faz sentido). Página pública em /confirmar-presenca/[token].
+
+model ConfirmacaoEscala {
+  id           String                  @id @default(uuid()) @db.Uuid
+  token        String                  @unique @db.VarChar(64)
+  escalaId     String                  @map("escala_id") @db.Uuid
+  membroId     String                  @map("membro_id") @db.Uuid
+  status       StatusConfirmacaoEscala @default(pendente)
+  expiraEm     DateTime                @map("expira_em")
+  respondidoEm DateTime?               @map("respondido_em")
+  criadoEm     DateTime                @default(now()) @map("criado_em")
+
+  escala EscalaEquipeEvento @relation(fields: [escalaId], references: [id], onDelete: Cascade)
+  membro Membro             @relation(fields: [membroId], references: [id], onDelete: Cascade)
+
+  @@index([escalaId])
+  @@index([membroId])
+  @@map("confirmacao_escala")
 }
 
 // ─────────────────────────────── AUDIT_LOG ───────────────────────────────

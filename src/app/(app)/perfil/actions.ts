@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
 import { prisma } from "@/lib/prisma";
@@ -9,6 +10,7 @@ import { writeAudit } from "@/lib/audit";
 import { uploadFotoMembro, removerFotoMembro } from "@/lib/storage";
 import { parseDataISO } from "@/lib/recorrencia";
 import { sucesso, falha, type EstadoAcao } from "@/lib/actions";
+import { obterBotUsername } from "@/lib/telegram";
 
 // Ações do próprio perfil. Todas exigem `editar_perfil_proprio` — o nível
 // `monitor` não tem NENHUMA permissão de escrita, nem sobre o próprio cadastro.
@@ -216,6 +218,62 @@ export async function removerFotoPerfil(): Promise<EstadoAcao> {
   } catch (erro) {
     return falha(
       `Erro ao remover a foto: ${erro instanceof Error ? erro.message : "falha desconhecida"}`,
+    );
+  }
+}
+
+// Vínculo do Telegram (Etapa 6 parte 2). Gera um token opaco de curta
+// duração e devolve o deep link t.me/<bot>?start=<token> — o vínculo de
+// verdade (telegramChatId) só acontece quando o membro clica e o webhook
+// recebe o /start (src/app/api/telegram/webhook/route.ts).
+export type EstadoVinculoTelegram = (NonNullable<EstadoAcao> & { link?: string }) | null;
+
+export async function gerarLinkTelegram(): Promise<EstadoVinculoTelegram> {
+  const usuario = await requirePermissao("editar_perfil_proprio");
+
+  const username = await obterBotUsername();
+  if (!username) {
+    return falha("Não foi possível falar com o Telegram agora — tente novamente em instantes.");
+  }
+
+  const token = randomUUID().replace(/-/g, "");
+  const expira = new Date(Date.now() + 30 * 60 * 1000);
+
+  await prisma.membro.update({
+    where: { id: usuario.membroId },
+    data: { telegramLinkToken: token, telegramLinkExpira: expira },
+  });
+
+  return {
+    ...sucesso("Link gerado — válido por 30 minutos.")!,
+    link: `https://t.me/${username}?start=${token}`,
+  };
+}
+
+// Desvincula o Telegram (limpa chatId e desliga o canal). Não some com o
+// histórico de LogNotificacao — só interrompe envios futuros por lá.
+export async function desvincularTelegram(): Promise<EstadoAcao> {
+  const usuario = await requirePermissao("editar_perfil_proprio");
+
+  try {
+    await prisma.membro.update({
+      where: { id: usuario.membroId },
+      data: { telegramChatId: null, notifTelegram: false },
+    });
+
+    await writeAudit({
+      usuarioId: usuario.membroId,
+      acao: "editar",
+      tabelaAfetada: "membros",
+      registroId: usuario.membroId,
+      dadosNovos: { telegramChatId: null, notifTelegram: false },
+    });
+
+    revalidatePath("/perfil");
+    return sucesso("Telegram desvinculado.");
+  } catch (erro) {
+    return falha(
+      `Erro ao desvincular: ${erro instanceof Error ? erro.message : "falha desconhecida"}`,
     );
   }
 }

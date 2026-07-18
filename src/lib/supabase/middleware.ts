@@ -6,7 +6,19 @@ import { NextResponse, type NextRequest } from "next/server";
 // checado na própria rota) — quem chama é o Vercel Cron / pg_cron do
 // Supabase, sem cookie de sessão nenhum, então precisa escapar do redirect
 // para /login que este middleware aplicaria a qualquer rota privada.
-const ROTAS_PUBLICAS = ["/login", "/auth", "/api/cron"];
+// `/api/telegram/webhook` tem o próprio segredo (header
+// X-Telegram-Bot-Api-Secret-Token, checado na rota) — quem chama é o
+// Telegram, sem cookie de sessão. `/confirmar-presenca` é a página pública
+// de RSVP (gatilho nova_escala): o link chega por e-mail/Telegram para
+// quem pode nem ter conta no sistema (login não é pré-requisito), a
+// segurança é o token opaco com expiração checado na própria página.
+const ROTAS_PUBLICAS = [
+  "/login",
+  "/auth",
+  "/api/cron",
+  "/api/telegram/webhook",
+  "/confirmar-presenca",
+];
 
 // Renova a sessão do Supabase a cada requisição e protege rotas privadas.
 // Segue o padrão recomendado pelo @supabase/ssr para Next.js App Router.

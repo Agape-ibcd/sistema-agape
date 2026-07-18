@@ -12,6 +12,10 @@ import {
   parseDataISO,
 } from "@/lib/recorrencia";
 import { aplicarRodizioNoBanco } from "@/lib/aplicarRodizio";
+import {
+  dispararNotificacaoNovaEscala,
+  dispararNotificacaoEscalaAlterada,
+} from "@/lib/notificacoesEnvio";
 import type { TipoEscala } from "@prisma/client";
 
 // Estado da ação de escalar: quando a equipe é escalada num evento e existem
@@ -79,7 +83,7 @@ export async function escalarEquipe(
       return falha("Este evento está cancelado — reative-o antes de escalar.");
     }
 
-    await prisma.escalaEquipeEvento.create({
+    const criada = await prisma.escalaEquipeEvento.create({
       data: {
         eventoId,
         equipeId,
@@ -102,6 +106,7 @@ export async function escalarEquipe(
       },
     });
 
+    await dispararNotificacaoNovaEscala(criada.id);
     revalidarCalendario(eventoId);
 
     // Cobertura semanal: procura eventos agendados da mesma semana sem a equipe.
@@ -190,6 +195,16 @@ export async function propagarEscala(
       dadosNovos: { equipe: equipe.nome, eventos: eventos.map((e) => e.id), criados: count },
     });
 
+    // A propagação é sempre por poucos eventos da mesma semana (nunca um lote
+    // como o rodízio) — cada escala criada dispara nova_escala normalmente.
+    const criadas = await prisma.escalaEquipeEvento.findMany({
+      where: { eventoId: { in: eventos.map((e) => e.id) }, equipeId },
+      select: { id: true },
+    });
+    for (const c of criadas) {
+      await dispararNotificacaoNovaEscala(c.id);
+    }
+
     revalidarCalendario();
     return sucesso(
       `Escala propagada: equipe ${equipe.nome} escalada em mais ${count} evento(s) da semana.`,
@@ -232,6 +247,12 @@ export async function removerEscala(
         tipoEscala: escala.tipoEscala,
         observacao: escala.observacao,
       },
+    });
+
+    await dispararNotificacaoEscalaAlterada({
+      eventoId: escala.eventoId,
+      equipeIds: [escala.equipeId],
+      detalhe: "Você foi removido(a) desta escala.",
     });
 
     revalidarCalendario(escala.eventoId);
@@ -360,6 +381,18 @@ export async function salvarEvento(
       dadosNovos: { horarioInicio, descricaoEspecifica: descricao || null },
     });
 
+    if (antes.horarioInicio !== horarioInicio) {
+      const escalas = await prisma.escalaEquipeEvento.findMany({
+        where: { eventoId: id },
+        select: { equipeId: true },
+      });
+      await dispararNotificacaoEscalaAlterada({
+        eventoId: id,
+        equipeIds: escalas.map((e) => e.equipeId),
+        detalhe: `O horário do evento mudou de ${antes.horarioInicio} para ${horarioInicio}.`,
+      });
+    }
+
     revalidarCalendario(id);
     return sucesso(
       `Evento atualizado (chegada da equipe recalculada: ${horarioChegadaEquipe}).`,
@@ -399,6 +432,19 @@ export async function alternarStatusEvento(
       registroId: id,
       dadosAnteriores: { status: antes.status },
       dadosNovos: { status: novoStatus },
+    });
+
+    const escalas = await prisma.escalaEquipeEvento.findMany({
+      where: { eventoId: id },
+      select: { equipeId: true },
+    });
+    await dispararNotificacaoEscalaAlterada({
+      eventoId: id,
+      equipeIds: escalas.map((e) => e.equipeId),
+      detalhe:
+        novoStatus === "cancelado"
+          ? "O evento foi cancelado."
+          : "O evento foi reativado (estava cancelado).",
     });
 
     revalidarCalendario(id);
@@ -467,7 +513,7 @@ export async function trocarEscala(
       );
     }
 
-    await prisma.$transaction([
+    const [, novaEscala] = await prisma.$transaction([
       prisma.escalaEquipeEvento.delete({ where: { id: escalaId } }),
       prisma.escalaEquipeEvento.create({
         data: {
@@ -489,6 +535,13 @@ export async function trocarEscala(
       dadosAnteriores: { eventoId: escala.eventoId, equipe: escala.equipe.nome },
       dadosNovos: { eventoId: escala.eventoId, equipe: nova.nome },
     });
+
+    await dispararNotificacaoEscalaAlterada({
+      eventoId: escala.eventoId,
+      equipeIds: [escala.equipeId],
+      detalhe: `Sua equipe foi substituída por ${nova.nome} nesta escala.`,
+    });
+    await dispararNotificacaoNovaEscala(novaEscala.id);
 
     revalidarCalendario(escala.eventoId);
     revalidatePath("/presenca");
