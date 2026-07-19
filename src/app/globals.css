@@ -105,7 +105,7 @@
      vidro-forte painéis flutuantes (popover, modal, sino) — mais opaco
      vidro-leve  cartões de conteúdo — translucidez SEM blur (barato)     */
   --vidro: rgb(255 255 255 / 0.62);
-  --vidro-forte: rgb(255 255 255 / 0.78);
+  --vidro-forte: rgb(255 255 255 / 0.94);
   --vidro-leve: rgb(255 255 255 / 0.72);
   --vidro-borda: rgb(13 43 92 / 0.14);
   --vidro-brilho: rgb(255 255 255 / 0.65); /* filete de luz interno no topo */
@@ -180,7 +180,7 @@
 
   /* Liquid Glass no escuro: grafite translúcido, filete de luz discreto. */
   --vidro: rgb(25 27 33 / 0.55);
-  --vidro-forte: rgb(25 27 33 / 0.82);
+  --vidro-forte: rgb(25 27 33 / 0.94);
   --vidro-leve: rgb(25 27 33 / 0.66);
   --vidro-borda: rgb(255 255 255 / 0.09);
   --vidro-brilho: rgb(255 255 255 / 0.07);
