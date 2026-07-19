@@ -95,7 +95,6 @@ export async function solicitarCodigoRecuperacao(
 
   // E-mail (se entregável). Recuperação é ação pedida pelo próprio usuário,
   // então ignora a preferência notifEmail — é segurança, não notificação.
-  console.log("[recuperacao] membro.email:", membro.email, "sintético?", ehEmailSintetico(membro.email));
   if (!ehEmailSintetico(membro.email)) {
     const r = await enviarEmail({
       para: membro.email,
@@ -107,12 +106,10 @@ export async function solicitarCodigoRecuperacao(
         `<p>Ele vale por ${VALIDADE_MIN} minutos. Se você não pediu isso, ignore este e-mail.</p>`,
       ].join(""),
     });
-    console.log("[recuperacao] resultado enviarEmail:", JSON.stringify(r));
     if (r.ok) canais.push("email");
   }
 
   // Telegram (se vinculado).
-  console.log("[recuperacao] membro.telegramChatId:", membro.telegramChatId);
   if (membro.telegramChatId) {
     const r = await enviarTelegram({
       chatId: membro.telegramChatId,
@@ -120,10 +117,8 @@ export async function solicitarCodigoRecuperacao(
         `Olá, ${primeiroNome}. Seu código para redefinir a senha do Sistema Ágape é: ${codigo}\n` +
         `Vale por ${VALIDADE_MIN} minutos. Se você não pediu isso, ignore esta mensagem.`,
     });
-    console.log("[recuperacao] resultado enviarTelegram:", JSON.stringify(r));
     if (r.ok) canais.push("telegram");
   }
-  console.log("[recuperacao] canais finais:", canais);
 
   return { enviado: canais.length > 0, canais };
 }
