@@ -13,6 +13,8 @@
     "seed": "tsx scripts/seed.ts",
     "migrate": "tsx scripts/migrate.ts",
     "migrate:dry": "tsx scripts/migrate.ts --dry-run",
+    "corrigir-emails:dry": "tsx scripts/corrigir-emails-planilha.ts --dry-run",
+    "corrigir-emails": "tsx scripts/corrigir-emails-planilha.ts",
     "setup:etapa3": "tsx scripts/setup-etapa3.ts",
     "setup:notificacoes": "tsx scripts/setup-notificacoes.ts",
     "setup:pgcron": "tsx scripts/setup-pgcron-notificacoes.ts",
