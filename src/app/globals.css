@@ -99,6 +99,22 @@
   --accent-faint: #fdecea;
   --accent-soft: #f8d5d2;
   --accent-edge: #ef8079;
+
+  /* LIQUID GLASS — superfícies translúcidas (ver classes .vidro* abaixo).
+     vidro       chrome com blur (sidebar, header, cards de login)
+     vidro-forte painéis flutuantes (popover, modal, sino) — mais opaco
+     vidro-leve  cartões de conteúdo — translucidez SEM blur (barato)     */
+  --vidro: rgb(255 255 255 / 0.62);
+  --vidro-forte: rgb(255 255 255 / 0.78);
+  --vidro-leve: rgb(255 255 255 / 0.72);
+  --vidro-borda: rgb(13 43 92 / 0.14);
+  --vidro-brilho: rgb(255 255 255 / 0.65); /* filete de luz interno no topo */
+
+  /* Aurora — manchas de cor da marca diluídas no fundo da página, o "líquido"
+     que os vidros desfocam. Alfas baixos para não competir com o conteúdo. */
+  --aurora-navy: rgb(13 43 92 / 0.1);
+  --aurora-vermelho: rgb(225 53 42 / 0.07);
+  --aurora-dourado: rgb(184 134 11 / 0.08);
 }
 
 .dark {
@@ -161,6 +177,17 @@
   --accent-faint: rgb(225 53 42 / 0.12);
   --accent-soft: rgb(225 53 42 / 0.2);
   --accent-edge: rgb(239 128 121 / 0.42);
+
+  /* Liquid Glass no escuro: grafite translúcido, filete de luz discreto. */
+  --vidro: rgb(25 27 33 / 0.55);
+  --vidro-forte: rgb(25 27 33 / 0.82);
+  --vidro-leve: rgb(25 27 33 / 0.66);
+  --vidro-borda: rgb(255 255 255 / 0.09);
+  --vidro-brilho: rgb(255 255 255 / 0.07);
+
+  --aurora-navy: rgb(63 111 184 / 0.13);
+  --aurora-vermelho: rgb(225 53 42 / 0.08);
+  --aurora-dourado: rgb(204 154 31 / 0.07);
 }
 
 @theme inline {
@@ -234,6 +261,99 @@
 body {
   background: var(--surface-2);
   color: var(--ink);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   LIQUID GLASS (glassmorphism) — linguagem visual da Sessão 1 de UX.
+
+   Camadas:
+     aurora        manchas suaves das cores da marca fixas atrás de tudo —
+                   é o que os vidros desfocam e o que dá vida às telas.
+     .vidro        chrome translúcido COM blur: sidebar, cabeçalho, cards
+                   de login. Use com moderação (blur custa GPU).
+     .vidro-forte  painéis flutuantes (popover, modal, sino): mais opacos
+                   para o conteúdo atrás não atrapalhar a leitura.
+     .vidro-leve   cartões de conteúdo: translucidez SEM backdrop-filter —
+                   custo zero, deixa a aurora transparecer de leve.
+
+   Salvaguardas:
+     - @supports: sem suporte a backdrop-filter, .vidro/.vidro-forte viram
+       superfícies sólidas (nada quebra).
+     - .tema-claro (rota /imprimir) e @media print: tudo sólido e sem
+       aurora — impressão limpa.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* Aurora: fixa, atrás de todo o conteúdo, nas cores da marca. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(38rem 26rem at 12% -4%, var(--aurora-navy), transparent 65%),
+    radial-gradient(30rem 22rem at 100% 12%, var(--aurora-dourado), transparent 68%),
+    radial-gradient(34rem 26rem at 50% 108%, var(--aurora-vermelho), transparent 66%);
+}
+
+/* Em @layer components para as utilities do Tailwind (border-0, border-b…)
+   poderem ajustar bordas/sombras por cima quando necessário. */
+@layer components {
+  .vidro {
+    background: var(--vidro);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    backdrop-filter: blur(16px) saturate(150%);
+    border: 1px solid var(--vidro-borda);
+    box-shadow:
+      inset 0 1px 0 var(--vidro-brilho),
+      0 8px 28px rgb(13 43 92 / 0.07);
+  }
+
+  .vidro-forte {
+    background: var(--vidro-forte);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    backdrop-filter: blur(20px) saturate(150%);
+    border: 1px solid var(--vidro-borda);
+    box-shadow:
+      inset 0 1px 0 var(--vidro-brilho),
+      0 12px 36px rgb(0 0 0 / 0.16);
+  }
+
+  .vidro-leve {
+    background: var(--vidro-leve);
+    box-shadow: inset 0 1px 0 var(--vidro-brilho);
+  }
+}
+
+/* Sem suporte a backdrop-filter → superfícies sólidas (legibilidade primeiro). */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .vidro,
+  .vidro-forte {
+    background: var(--surface);
+  }
+}
+
+/* Impressão e /imprimir: sólido, sem aurora, sem blur. */
+.tema-claro .vidro,
+.tema-claro .vidro-forte,
+.tema-claro .vidro-leve {
+  background: var(--surface);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+@media print {
+  body::before {
+    display: none;
+  }
+  .vidro,
+  .vidro-forte,
+  .vidro-leve {
+    background: #fff;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
 }
 
 /* Campos nativos legíveis nos dois temas: o dropdown de <select>, os

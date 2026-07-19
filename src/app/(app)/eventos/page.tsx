@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermissao } from "@/lib/auth";
 import { can } from "@/lib/rbac";
 import { formatarDataISO, parseDataISO } from "@/lib/recorrencia";
+import { AcoesEventos } from "./AcoesEventos";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Calendário de eventos e escalas (visões mês e semana).
@@ -128,17 +129,7 @@ export default async function EventosPage({
       <header className="mb-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-3xl font-display font-semibold uppercase tracking-wide text-ink">Eventos e Escalas</h1>
-          <div className="flex flex-wrap gap-2">
-            {podeGerirEscalas && (
-              <Link href="/eventos/rodizio" className={navBtn}>
-                Rodízio
-              </Link>
-            )}
-            {podeGerirTipos && (
-              <Link href="/eventos/tipos" className={navBtn}>
-                Tipos de evento
-              </Link>
-            )}
+          <div className="flex flex-wrap items-center gap-2">
             {podeEventoExtra && (
               <Link
                 href="/eventos/novo"
@@ -147,6 +138,10 @@ export default async function EventosPage({
                 + Evento avulso
               </Link>
             )}
+            <AcoesEventos
+              podeGerirEscalas={podeGerirEscalas}
+              podeGerirTipos={podeGerirTipos}
+            />
           </div>
         </div>
 
@@ -184,7 +179,7 @@ export default async function EventosPage({
       {visao === "mes" ? (
         <>
           {/* Grade mensal (desktop/tablet) */}
-          <div className="hidden overflow-hidden rounded-2xl border border-edge-soft bg-surface sm:block">
+          <div className="hidden overflow-hidden rounded-2xl border border-edge-soft vidro-leve sm:block">
             <div className="grid grid-cols-7 border-b border-edge-soft bg-surface-2">
               {NOMES_DIAS.map((n) => (
                 <div key={n} className="px-2 py-2 text-center text-xs font-semibold text-ink-soft">
@@ -300,7 +295,7 @@ function DiaLista({
   ehHoje: boolean;
 }) {
   return (
-    <section className="rounded-2xl border border-edge-soft bg-surface p-3">
+    <section className="rounded-2xl border border-edge-soft vidro-leve p-3">
       <h2 className="mb-2 text-sm font-semibold text-ink">
         {ehHoje && (
           <span className="mr-2 rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-white">

@@ -60,7 +60,7 @@ export function MembroForm({ membro, equipes }: Props) {
     <>
       <form
         action={formAction}
-        className="space-y-4 rounded-2xl border border-edge-soft bg-surface p-5"
+        className="space-y-4 rounded-2xl border border-edge-soft vidro-leve p-5"
       >
         {membro && <input type="hidden" name="id" value={membro.id} />}
 
@@ -267,7 +267,7 @@ function PainelStatus({
     "rounded-xl border border-edge px-4 py-2 text-sm font-medium text-ink-soft hover:bg-surface-2 disabled:opacity-60";
 
   return (
-    <div className="mt-4 rounded-2xl border border-edge-soft bg-surface p-5">
+    <div className="mt-4 rounded-2xl border border-edge-soft vidro-leve p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-ink">

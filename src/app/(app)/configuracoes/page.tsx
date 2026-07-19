@@ -122,7 +122,7 @@ export default async function ConfiguracoesPage() {
             Nenhum envio registrado ainda.
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-edge-soft bg-surface">
+          <div className="overflow-x-auto rounded-2xl border border-edge-soft vidro-leve">
             <table className="w-full text-left text-sm">
               <thead className="bg-surface-2 text-xs uppercase text-ink-subtle">
                 <tr>

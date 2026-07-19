@@ -42,7 +42,7 @@ function Cartao({
   acao?: React.ReactNode; // botão opcional no cabeçalho (ex.: compartilhar)
 }) {
   return (
-    <div className="rounded-2xl border border-edge-soft bg-surface p-4">
+    <div className="rounded-2xl border border-edge-soft vidro-leve p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-ink">{titulo}</h3>
         {acao}

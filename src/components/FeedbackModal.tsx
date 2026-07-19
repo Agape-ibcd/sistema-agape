@@ -33,11 +33,11 @@ export function FeedbackModal({
     <div
       role="alertdialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4 backdrop-blur-sm"
       onClick={fechar}
     >
       <div
-        className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-xl"
+        className="vidro-forte w-full max-w-sm rounded-2xl p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-3">

@@ -27,7 +27,7 @@ export function EventoForm({ evento }: Props) {
     "w-full rounded-xl border border-edge px-3 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-ring";
 
   return (
-    <section className="rounded-2xl border border-edge-soft bg-surface p-5">
+    <section className="rounded-2xl border border-edge-soft vidro-leve p-5">
       <h2 className="text-base font-semibold text-ink">Dados do evento</h2>
 
       <form action={formAction} className="mt-3 space-y-3">

@@ -70,7 +70,7 @@ export default async function RodizioPage() {
 
       {/* Prévia das próximas semanas */}
       {previa.length > 0 && (
-        <section className="mb-5 overflow-hidden rounded-2xl border border-edge-soft bg-surface">
+        <section className="mb-5 overflow-hidden rounded-2xl border border-edge-soft vidro-leve">
           <h2 className="border-b border-edge-soft px-4 py-3 text-sm font-semibold text-ink">
             Próximas semanas {config?.ativo ? "" : "· rodízio INATIVO"}
           </h2>

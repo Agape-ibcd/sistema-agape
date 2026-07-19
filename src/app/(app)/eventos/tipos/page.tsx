@@ -49,7 +49,7 @@ export default async function TiposEventoPage() {
         </div>
       </header>
 
-      <ul className="divide-y divide-edge-soft overflow-hidden rounded-2xl border border-edge-soft bg-surface">
+      <ul className="divide-y divide-edge-soft overflow-hidden rounded-2xl border border-edge-soft vidro-leve">
         {tipos.length === 0 && (
           <li className="p-6 text-center text-sm text-ink-subtle">
             Nenhum tipo de evento cadastrado.

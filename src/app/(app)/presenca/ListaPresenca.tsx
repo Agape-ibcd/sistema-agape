@@ -89,7 +89,7 @@ export function ListaPresenca({
   const totalLancados = membros.filter((m) => m.ativo).length;
 
   return (
-    <section className="rounded-2xl border border-edge-soft bg-surface p-4 sm:p-5">
+    <section className="rounded-2xl border border-edge-soft vidro-leve p-4 sm:p-5">
       <div className="mb-1 flex items-center justify-between gap-2">
         <h2 className="flex min-w-0 items-center gap-2 text-base font-semibold text-ink">
           {corHex !== undefined && (

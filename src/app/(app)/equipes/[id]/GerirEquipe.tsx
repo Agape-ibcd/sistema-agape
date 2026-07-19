@@ -65,7 +65,7 @@ export function GerirEquipe({
   return (
     <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
       {/* Líderes */}
-      <section className="rounded-2xl border border-edge-soft bg-surface p-5">
+      <section className="rounded-2xl border border-edge-soft vidro-leve p-5">
         <h2 className="text-base font-semibold text-ink">Líderes</h2>
         <p className="mt-0.5 text-xs text-ink-subtle">
           Ao encerrar uma liderança o histórico é preservado (data de fim).
@@ -119,7 +119,7 @@ export function GerirEquipe({
       </section>
 
       {/* Membros */}
-      <section className="rounded-2xl border border-edge-soft bg-surface p-5">
+      <section className="rounded-2xl border border-edge-soft vidro-leve p-5">
         <h2 className="text-base font-semibold text-ink">
           Membros ({membrosDaEquipe.length})
         </h2>

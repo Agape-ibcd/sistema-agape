@@ -193,7 +193,7 @@ export default async function PresencaPage({
             ← Voltar aos eventos da semana
           </Link>
 
-          <div className="rounded-2xl border border-edge-soft bg-surface p-4">
+          <div className="rounded-2xl border border-edge-soft vidro-leve p-4">
             <p className="text-sm font-semibold text-ink">
               {eventoSelecionado.descricaoEspecifica ??
                 eventoSelecionado.tipoEvento.nome}

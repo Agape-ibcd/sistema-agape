@@ -27,7 +27,7 @@ export function EventoAvulsoForm({ tipos }: Props) {
     <>
       <form
         action={formAction}
-        className="space-y-4 rounded-2xl border border-edge-soft bg-surface p-5"
+        className="space-y-4 rounded-2xl border border-edge-soft vidro-leve p-5"
       >
         <div>
           <label htmlFor="tipoEventoId" className={labelCls}>

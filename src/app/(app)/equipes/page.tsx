@@ -40,7 +40,7 @@ export default async function EquipesPage() {
           <Link
             key={e.id}
             href={`/equipes/${e.id}`}
-            className="rounded-2xl border border-edge-soft bg-surface p-5 transition hover:border-brand-edge hover:shadow-sm"
+            className="rounded-2xl border border-edge-soft vidro-leve p-5 transition hover:border-brand-edge hover:shadow-sm"
           >
             <div className="flex items-start gap-3">
               <span

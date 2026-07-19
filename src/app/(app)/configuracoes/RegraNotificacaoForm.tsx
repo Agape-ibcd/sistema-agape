@@ -42,7 +42,7 @@ export function RegraNotificacaoForm({ regra }: { regra: RegraDados }) {
     <>
       <form
         action={formAction}
-        className="space-y-4 rounded-2xl border border-edge-soft bg-surface p-5"
+        className="space-y-4 rounded-2xl border border-edge-soft vidro-leve p-5"
       >
         <input type="hidden" name="id" value={regra.id} />
 

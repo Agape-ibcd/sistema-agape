@@ -91,7 +91,7 @@ export function Popover({
           id={painelId}
           role="menu"
           style={{ left: 0 }}
-          className={`absolute z-20 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-edge-soft bg-surface p-3 shadow-lg ${panelClassName}`}
+          className={`vidro-forte absolute z-20 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl p-3 ${panelClassName}`}
         >
           {children(() => setAberto(false))}
         </div>

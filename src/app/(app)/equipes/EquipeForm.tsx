@@ -25,7 +25,7 @@ export function EquipeForm({ equipe }: { equipe: EquipeFormDados | null }) {
     <>
       <form
         action={formAction}
-        className="space-y-4 rounded-2xl border border-edge-soft bg-surface p-5"
+        className="space-y-4 rounded-2xl border border-edge-soft vidro-leve p-5"
       >
         {equipe && <input type="hidden" name="id" value={equipe.id} />}
 

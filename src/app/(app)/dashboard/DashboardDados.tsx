@@ -41,7 +41,7 @@ function KpiCard({
   return (
     <div
       className={`rounded-2xl border p-4 ${
-        cores ? `${cores.border} ${cores.bg}` : "border-edge-soft bg-surface"
+        cores ? `${cores.border} ${cores.bg}` : "border-edge-soft vidro-leve"
       }`}
     >
       <p className="text-xs font-medium uppercase tracking-wide text-ink-subtle">

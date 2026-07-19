@@ -67,7 +67,7 @@ export function PerfilForm({
       {/* Foto do perfil — mesmo fluxo do cadastro de membros (300×300 → Storage) */}
       <form
         action={fotoAction}
-        className="mb-6 rounded-2xl border border-edge-soft bg-surface p-5"
+        className="mb-6 rounded-2xl border border-edge-soft vidro-leve p-5"
       >
         <div className="flex items-center gap-4">
           {preview ? (
@@ -124,7 +124,7 @@ export function PerfilForm({
 
       <form
         action={formAction}
-        className="space-y-4 rounded-2xl border border-edge-soft bg-surface p-5"
+        className="space-y-4 rounded-2xl border border-edge-soft vidro-leve p-5"
       >
         <div>
           <label

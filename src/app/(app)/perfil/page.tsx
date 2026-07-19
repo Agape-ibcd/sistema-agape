@@ -32,7 +32,7 @@ export default async function PerfilPage() {
         </p>
       </header>
 
-      <dl className="mb-6 grid grid-cols-1 gap-3 rounded-2xl border border-edge-soft bg-surface p-5 sm:grid-cols-2">
+      <dl className="mb-6 grid grid-cols-1 gap-3 rounded-2xl border border-edge-soft vidro-leve p-5 sm:grid-cols-2">
         <div>
           <dt className="text-xs uppercase tracking-wide text-ink-subtle">Nome</dt>
           <dd className="text-sm font-medium text-ink">

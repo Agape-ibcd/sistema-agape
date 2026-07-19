@@ -66,7 +66,7 @@ export function TipoEventoForm({ tipo }: { tipo: TipoEventoFormDados | null }) {
     <>
       <form
         action={formAction}
-        className="space-y-5 rounded-2xl border border-edge-soft bg-surface p-5"
+        className="space-y-5 rounded-2xl border border-edge-soft vidro-leve p-5"
       >
         {tipo && <input type="hidden" name="id" value={tipo.id} />}
 

@@ -26,7 +26,7 @@ export function RegistrosDetalhados({
 
   return (
     <div>
-      <div className="overflow-x-auto rounded-2xl border border-edge-soft bg-surface">
+      <div className="overflow-x-auto rounded-2xl border border-edge-soft vidro-leve">
         <table className="w-full min-w-[640px] text-sm">
           <thead>
             <tr className="border-b border-edge-soft text-left text-xs uppercase tracking-wide text-ink-subtle">

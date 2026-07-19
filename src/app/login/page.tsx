@@ -16,7 +16,7 @@ function LoginForm() {
   return (
     <form
       action={formAction}
-      className="space-y-4 rounded-2xl bg-surface p-6 shadow-sm"
+      className="vidro space-y-4 rounded-2xl p-6"
     >
       <input type="hidden" name="redirect" value={redirect} />
 
@@ -84,7 +84,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="agape-dots flex flex-1 flex-col bg-surface-2">
+    <div className="agape-dots flex flex-1 flex-col">
       <div className="flex flex-1 items-center justify-center px-4 py-12">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex flex-col items-center text-center">
@@ -106,7 +106,7 @@ export default function LoginPage() {
 
           <Suspense
             fallback={
-              <div className="rounded-2xl bg-surface p-6 text-center text-sm text-ink-subtle shadow-sm">
+              <div className="vidro rounded-2xl p-6 text-center text-sm text-ink-subtle">
                 Carregando…
               </div>
             }

@@ -29,8 +29,8 @@ function CardAniversariante({ a }: { a: Aniversariante }) {
         a.ehHoje
           ? "border-accent-edge bg-accent-faint ring-1 ring-accent-edge"
           : passou
-            ? "border-edge-soft bg-surface opacity-70"
-            : "border-edge-soft bg-surface"
+            ? "border-edge-soft vidro-leve opacity-70"
+            : "border-edge-soft vidro-leve"
       }`}
     >
       <Avatar nome={a.nome} fotoUrl={a.fotoUrl} tamanho={48} />

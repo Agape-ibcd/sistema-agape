@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requirePermissao } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
+import { FiltrosMembros } from "./FiltrosMembros";
 
 // Lista de membros com busca por nome/e-mail e filtros por equipe e status.
 export default async function MembrosPage({
@@ -34,9 +35,6 @@ export default async function MembrosPage({
     prisma.equipe.findMany({ orderBy: { nome: "asc" }, select: { id: true, nome: true } }),
   ]);
 
-  const inputCls =
-    "rounded-xl border border-edge px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-ring";
-
   return (
     <div className="mx-auto max-w-4xl">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -54,38 +52,10 @@ export default async function MembrosPage({
         </Link>
       </header>
 
-      {/* Filtros (GET — a URL é compartilhável) */}
-      <form className="mb-4 flex flex-wrap items-center gap-2">
-        <input
-          type="search"
-          name="busca"
-          defaultValue={busca}
-          placeholder="Buscar por nome ou e-mail"
-          className={`${inputCls} min-w-40 flex-1`}
-        />
-        <select name="equipe" defaultValue={equipe} className={inputCls}>
-          <option value="">Todas as equipes</option>
-          {equipes.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.nome}
-            </option>
-          ))}
-        </select>
-        <select name="status" defaultValue={status} className={inputCls}>
-          <option value="ativo">Ativos</option>
-          <option value="afastado">Afastados</option>
-          <option value="inativo">Inativos</option>
-          <option value="todos">Todos</option>
-        </select>
-        <button
-          type="submit"
-          className="rounded-xl border border-edge bg-surface px-4 py-2 text-sm font-medium text-ink-soft hover:bg-surface-2"
-        >
-          Filtrar
-        </button>
-      </form>
+      {/* Busca + filtros recolhidos (a URL continua compartilhável) */}
+      <FiltrosMembros busca={busca} equipe={equipe} status={status} equipes={equipes} />
 
-      <ul className="divide-y divide-edge-soft overflow-hidden rounded-2xl border border-edge-soft bg-surface">
+      <ul className="divide-y divide-edge-soft overflow-hidden rounded-2xl border border-edge-soft vidro-leve">
         {membros.length === 0 && (
           <li className="p-6 text-center text-sm text-ink-subtle">
             Nenhum membro encontrado com estes filtros.

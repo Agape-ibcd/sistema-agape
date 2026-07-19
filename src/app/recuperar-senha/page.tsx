@@ -7,7 +7,7 @@ import { RecuperarSenhaFluxo } from "./RecuperarSenhaFluxo";
 // (e-mail/Telegram). Mesmo enquadramento visual do /login.
 export default function RecuperarSenhaPage() {
   return (
-    <div className="agape-dots flex min-h-screen flex-col bg-surface-2">
+    <div className="agape-dots flex min-h-screen flex-col">
       <div className="flex flex-1 items-center justify-center px-4 py-12">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex flex-col items-center text-center">

@@ -125,7 +125,7 @@ export function SinoNotificacoes({
         aria-expanded={aberto}
         onClick={() => setAberto((v) => !v)}
         className={`relative rounded-lg p-2 text-ink-soft hover:bg-surface-3 ${
-          flutuante ? "border border-edge-soft bg-surface shadow-lg" : ""
+          flutuante ? "vidro-forte rounded-full" : ""
         }`}
       >
         <svg
@@ -155,7 +155,7 @@ export function SinoNotificacoes({
           ref={painel}
           role="menu"
           style={{ left: 0 }}
-          className="absolute z-20 mt-2 w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-edge-soft bg-surface p-3 shadow-lg"
+          className="vidro-forte absolute z-20 mt-2 w-[min(20rem,calc(100vw-2rem))] rounded-2xl p-3"
         >
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-subtle">
             Notificações

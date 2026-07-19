@@ -71,7 +71,7 @@ export function RecuperarSenhaFluxo() {
   const indiceAtual = passos.indexOf(etapa as (typeof passos)[number]);
 
   return (
-    <div className="rounded-2xl bg-surface p-6 shadow-sm">
+    <div className="vidro rounded-2xl p-6">
       {/* Indicador de passos */}
       {etapa !== "pronto" && (
         <ol className="mb-5 flex items-center justify-center gap-2 text-xs font-medium">

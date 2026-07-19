@@ -65,7 +65,7 @@ export function EscalasPanel({
     !(estadoPropagar && estadoPropagar.ts > estadoEscalar.ts);
 
   return (
-    <section className="rounded-2xl border border-edge-soft bg-surface p-5">
+    <section className="rounded-2xl border border-edge-soft vidro-leve p-5">
       <h2 className="text-base font-semibold text-ink">Escala de equipes</h2>
 
       <ul className="mt-3 divide-y divide-edge-soft">
@@ -222,9 +222,9 @@ export function EscalasPanel({
         <div
           role="alertdialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4 backdrop-blur-sm"
         >
-          <div className="w-full max-w-md rounded-2xl bg-surface p-6 shadow-xl">
+          <div className="vidro-forte w-full max-w-md rounded-2xl p-6">
             <h3 className="text-base font-semibold text-ink">
               Equipe {estadoEscalar.propagacao.equipeNome} escalada ✓
             </h3>

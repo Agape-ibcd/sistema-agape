@@ -48,7 +48,7 @@ export function IndicadorNavegacao() {
       aria-hidden
       className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center"
     >
-      <div className="flex items-center gap-2 rounded-full border border-edge-soft bg-surface/95 px-5 py-3 shadow-xl backdrop-blur">
+      <div className="vidro-forte flex items-center gap-2 rounded-full px-5 py-3">
         <svg
           width="28"
           height="28"

@@ -70,7 +70,7 @@ export function RodizioForm({
   return (
     <div className="space-y-5">
       {/* ── Configuração do ciclo ── */}
-      <form action={salvarAction} className="rounded-2xl border border-edge-soft bg-surface p-5">
+      <form action={salvarAction} className="rounded-2xl border border-edge-soft vidro-leve p-5">
         <h2 className="text-base font-semibold text-ink">Ciclo do rodízio</h2>
         <p className="mt-1 text-sm text-ink-soft">
           Em cada semana do ciclo, defina a equipe da manhã e a da noite. Domingo
@@ -143,7 +143,7 @@ export function RodizioForm({
       </form>
 
       {/* ── Aplicar num período ── */}
-      <form action={aplicarAction} className="rounded-2xl border border-edge-soft bg-surface p-5">
+      <form action={aplicarAction} className="rounded-2xl border border-edge-soft vidro-leve p-5">
         <h2 className="text-base font-semibold text-ink">Aplicar rodízio</h2>
         <p className="mt-1 text-sm text-ink-soft">
           Preenche as escalas dos eventos do período. Eventos com escala manual

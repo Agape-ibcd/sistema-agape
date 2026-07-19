@@ -19,7 +19,7 @@ export function SenhaForm() {
       <form
         ref={formRef}
         action={formAction}
-        className="mt-6 space-y-4 rounded-2xl border border-edge-soft bg-surface p-5"
+        className="mt-6 space-y-4 rounded-2xl border border-edge-soft vidro-leve p-5"
       >
         <div>
           <h2 className="text-base font-semibold text-ink">Trocar senha</h2>

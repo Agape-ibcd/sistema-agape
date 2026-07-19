@@ -12,7 +12,7 @@ export function TelegramVinculo({ vinculado }: { vinculado: boolean }) {
   );
 
   return (
-    <div className="mb-6 rounded-2xl border border-edge-soft bg-surface p-5">
+    <div className="mb-6 rounded-2xl border border-edge-soft vidro-leve p-5">
       <h2 className="text-base font-semibold text-ink">Telegram</h2>
 
       {vinculado ? (

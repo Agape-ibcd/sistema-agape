@@ -105,6 +105,23 @@ export function UsuariosLista({
   const [painelTodosAberto, setPainelTodosAberto] = useState(false);
   const [selecao, setSelecao] = useState<Set<string>>(new Set());
   const [acaoMassa, setAcaoMassa] = useState<AcaoMassa | null>(null);
+  const [busca, setBusca] = useState("");
+
+  // Busca local (sem ida ao servidor — a lista já está toda na tela), sem
+  // diferenciar acentos/maiúsculas.
+  const normalizar = (s: string) =>
+    s
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase();
+  const buscaNorm = normalizar(busca.trim());
+  const visiveis = buscaNorm
+    ? usuarios.filter(
+        (u) =>
+          normalizar(u.nomeCompleto).includes(buscaNorm) ||
+          normalizar(u.email).includes(buscaNorm),
+      )
+    : usuarios;
 
   const semAcesso = usuarios.filter((u) => !u.temAcesso && u.status !== "inativo");
   const pendenteMassa = pMConceder || pMRevogar || pMStatus || pMNivel;
@@ -135,7 +152,7 @@ export function UsuariosLista({
   return (
     <>
       {/* Acesso em massa: todos os membros (não inativos) entram no sistema. */}
-      <div className="mb-4 rounded-2xl border border-edge-soft bg-surface p-4">
+      <div className="mb-4 rounded-2xl border border-edge-soft vidro-leve p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="text-sm font-medium text-ink">
@@ -333,23 +350,38 @@ export function UsuariosLista({
         </div>
       )}
 
-      {/* Cabeçalho da lista: selecionar todos */}
-      <label className="mb-1 flex items-center gap-2 px-4 text-xs font-medium text-ink-subtle">
+      {/* Busca + cabeçalho da lista (selecionar todos os visíveis) */}
+      <div className="mb-2 flex flex-wrap items-center gap-3">
         <input
-          type="checkbox"
-          checked={selecao.size === usuarios.length && usuarios.length > 0}
-          onChange={(e) =>
-            setSelecao(
-              e.target.checked ? new Set(usuarios.map((u) => u.id)) : new Set(),
-            )
-          }
-          className="h-4 w-4 accent-brand"
+          type="search"
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar por nome ou e-mail"
+          aria-label="Buscar usuário por nome ou e-mail"
+          className={`${inputCls} min-w-40 flex-1`}
         />
-        Selecionar todos ({usuarios.length})
-      </label>
+        <label className="flex items-center gap-2 text-xs font-medium text-ink-subtle">
+          <input
+            type="checkbox"
+            checked={visiveis.length > 0 && visiveis.every((u) => selecao.has(u.id))}
+            onChange={(e) =>
+              setSelecao(
+                e.target.checked ? new Set(visiveis.map((u) => u.id)) : new Set(),
+              )
+            }
+            className="h-4 w-4 accent-brand"
+          />
+          Selecionar todos ({visiveis.length})
+        </label>
+      </div>
 
-      <ul className="divide-y divide-edge-soft overflow-hidden rounded-2xl border border-edge-soft bg-surface">
-        {usuarios.map((u) => {
+      <ul className="divide-y divide-edge-soft overflow-hidden rounded-2xl border border-edge-soft vidro-leve">
+        {visiveis.length === 0 && (
+          <li className="p-6 text-center text-sm text-ink-subtle">
+            Ninguém encontrado com essa busca.
+          </li>
+        )}
+        {visiveis.map((u) => {
           const souEu = u.id === meuId;
           const aberto = painelAberto === u.id;
           const inativo = u.status === "inativo";

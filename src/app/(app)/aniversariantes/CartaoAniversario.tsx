@@ -323,11 +323,11 @@ export function CartaoAniversario({ dados }: { dados: DadosCartao }) {
           role="dialog"
           aria-modal="true"
           aria-label={`Cartão de aniversário de ${dados.nome}`}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4 backdrop-blur-sm"
           onClick={() => setAberto(false)}
         >
           <div
-            className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-2xl bg-surface p-4 shadow-xl"
+            className="vidro-forte max-h-[92vh] w-full max-w-md overflow-y-auto rounded-2xl p-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between gap-2">

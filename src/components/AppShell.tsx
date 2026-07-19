@@ -73,8 +73,9 @@ export function AppShell({ itens, usuario, children }: Props) {
     <div className="flex min-h-full flex-1 flex-col md:flex-row">
       <IndicadorNavegacao />
 
-      {/* Topo (mobile) */}
-      <header className="flex items-center justify-between border-b border-edge-soft bg-surface px-4 py-3 md:hidden">
+      {/* Topo (mobile) — sticky com vidro: o conteúdo desliza desfocado por
+          baixo ao rolar. */}
+      <header className="vidro sticky top-0 z-40 flex items-center justify-between border-0 border-b px-4 py-3 md:hidden">
         <AgapeLogo markSize={34} />
         <div className="flex items-center gap-1">
           <SinoNotificacoes />
@@ -95,15 +96,15 @@ export function AppShell({ itens, usuario, children }: Props) {
 
       {/* Menu mobile expansível */}
       {menuAberto && (
-        <div className="border-b border-edge-soft bg-surface px-4 py-3 md:hidden">
+        <div className="vidro border-0 border-b px-4 py-3 md:hidden">
           <PainelUsuario usuario={usuario} />
           <div className="mt-3">{listaLinks}</div>
         </div>
       )}
 
-      {/* Barra lateral (desktop) */}
+      {/* Barra lateral (desktop) — vidro fixo na altura da tela */}
       {!menuOculto && (
-        <aside className="hidden w-64 shrink-0 flex-col border-r border-edge-soft bg-surface p-4 md:flex">
+        <aside className="vidro sticky top-0 hidden max-h-screen w-64 shrink-0 flex-col overflow-y-auto border-0 border-r p-4 md:flex">
           <div className="mb-4 flex items-start justify-between gap-2 px-1">
             <AgapeLogo markSize={40} subtitulo="IBCD · Jundiaí/SP" />
             <div className="flex items-center gap-1">
@@ -135,7 +136,7 @@ export function AppShell({ itens, usuario, children }: Props) {
             type="button"
             aria-label="Mostrar menu"
             onClick={alternarMenuOculto}
-            className="fixed left-2 top-1/2 z-30 -translate-y-1/2 rounded-full border border-edge-soft bg-surface p-2 text-ink-soft shadow-lg hover:bg-surface-3"
+            className="vidro-forte fixed left-2 top-1/2 z-30 -translate-y-1/2 rounded-full p-2 text-ink-soft hover:bg-surface-3"
           >
             <IconeMostrarMenu />
           </button>
@@ -145,8 +146,9 @@ export function AppShell({ itens, usuario, children }: Props) {
         </div>
       )}
 
-      {/* Conteúdo + rodapé */}
-      <div className="flex min-w-0 flex-1 flex-col bg-surface-2">
+      {/* Conteúdo + rodapé — sem fundo próprio: deixa a aurora do body
+          transparecer (é ela que os vidros desfocam). */}
+      <div className="flex min-w-0 flex-1 flex-col">
         <main className="flex-1 p-4 md:p-8">{children}</main>
         <Rodape />
       </div>
@@ -165,7 +167,7 @@ function PainelUsuario({
   };
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl bg-surface-2 p-3">
+    <div className="flex items-center gap-3 rounded-xl bg-surface-2/60 p-3">
       <Avatar nome={usuario.nome} fotoUrl={usuario.fotoUrl} tamanho={40} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-ink">
