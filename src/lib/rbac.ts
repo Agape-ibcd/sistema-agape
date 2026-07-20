@@ -14,7 +14,10 @@ export type Permissao =
   | "gerenciar_escalas"
   | "ver_calendario" // ver o calendário de eventos/escalas (leitura)
   | "exportar_agenda" // exportar agenda/escalas do próprio escopo (monitor não)
-  | "gerenciar_membros" // cadastrar/editar membros
+  | "gerenciar_membros" // cadastrar/editar QUALQUER membro (admin/super)
+  | "ver_membros_equipe" // líder: ver a lista de membros da própria equipe
+  | "editar_membros_equipe" // líder: editar dados de perfil dos membros da própria equipe
+  | "ver_agenda_equipe" // líder: ver a agenda (calendário) restrita à própria equipe
   | "registrar_presenca_qualquer" // presença de qualquer equipe
   | "registrar_presenca_propria" // presença apenas da própria equipe
   | "dashboard_geral" // dashboard de todas as equipes
@@ -59,11 +62,23 @@ const MATRIZ: Record<NivelAcesso, Permissao[]> = {
     "painel_aniversariantes",
   ],
   // Monitor: acompanha os INDICADORES (dashboard geral) em modo LEITURA.
-  // Nenhuma permissão de escrita — nem sobre o próprio perfil. Não vê
-  // eventos/escalas nem aniversariantes, e não pertence a nenhuma equipe
-  // (atribuir o nível remove o vínculo de equipe).
-  monitor: ["dashboard_geral", "dashboard_equipe", "ver_perfil_proprio"],
+  // Não vê eventos/escalas nem gerencia nada, e não pertence a nenhuma equipe
+  // (atribuir o nível remove o vínculo de equipe). Pode, porém, EDITAR o
+  // próprio perfil e ver o painel de aniversariantes (ajuste de 2026-07-19).
+  monitor: [
+    "dashboard_geral",
+    "dashboard_equipe",
+    "ver_perfil_proprio",
+    "editar_perfil_proprio",
+    "painel_aniversariantes",
+  ],
+  // Líder: além do próprio perfil, vê e edita (só dados de perfil) os membros
+  // da PRÓPRIA equipe e vê a agenda restrita à própria equipe. Não gerencia
+  // escalas, tipos de evento nem outros níveis.
   lider: [
+    "ver_membros_equipe",
+    "editar_membros_equipe",
+    "ver_agenda_equipe",
     "registrar_presenca_propria",
     "dashboard_equipe",
     "exportar_agenda",

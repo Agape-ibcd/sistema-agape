@@ -9,6 +9,8 @@ const ORDEM: GatilhoNotificacao[] = [
   "nova_escala",
   "escala_alterada",
   "lembrete_vespera",
+  "membro_editado_por_lider",
+  "perfil_editado",
 ];
 
 const META: Record<
@@ -19,6 +21,9 @@ const META: Record<
     implementado: boolean;
     usaHorario: boolean;
     usaNiveisAlvo: boolean;
+    // Texto do aviso de destinatários quando usaNiveisAlvo=false (o padrão fala
+    // em "membros escalados"; gatilhos de edição têm destinatários próprios).
+    avisoDestinatarios?: string;
   }
 > = {
   aniversario_dia: {
@@ -50,6 +55,25 @@ const META: Record<
     implementado: true,
     usaHorario: true,
     usaNiveisAlvo: false,
+  },
+  membro_editado_por_lider: {
+    titulo: "Líder editou um membro da equipe",
+    descricao:
+      "Avisa os administradores quando um líder altera o cadastro de um membro da própria equipe. Placeholders: {{membro}}, {{editor}}, {{equipe}}, {{detalhe}}.",
+    implementado: true,
+    usaHorario: false,
+    usaNiveisAlvo: false,
+    avisoDestinatarios: "Enviado automaticamente a todos os Administradores e Super Administradores.",
+  },
+  perfil_editado: {
+    titulo: "Membro editou o próprio perfil",
+    descricao:
+      "Avisa o(s) líder(es) da equipe e os administradores quando alguém altera o próprio perfil. Placeholders: {{membro}}, {{detalhe}}.",
+    implementado: true,
+    usaHorario: false,
+    usaNiveisAlvo: false,
+    avisoDestinatarios:
+      "Enviado automaticamente aos líderes da equipe da pessoa + Administradores e Super Administradores.",
   },
 };
 
@@ -110,6 +134,7 @@ export default async function ConfiguracoesPage() {
             horarioEnvio: regra.horarioEnvio,
             usaHorario: meta.usaHorario,
             usaNiveisAlvo: meta.usaNiveisAlvo,
+            avisoDestinatarios: meta.avisoDestinatarios,
           };
           return <RegraNotificacaoForm key={regra.id} regra={dados} />;
         })}

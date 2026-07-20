@@ -42,6 +42,7 @@ export default async function UsuariosPage() {
             : null,
           equipeNome: m.equipe?.nome ?? null,
           emailSintetico: m.email.endsWith("@membros.agape.local"),
+          temTelegram: Boolean(m.telegramChatId),
         }))}
       />
     </div>

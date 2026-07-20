@@ -16,6 +16,7 @@ export type UsuarioAtual = {
   equipeId: string | null;
   equipeNome: string | null;
   fotoUrl: string | null;
+  deveTrocarSenha: boolean;
 };
 
 // Retorna o usuário logado (ou null). Combina a sessão do Supabase Auth com o
@@ -57,6 +58,7 @@ export const getUsuarioAtual = cache(async (): Promise<UsuarioAtual | null> => {
     equipeId: membro.equipeId,
     equipeNome: membro.equipe?.nome ?? null,
     fotoUrl: membro.fotoUrl,
+    deveTrocarSenha: membro.deveTrocarSenha,
   };
 });
 

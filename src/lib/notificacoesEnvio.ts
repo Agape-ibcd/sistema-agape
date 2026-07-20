@@ -141,6 +141,16 @@ const TEMPLATE_PADRAO: Record<
     assunto: "Lembrete: você está escalado(a) amanhã",
     mensagem: "Olá, {{nome}}! Lembrete: amanhã ({{data}}) você está escalado(a) em:\n{{lista}}",
   },
+  membro_editado_por_lider: {
+    assunto: "Cadastro atualizado por líder — {{membro}}",
+    mensagem:
+      "Olá, {{nome}}!\n\n{{editor}} atualizou o cadastro de {{membro}} (equipe {{equipe}}).\n{{detalhe}}",
+  },
+  perfil_editado: {
+    assunto: "Perfil atualizado — {{membro}}",
+    mensagem:
+      "Olá, {{nome}}!\n\n{{membro}} atualizou o próprio perfil.\n{{detalhe}}",
+  },
 };
 
 // Envia (e loga) os e-mails/Telegram de aniversário de quem faz aniversário
@@ -326,6 +336,112 @@ export async function dispararNotificacaoEscalaAlterada(params: {
     }
   } catch (erro) {
     console.error("[notificacoes] falha ao disparar escala_alterada:", erro);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Gatilhos de EDIÇÃO de cadastro (avisam supervisores, não o próprio editado):
+//   • membro_editado_por_lider → líder alterou um membro da equipe: avisa
+//     admin/super_admin.
+//   • perfil_editado → alguém alterou o próprio perfil: avisa os líderes da
+//     equipe dessa pessoa + admin/super_admin.
+// Recipientes são CALCULADOS (não usam niveisAlvo da regra). Nunca lançam erro
+// (uma falha de notificação não pode derrubar a ação de edição).
+// ─────────────────────────────────────────────────────────────────────────
+
+async function notificarSupervisores(params: {
+  gatilho: "membro_editado_por_lider" | "perfil_editado";
+  destinatarios: MembroDestino[];
+  excluirMembroId?: string; // não notificar o próprio editor
+  dados: Record<string, string>;
+  referenciaId?: string;
+}): Promise<void> {
+  const { gatilho, destinatarios, excluirMembroId, dados, referenciaId } = params;
+  const config = await prisma.configNotificacao.findUnique({ where: { gatilho } });
+  if (!config || !config.ativo || config.canais.length === 0) return;
+
+  const tpl = TEMPLATE_PADRAO[gatilho];
+  const assuntoBase = config.assunto || tpl.assunto;
+  const mensagemBase = config.mensagem || tpl.mensagem;
+
+  const vistos = new Set<string>();
+  for (const membro of destinatarios) {
+    if (membro.id === excluirMembroId) continue;
+    if (vistos.has(membro.id)) continue;
+    vistos.add(membro.id);
+
+    const dadosMembro = { ...dados, nome: membro.nomeCompleto.split(" ")[0] };
+    await enviarParaMembro({
+      gatilho,
+      membro,
+      canaisRegra: config.canais,
+      assunto: preencherTemplate(assuntoBase, dadosMembro),
+      mensagem: preencherTemplate(mensagemBase, dadosMembro),
+      referenciaId,
+    });
+  }
+}
+
+// Líder alterou o cadastro de um membro da equipe → avisa admin/super_admin.
+export async function dispararNotificacaoMembroEditadoPorLider(params: {
+  membroEditadoId: string;
+  membroEditadoNome: string;
+  equipeNome: string | null;
+  editorNome: string;
+  editorMembroId: string;
+  detalhe: string;
+}): Promise<void> {
+  try {
+    const destinatarios = await prisma.membro.findMany({
+      where: { status: "ativo", nivelAcesso: { in: ["admin", "super_admin"] } },
+      select: SELECT_MEMBRO_DESTINO,
+    });
+    await notificarSupervisores({
+      gatilho: "membro_editado_por_lider",
+      destinatarios,
+      excluirMembroId: params.editorMembroId,
+      dados: {
+        membro: params.membroEditadoNome,
+        equipe: params.equipeNome ?? "—",
+        editor: params.editorNome,
+        detalhe: params.detalhe,
+      },
+      referenciaId: params.membroEditadoId,
+    });
+  } catch (erro) {
+    console.error("[notificacoes] falha ao disparar membro_editado_por_lider:", erro);
+  }
+}
+
+// Alguém alterou o próprio perfil → avisa os líderes da equipe + admin/super.
+export async function dispararNotificacaoPerfilEditado(params: {
+  membroId: string;
+  membroNome: string;
+  equipeId: string | null;
+  detalhe: string;
+}): Promise<void> {
+  try {
+    const destinatarios = await prisma.membro.findMany({
+      where: {
+        status: "ativo",
+        OR: [
+          { nivelAcesso: { in: ["admin", "super_admin"] } },
+          ...(params.equipeId
+            ? [{ nivelAcesso: "lider" as const, equipeId: params.equipeId }]
+            : []),
+        ],
+      },
+      select: SELECT_MEMBRO_DESTINO,
+    });
+    await notificarSupervisores({
+      gatilho: "perfil_editado",
+      destinatarios,
+      excluirMembroId: params.membroId, // não avisa o próprio editor
+      dados: { membro: params.membroNome, detalhe: params.detalhe },
+      referenciaId: params.membroId,
+    });
+  } catch (erro) {
+    console.error("[notificacoes] falha ao disparar perfil_editado:", erro);
   }
 }
 

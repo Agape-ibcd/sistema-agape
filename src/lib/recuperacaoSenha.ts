@@ -214,6 +214,13 @@ export async function redefinirSenhaComToken(
     data: { usado: true },
   });
 
+  // Definiu a própria senha — não há mais senha provisória pendente (evita
+  // ficar preso na tela de troca obrigatória).
+  await prisma.membro.update({
+    where: { id: registro.membro.id },
+    data: { deveTrocarSenha: false },
+  });
+
   return { ok: true };
 }
 

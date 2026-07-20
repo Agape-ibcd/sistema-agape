@@ -3,11 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { Prisma, type StatusMembro } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { requirePermissao } from "@/lib/auth";
+import { requirePermissao, requireUsuario } from "@/lib/auth";
+import { acessoMembros } from "@/lib/acessoMembros";
 import { writeAudit } from "@/lib/audit";
 import { sucesso, falha, type EstadoAcao } from "@/lib/actions";
 import { uploadFotoMembro, removerFotoMembro } from "@/lib/storage";
 import { aplicarStatusMembro } from "@/lib/statusMembro";
+import { dispararNotificacaoMembroEditadoPorLider } from "@/lib/notificacoesEnvio";
 import { parseDataISO } from "@/lib/recorrencia";
 
 // Estado do formulário de membro: além do popup padrão, devolve o id criado
@@ -24,25 +26,54 @@ function revalidarMembros(id?: string) {
   if (id) revalidatePath(`/membros/${id}`);
 }
 
+// Descreve em texto curto quais campos de perfil mudaram (para os alertas).
+function descreverMudancas(
+  antes: {
+    nomeCompleto: string;
+    celularWhatsapp: string | null;
+    dataNascimento: Date | null;
+    observacao: string | null;
+  },
+  depois: {
+    nomeCompleto: string;
+    celularWhatsapp: string | null;
+    dataNascimento: Date | null;
+    observacao: string | null;
+  },
+): string {
+  const mudou: string[] = [];
+  if (antes.nomeCompleto !== depois.nomeCompleto) mudou.push("nome");
+  if ((antes.celularWhatsapp ?? "") !== (depois.celularWhatsapp ?? "")) mudou.push("celular");
+  const aN = antes.dataNascimento?.toISOString().slice(0, 10) ?? "";
+  const dN = depois.dataNascimento?.toISOString().slice(0, 10) ?? "";
+  if (aN !== dN) mudou.push("data de nascimento");
+  if ((antes.observacao ?? "") !== (depois.observacao ?? "")) mudou.push("observação");
+  return mudou.length
+    ? `Campos alterados: ${mudou.join(", ")}.`
+    : "Sem alterações de dados (possivelmente só a foto).";
+}
+
 // Cria ou atualiza um membro (id presente = edição). A foto, quando enviada,
 // já chega redimensionada para 300×300 pelo cliente e vai para o Storage.
+// Admin/super editam tudo; o LÍDER edita só dados de perfil dos membros da
+// própria equipe (sem e-mail/equipe) e nunca cria — ver acessoMembros().
 export async function salvarMembro(
   _prev: EstadoMembro,
   formData: FormData,
 ): Promise<EstadoMembro> {
-  const usuario = await requirePermissao("gerenciar_membros");
+  const usuario = await requireUsuario();
+  const acesso = acessoMembros(usuario);
+  if (acesso === "nenhum") return falha("Você não tem acesso ao cadastro de membros.");
+  const restrito = acesso === "equipe";
 
   const id = String(formData.get("id") ?? "").trim() || null;
   const nomeCompleto = String(formData.get("nomeCompleto") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const celular = String(formData.get("celular") ?? "").trim();
   const nascimentoStr = String(formData.get("dataNascimento") ?? "").trim();
-  const equipeId = String(formData.get("equipeId") ?? "").trim() || null;
   const observacao = String(formData.get("observacao") ?? "").trim();
   const foto = formData.get("foto");
 
   if (nomeCompleto.length < 3) return falha("Informe o nome completo.");
-  if (!EMAIL_RE.test(email)) return falha("Informe um e-mail válido.");
   if (celular.length > 20) return falha("O celular deve ter no máximo 20 caracteres.");
 
   let dataNascimento: Date | null = null;
@@ -50,6 +81,68 @@ export async function salvarMembro(
     dataNascimento = parseDataISO(nascimentoStr);
     if (!dataNascimento) return falha("Data de nascimento inválida.");
   }
+
+  // ── Líder: escopo de equipe, só dados de perfil, nunca cria. ──
+  if (restrito) {
+    if (!id) return falha("Líderes não cadastram novos membros.");
+    try {
+      const antes = await prisma.membro.findUnique({ where: { id } });
+      if (!antes) return falha("Membro não encontrado.");
+      if (antes.equipeId !== usuario.equipeId) {
+        return falha("Você só pode editar membros da sua equipe.");
+      }
+
+      const dadosPerfil = {
+        nomeCompleto,
+        celularWhatsapp: celular || null,
+        dataNascimento,
+        observacao: observacao || null,
+      };
+      await prisma.membro.update({ where: { id }, data: dadosPerfil });
+
+      const detalhe = descreverMudancas(antes, dadosPerfil);
+      await writeAudit({
+        usuarioId: usuario.membroId,
+        acao: "editar",
+        tabelaAfetada: "membros",
+        registroId: id,
+        dadosAnteriores: {
+          nomeCompleto: antes.nomeCompleto,
+          celularWhatsapp: antes.celularWhatsapp,
+          dataNascimento: antes.dataNascimento?.toISOString() ?? null,
+          observacao: antes.observacao,
+        },
+        dadosNovos: { ...dadosPerfil, dataNascimento: dataNascimento?.toISOString() ?? null },
+      });
+
+      if (foto instanceof File && foto.size > 0) {
+        const fotoUrl = await uploadFotoMembro(id, foto);
+        await prisma.membro.update({ where: { id }, data: { fotoUrl } });
+      }
+
+      // Avisa admin/super que um líder editou o cadastro de um membro.
+      await dispararNotificacaoMembroEditadoPorLider({
+        membroEditadoId: id,
+        membroEditadoNome: nomeCompleto,
+        equipeNome: usuario.equipeNome,
+        editorNome: usuario.nomeCompleto,
+        editorMembroId: usuario.membroId,
+        detalhe,
+      });
+
+      revalidarMembros(id);
+      return { ...sucesso("Membro atualizado com sucesso.")!, membroId: id };
+    } catch (erro) {
+      return falha(
+        `Erro ao salvar: ${erro instanceof Error ? erro.message : "falha desconhecida"}`,
+      );
+    }
+  }
+
+  // ── Admin/super: acesso total (cria/edita tudo, incl. e-mail e equipe). ──
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const equipeId = String(formData.get("equipeId") ?? "").trim() || null;
+  if (!EMAIL_RE.test(email)) return falha("Informe um e-mail válido.");
 
   const dados = {
     nomeCompleto,
@@ -156,17 +249,23 @@ export async function definirStatusMembro(
   }
 }
 
-// Remove a foto do membro (Storage + referência no cadastro).
+// Remove a foto do membro (Storage + referência no cadastro). Admin/super em
+// qualquer membro; líder só nos da própria equipe (foto é dado de perfil).
 export async function removerFoto(
   _prev: EstadoAcao,
   formData: FormData,
 ): Promise<EstadoAcao> {
-  const usuario = await requirePermissao("gerenciar_membros");
+  const usuario = await requireUsuario();
+  const acesso = acessoMembros(usuario);
+  if (acesso === "nenhum") return falha("Você não tem acesso ao cadastro de membros.");
   const id = String(formData.get("id") ?? "");
 
   try {
     const membro = await prisma.membro.findUnique({ where: { id } });
     if (!membro) return falha("Membro não encontrado.");
+    if (acesso === "equipe" && membro.equipeId !== usuario.equipeId) {
+      return falha("Você só pode editar membros da sua equipe.");
+    }
     if (!membro.fotoUrl) return falha("Este membro não tem foto cadastrada.");
 
     await removerFotoMembro(id);

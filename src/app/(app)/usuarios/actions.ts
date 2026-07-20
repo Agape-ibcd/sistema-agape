@@ -1,5 +1,6 @@
 "use server";
 
+import { randomInt } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
 import { prisma } from "@/lib/prisma";
@@ -7,10 +8,22 @@ import { requirePermissao } from "@/lib/auth";
 import { writeAudit } from "@/lib/audit";
 import { sucesso, falha, type EstadoAcao } from "@/lib/actions";
 import { aplicarStatusMembro } from "@/lib/statusMembro";
+import { enviarEmail, ehEmailSintetico } from "@/lib/email";
+import { enviarTelegram } from "@/lib/telegram";
 import type { NivelAcesso, StatusMembro } from "@prisma/client";
 import { ROTULO_NIVEL } from "@/lib/rbac";
 
 const NIVEIS: NivelAcesso[] = ["membro", "monitor", "lider", "admin", "super_admin"];
+
+// Gera uma senha provisória forte e legível (sem caracteres ambíguos), para o
+// super_admin enviar ao membro. O membro é obrigado a trocá-la no 1º acesso
+// (deveTrocarSenha), então ela é descartável.
+function gerarSenhaProvisoria(): string {
+  const alfabeto = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  let s = "";
+  for (let i = 0; i < 10; i++) s += alfabeto[randomInt(alfabeto.length)];
+  return `Agape-${s}`;
+}
 
 // Cliente admin do Supabase Auth (service role) — só no servidor.
 function authAdmin() {
@@ -115,7 +128,8 @@ export async function concederAcesso(
 
     await prisma.membro.update({
       where: { id: membroId },
-      data: { authUserId: data.user.id },
+      // Senha definida pelo admin = provisória: o membro troca no 1º acesso.
+      data: { authUserId: data.user.id, deveTrocarSenha: true },
     });
 
     await writeAudit({
@@ -133,7 +147,7 @@ export async function concederAcesso(
       ? " Atenção: e-mail sintético da migração — o login funciona, mas este endereço não recebe e-mails; atualize o e-mail real em Membros quando possível."
       : "";
     return sucesso(
-      `Acesso criado para ${membro.nomeCompleto} (${membro.email}). Oriente a troca da senha no primeiro login.${avisoSintetico}`,
+      `Acesso criado para ${membro.nomeCompleto} (${membro.email}). Ele definirá uma nova senha no primeiro acesso.${avisoSintetico}`,
     );
   } catch (erro) {
     return falha(
@@ -180,7 +194,7 @@ export async function concederAcessoTodos(
       }
       await prisma.membro.update({
         where: { id: m.id },
-        data: { authUserId: data.user.id },
+        data: { authUserId: data.user.id, deveTrocarSenha: true },
       });
       criados += 1;
     }
@@ -196,7 +210,7 @@ export async function concederAcessoTodos(
     const resumoFalhas =
       falhas.length > 0 ? ` Falharam ${falhas.length}: ${falhas.join("; ")}.` : "";
     return sucesso(
-      `Acesso criado para ${criados} membro(s) com a senha inicial informada. Oriente cada um a trocar a senha em Meu Perfil.${resumoFalhas}`,
+      `Acesso criado para ${criados} membro(s) com a senha inicial informada. Cada um definirá uma nova senha no primeiro acesso.${resumoFalhas}`,
     );
   } catch (erro) {
     return falha(
@@ -269,6 +283,12 @@ export async function redefinirSenha(
     });
     if (error) return falha(`Supabase Auth: ${error.message}`);
 
+    // Senha definida pelo admin = provisória: o membro troca no 1º acesso.
+    await prisma.membro.update({
+      where: { id: membroId },
+      data: { deveTrocarSenha: true },
+    });
+
     await writeAudit({
       usuarioId: usuario.membroId,
       acao: "redefinir_senha",
@@ -278,10 +298,145 @@ export async function redefinirSenha(
     });
 
     revalidatePath("/usuarios");
-    return sucesso(`Senha redefinida para ${membro.nomeCompleto}.`);
+    return sucesso(
+      `Senha redefinida para ${membro.nomeCompleto}. Ele deverá definir uma nova senha no próximo acesso.`,
+    );
   } catch (erro) {
     return falha(
       `Erro ao redefinir senha: ${erro instanceof Error ? erro.message : "falha desconhecida"}`,
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Enviar credenciais de acesso (super_admin). Gera uma senha provisória,
+// (re)define no Supabase Auth, marca deveTrocarSenha=true e ENTREGA o login +
+// senha por e-mail, Telegram ou "compartilhar" (Web Share no navegador). O
+// membro é obrigado a definir uma nova senha antes de usar o sistema.
+//
+// SEGURANÇA: por pedido do usuário, a senha vai em texto puro pelo canal
+// escolhido. Como é provisória e de troca obrigatória, a exposição é curta.
+// O valor da senha NUNCA é gravado no log de auditoria.
+// ─────────────────────────────────────────────────────────────────────────
+
+export type EstadoCredenciais =
+  | (NonNullable<EstadoAcao> & { textoCompartilhar?: string })
+  | null;
+
+function textoCredenciais(nome: string, email: string, senha: string): string {
+  const url = (process.env.APP_URL ?? "https://agape.lebrai.com.br").replace(/\/$/, "");
+  const primeiro = nome.split(" ")[0];
+  return [
+    `Olá, ${primeiro}! Seu acesso ao Sistema Ágape:`,
+    ``,
+    `Endereço: ${url}`,
+    `Login (e-mail): ${email}`,
+    `Senha provisória: ${senha}`,
+    ``,
+    `No primeiro acesso o sistema vai pedir que você defina uma nova senha pessoal.`,
+    ``,
+    `Ministério Ágape — Casa de Deus Jundiaí`,
+  ].join("\n");
+}
+
+export async function enviarCredenciais(
+  _prev: EstadoCredenciais,
+  formData: FormData,
+): Promise<EstadoCredenciais> {
+  const usuario = await requirePermissao("gerenciar_usuarios");
+  const membroId = String(formData.get("membroId") ?? "");
+  const canal = String(formData.get("canal") ?? ""); // email | telegram | compartilhar
+
+  if (!["email", "telegram", "compartilhar"].includes(canal)) {
+    return falha("Canal de envio inválido.");
+  }
+
+  try {
+    const membro = await prisma.membro.findUnique({ where: { id: membroId } });
+    if (!membro) return falha("Membro não encontrado.");
+    if (membro.status === "inativo") {
+      return falha("Membro inativo — reative o cadastro antes de enviar credenciais.");
+    }
+
+    // Valida o canal ANTES de mexer na senha (evita trocar a senha e não conseguir entregar).
+    if (canal === "email" && ehEmailSintetico(membro.email)) {
+      return falha(
+        "Este membro tem e-mail sintético da migração (não recebe e-mails). Use Telegram, Compartilhar, ou atualize o e-mail real em Membros.",
+      );
+    }
+    if (canal === "telegram" && !membro.telegramChatId) {
+      return falha(
+        "Este membro ainda não vinculou o Telegram. Use E-mail, Compartilhar, ou peça a ele para vincular em Meu Perfil.",
+      );
+    }
+
+    const senha = gerarSenhaProvisoria();
+
+    // (Re)define a senha: cria a conta se ainda não houver login, senão troca.
+    if (membro.authUserId) {
+      const { error } = await authAdmin().updateUserById(membro.authUserId, { password: senha });
+      if (error) return falha(`Supabase Auth: ${error.message}`);
+      await prisma.membro.update({ where: { id: membroId }, data: { deveTrocarSenha: true } });
+    } else {
+      const { data, error } = await authAdmin().createUser({
+        email: membro.email,
+        password: senha,
+        email_confirm: true,
+      });
+      if (error) return falha(`Supabase Auth: ${error.message}`);
+      await prisma.membro.update({
+        where: { id: membroId },
+        data: { authUserId: data.user.id, deveTrocarSenha: true },
+      });
+    }
+
+    const texto = textoCredenciais(membro.nomeCompleto, membro.email, senha);
+
+    await writeAudit({
+      usuarioId: usuario.membroId,
+      acao: "enviar_credenciais",
+      tabelaAfetada: "membros",
+      registroId: membroId,
+      // NUNCA gravar a senha; só o canal e o e-mail de login.
+      dadosNovos: { canal, email: membro.email },
+    });
+
+    revalidatePath("/usuarios");
+
+    if (canal === "compartilhar") {
+      // O envio real acontece no navegador (Web Share). Devolve o texto pronto.
+      return {
+        ...sucesso(
+          `Senha provisória gerada para ${membro.nomeCompleto}. Compartilhe a mensagem — ele terá de trocar a senha no primeiro acesso.`,
+        )!,
+        textoCompartilhar: texto,
+      };
+    }
+
+    if (canal === "email") {
+      const r = await enviarEmail({
+        para: membro.email,
+        assunto: "Seu acesso ao Sistema Ágape",
+        html: texto
+          .split("\n")
+          .map((l) => `<p>${l.trim() ? l : "&nbsp;"}</p>`)
+          .join(""),
+      });
+      if (!r.ok) return falha(`A senha foi definida, mas o e-mail falhou: ${r.erro}`);
+      return sucesso(
+        `Credenciais enviadas por e-mail para ${membro.nomeCompleto} (${membro.email}). Ele terá de trocar a senha no primeiro acesso.`,
+      );
+    }
+
+    // canal === "telegram"
+    const r = await enviarTelegram({ chatId: membro.telegramChatId!, texto });
+    if (!r.ok) return falha(`A senha foi definida, mas o Telegram falhou: ${r.erro}`);
+    return sucesso(
+      `Credenciais enviadas pelo Telegram para ${membro.nomeCompleto}. Ele terá de trocar a senha no primeiro acesso.`,
+    );
+  } catch (erro) {
+    return falha(
+      `Erro ao enviar credenciais: ${erro instanceof Error ? erro.message : "falha desconhecida"}`,
     );
   }
 }
@@ -381,7 +536,7 @@ export async function concederAcessoVarios(
       }
       await prisma.membro.update({
         where: { id },
-        data: { authUserId: data.user.id },
+        data: { authUserId: data.user.id, deveTrocarSenha: true },
       });
       await writeAudit({
         usuarioId: usuario.membroId,
@@ -394,7 +549,7 @@ export async function concederAcessoVarios(
     }
     revalidatePath("/usuarios");
     return sucesso(
-      `${resumoMassa(aplicados, pulados, "Concessão de acesso")} Oriente cada um a trocar a senha em Meu Perfil.`,
+      `${resumoMassa(aplicados, pulados, "Concessão de acesso")} Cada um definirá uma nova senha no primeiro acesso.`,
     );
   } catch (erro) {
     return falha(

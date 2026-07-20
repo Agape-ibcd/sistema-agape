@@ -11,6 +11,7 @@ import { uploadFotoMembro, removerFotoMembro } from "@/lib/storage";
 import { parseDataISO } from "@/lib/recorrencia";
 import { sucesso, falha, type EstadoAcao } from "@/lib/actions";
 import { obterBotUsername } from "@/lib/telegram";
+import { dispararNotificacaoPerfilEditado } from "@/lib/notificacoesEnvio";
 
 // Ações do próprio perfil. Todas exigem `editar_perfil_proprio` — o nível
 // `monitor` não tem NENHUMA permissão de escrita, nem sobre o próprio cadastro.
@@ -70,6 +71,26 @@ export async function atualizarPerfil(
         ...depois,
         dataNascimento: depois.dataNascimento?.toISOString() ?? null,
       },
+    });
+
+    // Avisa os líderes da equipe + admin/super que a pessoa editou o próprio
+    // perfil (o próprio editor nunca recebe). Detalhe = campos que mudaram.
+    const mudou: string[] = [];
+    if ((antes?.celularWhatsapp ?? "") !== (depois.celularWhatsapp ?? "")) mudou.push("celular");
+    if ((antes?.observacao ?? "") !== (depois.observacao ?? "")) mudou.push("observação");
+    if (
+      (antes?.dataNascimento?.toISOString().slice(0, 10) ?? "") !==
+      (depois.dataNascimento?.toISOString().slice(0, 10) ?? "")
+    ) {
+      mudou.push("data de nascimento");
+    }
+    await dispararNotificacaoPerfilEditado({
+      membroId: usuario.membroId,
+      membroNome: usuario.nomeCompleto,
+      equipeId: usuario.equipeId,
+      detalhe: mudou.length
+        ? `Campos alterados: ${mudou.join(", ")}.`
+        : "Sem alterações de dados.",
     });
 
     revalidatePath("/perfil");

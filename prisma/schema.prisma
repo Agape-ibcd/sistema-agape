@@ -104,6 +104,8 @@ enum GatilhoNotificacao {
   nova_escala // membro escalado — pede confirmação de presença
   escala_alterada // escala/evento alterado ou cancelado
   lembrete_vespera // D-1 às 18h
+  membro_editado_por_lider // líder alterou o cadastro de um membro da equipe → avisa admin/super
+  perfil_editado // membro/líder alterou o próprio perfil → avisa líder(es) da equipe + admin/super
 }
 
 enum CanalNotificacao {
@@ -154,6 +156,11 @@ model Membro {
   // o membro não completar o vínculo.
   telegramLinkToken  String?   @unique @map("telegram_link_token") @db.VarChar(64)
   telegramLinkExpira DateTime? @map("telegram_link_expira")
+  // true quando um super_admin enviou credenciais provisórias (senha gerada
+  // pelo sistema): o membro é obrigado a definir uma nova senha em
+  // /trocar-senha antes de usar o restante do sistema. Limpo assim que ele
+  // troca a senha (ou define uma nova via recuperação de senha).
+  deveTrocarSenha Boolean      @default(false) @map("deve_trocar_senha")
   ultimoAcesso    DateTime?    @map("ultimo_acesso")
 
   equipe        Equipe?              @relation("MembroEquipe", fields: [equipeId], references: [id], onDelete: SetNull)

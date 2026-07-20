@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { requirePermissao } from "@/lib/auth";
+import { requireUsuario } from "@/lib/auth";
 import { can } from "@/lib/rbac";
 import { formatarDataISO } from "@/lib/recorrencia";
 import { EscalasPanel } from "./EscalasPanel";
@@ -18,9 +18,14 @@ export default async function EventoPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  // Leitura basta para ver o evento (nível monitor); escrita fica atrás de
+  // Leitura basta para ver o evento (monitor via ver_calendario; líder via
+  // ver_agenda_equipe, restrito à própria equipe). Escrita fica atrás de
   // `gerenciar_escalas` — validada também nas Server Actions.
-  const usuario = await requirePermissao("ver_calendario");
+  const usuario = await requireUsuario();
+  const temCalendario = can(usuario.nivelAcesso, "ver_calendario");
+  const temAgendaEquipe = can(usuario.nivelAcesso, "ver_agenda_equipe");
+  if (!temCalendario && !temAgendaEquipe) redirect("/nao-autorizado");
+  const escopoEquipe = !temCalendario && temAgendaEquipe;
   const podeGerirEscalas = can(usuario.nivelAcesso, "gerenciar_escalas");
   const { id } = await params;
 
@@ -42,6 +47,11 @@ export default async function EventoPage({
     }),
   ]);
   if (!evento) notFound();
+
+  // Líder só vê eventos onde a própria equipe está escalada.
+  if (escopoEquipe && !evento.escalas.some((e) => e.equipeId === usuario.equipeId)) {
+    redirect("/nao-autorizado");
+  }
 
   const [rotuloStatus, corStatus] = BADGE_STATUS[evento.status];
   const equipesEscaladas = new Set(evento.escalas.map((e) => e.equipeId));

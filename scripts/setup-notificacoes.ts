@@ -52,6 +52,28 @@ const REGRAS_PADRAO = [
       "Olá, {{nome}}!\n\nLembrando que você está escalado(a) para {{evento}} amanhã, {{data}}.\n\nMinistério Ágape",
     horarioEnvio: "18:00",
   },
+  {
+    // Avisa admin/super quando um líder edita um membro da própria equipe.
+    gatilho: "membro_editado_por_lider" as const,
+    ativo: true,
+    niveisAlvo: [],
+    canais: ["email", "telegram"] as const,
+    assunto: "Cadastro atualizado por líder — {{membro}}",
+    mensagem:
+      "Olá, {{nome}}!\n\n{{editor}} atualizou o cadastro de {{membro}} (equipe {{equipe}}).\n{{detalhe}}\n\nMinistério Ágape",
+    horarioEnvio: null,
+  },
+  {
+    // Avisa líder(es) da equipe + admin/super quando alguém edita o próprio perfil.
+    gatilho: "perfil_editado" as const,
+    ativo: true,
+    niveisAlvo: [],
+    canais: ["email", "telegram"] as const,
+    assunto: "Perfil atualizado — {{membro}}",
+    mensagem:
+      "Olá, {{nome}}!\n\n{{membro}} atualizou o próprio perfil.\n{{detalhe}}\n\nMinistério Ágape",
+    horarioEnvio: null,
+  },
 ];
 
 async function main() {

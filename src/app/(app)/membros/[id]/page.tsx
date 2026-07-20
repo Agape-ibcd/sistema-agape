@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { requirePermissao } from "@/lib/auth";
+import { requireUsuario } from "@/lib/auth";
+import { acessoMembros } from "@/lib/acessoMembros";
 import { ROTULO_NIVEL } from "@/lib/rbac";
 import { MembroForm } from "../MembroForm";
 
@@ -10,7 +11,10 @@ export default async function EditarMembroPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requirePermissao("gerenciar_membros");
+  const usuario = await requireUsuario();
+  const acesso = acessoMembros(usuario);
+  if (acesso === "nenhum") redirect("/nao-autorizado");
+  const restrito = acesso === "equipe"; // líder: só perfil, sem e-mail/equipe/status
   const { id } = await params;
 
   const [membro, equipes] = await Promise.all([
@@ -18,13 +22,19 @@ export default async function EditarMembroPage({
       where: { id },
       include: { equipe: { select: { nome: true } } },
     }),
-    prisma.equipe.findMany({
-      where: { status: "ativa" },
-      orderBy: { nome: "asc" },
-      select: { id: true, nome: true },
-    }),
+    // Líder não troca a equipe do membro — não precisa da lista de equipes.
+    restrito
+      ? Promise.resolve([] as { id: string; nome: string }[])
+      : prisma.equipe.findMany({
+          where: { status: "ativa" },
+          orderBy: { nome: "asc" },
+          select: { id: true, nome: true },
+        }),
   ]);
   if (!membro) notFound();
+
+  // Líder só acessa membros da própria equipe.
+  if (restrito && membro.equipeId !== usuario.equipeId) redirect("/nao-autorizado");
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -69,6 +79,7 @@ export default async function EditarMembroPage({
             : "",
         }}
         equipes={equipes}
+        restrito={restrito}
       />
     </div>
   );

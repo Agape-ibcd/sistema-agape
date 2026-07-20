@@ -19,11 +19,13 @@ export function FiltrosMembros({
   equipe,
   status,
   equipes,
+  ocultarEquipe = false,
 }: {
   busca: string;
   equipe: string;
   status: string;
   equipes: { id: string; nome: string }[];
+  ocultarEquipe?: boolean; // líder: só vê a própria equipe, sem filtro de equipe
 }) {
   const router = useRouter();
   const [pendente, iniciar] = useTransition();
@@ -41,7 +43,7 @@ export function FiltrosMembros({
     iniciar(() => router.push(qs ? `/membros?${qs}` : "/membros"));
   }
 
-  const qtdFiltros = (equipe ? 1 : 0) + (status !== "ativo" ? 1 : 0);
+  const qtdFiltros = (!ocultarEquipe && equipe ? 1 : 0) + (status !== "ativo" ? 1 : 0);
 
   const inputCls =
     "w-full rounded-xl border border-edge bg-surface px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-ring";
@@ -72,24 +74,26 @@ export function FiltrosMembros({
       <Popover rotulo="Filtros" badge={qtdFiltros} align="right">
         {(fechar) => (
           <div className="flex flex-col gap-3">
-            <label className="flex flex-col gap-1 text-xs font-medium text-ink-soft">
-              Equipe
-              <select
-                value={equipe}
-                onChange={(e) => {
-                  navegar({ equipe: e.target.value });
-                  fechar();
-                }}
-                className={inputCls}
-              >
-                <option value="">Todas as equipes</option>
-                {equipes.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.nome}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {!ocultarEquipe && (
+              <label className="flex flex-col gap-1 text-xs font-medium text-ink-soft">
+                Equipe
+                <select
+                  value={equipe}
+                  onChange={(e) => {
+                    navegar({ equipe: e.target.value });
+                    fechar();
+                  }}
+                  className={inputCls}
+                >
+                  <option value="">Todas as equipes</option>
+                  {equipes.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.nome}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
 
             <label className="flex flex-col gap-1 text-xs font-medium text-ink-soft">
               Situação

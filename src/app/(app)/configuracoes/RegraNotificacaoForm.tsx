@@ -29,6 +29,9 @@ export type RegraDados = {
   // nova_escala/escala_alterada notificam TODOS os escalados, sem filtrar
   // por nível — o seletor de níveis-alvo não faz sentido pra eles.
   usaNiveisAlvo: boolean;
+  // Texto do aviso de destinatários (quando usaNiveisAlvo=false). Padrão =
+  // "membros escalados"; gatilhos de edição informam os supervisores.
+  avisoDestinatarios?: string;
 };
 
 const inputCls =
@@ -95,7 +98,8 @@ export function RegraNotificacaoForm({ regra }: { regra: RegraDados }) {
           </div>
         ) : (
           <p className="text-xs text-ink-subtle">
-            Notifica todos os membros escalados, sem filtro de nível de acesso.
+            {regra.avisoDestinatarios ??
+              "Notifica todos os membros escalados, sem filtro de nível de acesso."}
           </p>
         )}
 

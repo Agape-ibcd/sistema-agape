@@ -24,13 +24,17 @@ export type MembroFormDados = {
 type Props = {
   membro: MembroFormDados | null; // null = cadastro novo
   equipes: { id: string; nome: string }[];
+  // Modo líder: edita só dados de perfil dos membros da própria equipe —
+  // sem e-mail (identidade de login), sem trocar de equipe e sem painel de
+  // status (afastar/inativar continua sendo de admin/super).
+  restrito?: boolean;
 };
 
 const inputCls =
   "w-full rounded-xl border border-edge px-3 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-ring";
 const labelCls = "mb-1 block text-sm font-medium text-ink-soft";
 
-export function MembroForm({ membro, equipes }: Props) {
+export function MembroForm({ membro, equipes, restrito = false }: Props) {
   const router = useRouter();
   const [estado, formAction, pendente] = useActionState(salvarMembro, null);
   const [estadoFoto, acaoRemoverFoto, pendenteFoto] = useActionState(removerFoto, null);
@@ -111,17 +115,25 @@ export function MembroForm({ membro, equipes }: Props) {
 
           <div>
             <label htmlFor="email" className={labelCls}>
-              E-mail *
+              E-mail {restrito ? "" : "*"}
             </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              required
-              maxLength={150}
-              defaultValue={membro?.email ?? ""}
-              className={inputCls}
-            />
+            {restrito ? (
+              // Líder não altera o e-mail (é a identidade de login). Mostra só
+              // leitura — o servidor também ignora o campo neste modo.
+              <p className={`${inputCls} bg-surface-2 text-ink-soft`}>
+                {membro?.email ?? "—"}
+              </p>
+            ) : (
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                maxLength={150}
+                defaultValue={membro?.email ?? ""}
+                className={inputCls}
+              />
+            )}
           </div>
 
           <div>
@@ -152,24 +164,26 @@ export function MembroForm({ membro, equipes }: Props) {
             />
           </div>
 
-          <div>
-            <label htmlFor="equipeId" className={labelCls}>
-              Equipe
-            </label>
-            <select
-              id="equipeId"
-              name="equipeId"
-              defaultValue={membro?.equipeId ?? ""}
-              className={inputCls}
-            >
-              <option value="">Sem equipe</option>
-              {equipes.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.nome}
-                </option>
-              ))}
-            </select>
-          </div>
+          {!restrito && (
+            <div>
+              <label htmlFor="equipeId" className={labelCls}>
+                Equipe
+              </label>
+              <select
+                id="equipeId"
+                name="equipeId"
+                defaultValue={membro?.equipeId ?? ""}
+                className={inputCls}
+              >
+                <option value="">Sem equipe</option>
+                {equipes.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="sm:col-span-2">
             <label htmlFor="observacao" className={labelCls}>
@@ -211,8 +225,9 @@ export function MembroForm({ membro, equipes }: Props) {
         </div>
       </form>
 
-      {/* Status: ativo / afastado (temporário) / inativo — nunca exclusão. */}
-      {membro && (
+      {/* Status: ativo / afastado (temporário) / inativo — nunca exclusão.
+          Só admin/super; o líder (restrito) não muda status. */}
+      {membro && !restrito && (
         <PainelStatus
           membro={membro}
           acaoStatus={acaoStatus}

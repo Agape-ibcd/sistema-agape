@@ -1,17 +1,25 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { requirePermissao } from "@/lib/auth";
+import { requireUsuario } from "@/lib/auth";
+import { acessoMembros } from "@/lib/acessoMembros";
 import { Avatar } from "@/components/Avatar";
 import { FiltrosMembros } from "./FiltrosMembros";
 
 // Lista de membros com busca por nome/e-mail e filtros por equipe e status.
+// Admin/super veem todos; o líder vê SÓ a própria equipe (escopo travado no
+// servidor, sem botão de novo cadastro nem filtro de equipe).
 export default async function MembrosPage({
   searchParams,
 }: {
   searchParams: Promise<{ busca?: string; equipe?: string; status?: string }>;
 }) {
-  await requirePermissao("gerenciar_membros");
+  const usuario = await requireUsuario();
+  const acesso = acessoMembros(usuario);
+  if (acesso === "nenhum") redirect("/nao-autorizado");
+  const escopoEquipe = acesso === "equipe";
+
   const { busca = "", equipe = "", status = "ativo" } = await searchParams;
 
   const where: Prisma.MembroWhereInput = {};
@@ -21,7 +29,13 @@ export default async function MembrosPage({
       { email: { contains: busca, mode: "insensitive" } },
     ];
   }
-  if (equipe) where.equipeId = equipe;
+  // Líder: sempre a própria equipe (ignora o que veio na URL). Sem equipe
+  // vinculada, não vê ninguém — situação anômala, mas resolvida com segurança.
+  if (escopoEquipe) {
+    where.equipeId = usuario.equipeId ?? "__sem_equipe__";
+  } else if (equipe) {
+    where.equipeId = equipe;
+  }
   if (status === "ativo" || status === "afastado" || status === "inativo") {
     where.status = status;
   }
@@ -32,28 +46,42 @@ export default async function MembrosPage({
       orderBy: { nomeCompleto: "asc" },
       include: { equipe: { select: { nome: true, corHex: true } } },
     }),
-    prisma.equipe.findMany({ orderBy: { nome: "asc" }, select: { id: true, nome: true } }),
+    escopoEquipe
+      ? Promise.resolve([] as { id: string; nome: string }[])
+      : prisma.equipe.findMany({ orderBy: { nome: "asc" }, select: { id: true, nome: true } }),
   ]);
 
   return (
     <div className="mx-auto max-w-4xl">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-display font-semibold uppercase tracking-wide text-ink">Membros</h1>
+          <h1 className="text-3xl font-display font-semibold uppercase tracking-wide text-ink">
+            {escopoEquipe ? "Membros da equipe" : "Membros"}
+          </h1>
           <p className="mt-1 text-sm text-ink-soft">
+            {escopoEquipe && usuario.equipeNome ? `${usuario.equipeNome} · ` : ""}
             {membros.length} membro(s) na seleção atual.
           </p>
         </div>
-        <Link
-          href="/membros/novo"
-          className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong"
-        >
-          + Novo membro
-        </Link>
+        {!escopoEquipe && (
+          <Link
+            href="/membros/novo"
+            className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong"
+          >
+            + Novo membro
+          </Link>
+        )}
       </header>
 
-      {/* Busca + filtros recolhidos (a URL continua compartilhável) */}
-      <FiltrosMembros busca={busca} equipe={equipe} status={status} equipes={equipes} />
+      {/* Busca + filtros recolhidos (a URL continua compartilhável). O líder
+          não filtra por equipe (só vê a própria). */}
+      <FiltrosMembros
+        busca={busca}
+        equipe={equipe}
+        status={status}
+        equipes={equipes}
+        ocultarEquipe={escopoEquipe}
+      />
 
       <ul className="divide-y divide-edge-soft overflow-hidden rounded-2xl border border-edge-soft vidro-leve">
         {membros.length === 0 && (

@@ -12,6 +12,7 @@ import {
   revogarAcessoVarios,
   alterarNivelVarios,
   definirStatusVarios,
+  enviarCredenciais,
 } from "./actions";
 import { definirStatusMembro } from "../membros/actions";
 import { FeedbackModal } from "@/components/FeedbackModal";
@@ -29,6 +30,7 @@ export type UsuarioLinha = {
   retornoPrevisto: string | null; // "YYYY-MM-DD"
   equipeNome: string | null;
   emailSintetico: boolean;
+  temTelegram: boolean;
 };
 
 const ROTULOS: Record<UsuarioLinha["nivelAcesso"], string> = {
@@ -79,6 +81,7 @@ export function UsuariosLista({
   const [estadoSenha, senhaAction, pSenha] = useActionState(redefinirSenha, null);
   const [estadoTodos, todosAction, pTodos] = useActionState(concederAcessoTodos, null);
   const [estadoRevogar, revogarAction, pRevogar] = useActionState(revogarAcesso, null);
+  const [estadoCred, credAction, pCred] = useActionState(enviarCredenciais, null);
   const [estadoStatus, statusAction, pStatus] = useActionState(
     definirStatusMembro,
     null,
@@ -102,6 +105,8 @@ export function UsuariosLista({
   );
 
   const [painelAberto, setPainelAberto] = useState<string | null>(null);
+  const [painelCredAberto, setPainelCredAberto] = useState<string | null>(null);
+  const [textoShare, setTextoShare] = useState<string | null>(null);
   const [painelTodosAberto, setPainelTodosAberto] = useState(false);
   const [selecao, setSelecao] = useState<Set<string>>(new Set());
   const [acaoMassa, setAcaoMassa] = useState<AcaoMassa | null>(null);
@@ -507,6 +512,19 @@ export function UsuariosLista({
                     </button>
                   )}
 
+                  {!inativo && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPainelCredAberto(painelCredAberto === u.id ? null : u.id)
+                      }
+                      aria-pressed={painelCredAberto === u.id}
+                      className={btnLeve}
+                    >
+                      Enviar credenciais
+                    </button>
+                  )}
+
                   {u.temAcesso && !souEu && (
                     <form
                       action={revogarAction}
@@ -595,10 +613,77 @@ export function UsuariosLista({
                     {u.temAcesso ? "Redefinir" : "Criar acesso"}
                   </button>
                   <p className="w-full text-xs text-ink-subtle">
-                    Oriente o membro a trocar a senha no primeiro login (Meu Perfil).
+                    A senha definida aqui é provisória — o membro terá de criar
+                    uma nova no primeiro acesso.
                     {u.emailSintetico &&
                       " E-mail sintético: o login funciona, mas não recebe e-mails."}
                   </p>
+                </form>
+              )}
+
+              {/* Enviar credenciais: gera senha provisória e entrega por canal. */}
+              {painelCredAberto === u.id && !inativo && (
+                <form
+                  action={credAction}
+                  className="mt-3 rounded-xl bg-surface-2 p-3"
+                  onSubmit={(e) => {
+                    if (
+                      !window.confirm(
+                        `Gerar uma nova senha provisória para ${u.nomeCompleto} e enviar? A senha atual dele (se houver) deixará de funcionar, e ele terá de definir uma nova no primeiro acesso.`,
+                      )
+                    )
+                      e.preventDefault();
+                  }}
+                >
+                  <input type="hidden" name="membroId" value={u.id} />
+                  <p className="mb-2 text-xs text-ink-soft">
+                    Gera uma senha provisória e envia login + senha. O membro é
+                    obrigado a trocar a senha no primeiro acesso.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="submit"
+                      name="canal"
+                      value="email"
+                      disabled={pCred || u.emailSintetico}
+                      title={
+                        u.emailSintetico
+                          ? "E-mail sintético não recebe mensagens"
+                          : undefined
+                      }
+                      className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
+                    >
+                      Por e-mail
+                    </button>
+                    <button
+                      type="submit"
+                      name="canal"
+                      value="telegram"
+                      disabled={pCred || !u.temTelegram}
+                      title={
+                        u.temTelegram ? undefined : "Membro sem Telegram vinculado"
+                      }
+                      className="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-strong disabled:opacity-50"
+                    >
+                      Por Telegram
+                    </button>
+                    <button
+                      type="submit"
+                      name="canal"
+                      value="compartilhar"
+                      disabled={pCred}
+                      className="rounded-lg border border-edge px-3 py-1.5 text-xs font-semibold text-ink-soft hover:bg-surface-3 disabled:opacity-50"
+                    >
+                      Compartilhar…
+                    </button>
+                  </div>
+                  {(u.emailSintetico || !u.temTelegram) && (
+                    <p className="mt-2 text-xs text-ink-subtle">
+                      {u.emailSintetico && "E-mail sintético (não recebe). "}
+                      {!u.temTelegram && "Telegram não vinculado. "}
+                      Use “Compartilhar” para copiar/enviar a mensagem manualmente.
+                    </p>
+                  )}
                 </form>
               )}
             </li>
@@ -616,6 +701,17 @@ export function UsuariosLista({
       <FeedbackModal estado={estadoRevogar} />
       <FeedbackModal estado={estadoStatus} />
       <FeedbackModal
+        estado={estadoCred}
+        onFechar={() => {
+          setPainelCredAberto(null);
+          // "Compartilhar" devolve o texto pronto — abre o modal de partilha.
+          if (estadoCred?.textoCompartilhar) setTextoShare(estadoCred.textoCompartilhar);
+        }}
+      />
+      {textoShare && (
+        <ModalCompartilhar texto={textoShare} onFechar={() => setTextoShare(null)} />
+      )}
+      <FeedbackModal
         estado={estadoMConceder}
         onFechar={(e) => e.ok && limparSelecao()}
       />
@@ -632,6 +728,77 @@ export function UsuariosLista({
         onFechar={(e) => e.ok && limparSelecao()}
       />
     </>
+  );
+}
+
+// Modal de compartilhamento: mostra a mensagem com login + senha provisória e
+// oferece "Compartilhar" (Web Share API, dentro do gesto do clique) e "Copiar".
+function ModalCompartilhar({
+  texto,
+  onFechar,
+}: {
+  texto: string;
+  onFechar: () => void;
+}) {
+  const [copiado, setCopiado] = useState(false);
+  const podeCompartilhar =
+    typeof navigator !== "undefined" && typeof navigator.share === "function";
+
+  async function compartilhar() {
+    try {
+      await navigator.share({ title: "Acesso ao Sistema Ágape", text: texto });
+    } catch {
+      // Cancelado pelo usuário ou indisponível — silencioso (há o botão Copiar).
+    }
+  }
+
+  async function copiar() {
+    try {
+      await navigator.clipboard.writeText(texto);
+      setCopiado(true);
+    } catch {
+      setCopiado(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-2xl vidro-forte p-5 shadow-xl">
+        <h3 className="text-base font-semibold text-ink">Compartilhar credenciais</h3>
+        <p className="mt-1 text-xs text-ink-subtle">
+          A senha provisória já foi definida. Envie esta mensagem ao membro — ele
+          terá de trocar a senha no primeiro acesso.
+        </p>
+        <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap rounded-xl border border-edge-soft bg-surface-2 p-3 text-xs text-ink">
+          {texto}
+        </pre>
+        <div className="mt-4 flex flex-wrap justify-end gap-2">
+          <button
+            type="button"
+            onClick={copiar}
+            className="rounded-xl border border-edge px-4 py-2 text-sm font-medium text-ink-soft hover:bg-surface-2"
+          >
+            {copiado ? "Copiado ✓" : "Copiar"}
+          </button>
+          {podeCompartilhar && (
+            <button
+              type="button"
+              onClick={compartilhar}
+              className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong"
+            >
+              Compartilhar…
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onFechar}
+            className="rounded-xl bg-surface-3 px-4 py-2 text-sm font-medium text-ink-soft hover:bg-surface-2"
+          >
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

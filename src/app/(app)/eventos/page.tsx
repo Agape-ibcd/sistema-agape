@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { requirePermissao } from "@/lib/auth";
+import { requireUsuario } from "@/lib/auth";
 import { can } from "@/lib/rbac";
 import { formatarDataISO, parseDataISO } from "@/lib/recorrencia";
 import { AcoesEventos } from "./AcoesEventos";
@@ -37,9 +39,13 @@ export default async function EventosPage({
 }: {
   searchParams: Promise<{ visao?: string; ref?: string }>;
 }) {
-  // Leitura basta para ver o calendário (nível monitor); os controles de
-  // escrita abaixo são condicionados às permissões específicas.
-  const usuario = await requirePermissao("ver_calendario");
+  // Admin/super/monitor veem o calendário inteiro (ver_calendario); o líder vê
+  // a AGENDA restrita à própria equipe (ver_agenda_equipe), sempre em leitura.
+  const usuario = await requireUsuario();
+  const temCalendario = can(usuario.nivelAcesso, "ver_calendario");
+  const temAgendaEquipe = can(usuario.nivelAcesso, "ver_agenda_equipe");
+  if (!temCalendario && !temAgendaEquipe) redirect("/nao-autorizado");
+  const escopoEquipe = !temCalendario && temAgendaEquipe;
   const params = await searchParams;
 
   const hoje = hojeUTC();
@@ -61,8 +67,16 @@ export default async function EventosPage({
     fimJanela = new Date(inicioJanela.getTime() + 6 * DIA_MS);
   }
 
+  // Líder: só eventos onde a própria equipe está escalada (a "sua agenda").
+  const whereEventos: Prisma.EventoWhereInput = {
+    dataEvento: { gte: inicioJanela, lte: fimJanela },
+    ...(escopoEquipe
+      ? { escalas: { some: { equipeId: usuario.equipeId ?? "__sem_equipe__" } } }
+      : {}),
+  };
+
   const eventos = await prisma.evento.findMany({
-    where: { dataEvento: { gte: inicioJanela, lte: fimJanela } },
+    where: whereEventos,
     include: {
       tipoEvento: { select: { nome: true } },
       escalas: {
@@ -128,7 +142,9 @@ export default async function EventosPage({
     <div className="mx-auto max-w-6xl">
       <header className="mb-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-3xl font-display font-semibold uppercase tracking-wide text-ink">Eventos e Escalas</h1>
+          <h1 className="text-3xl font-display font-semibold uppercase tracking-wide text-ink">
+            {escopoEquipe ? "Minha agenda" : "Eventos e Escalas"}
+          </h1>
           <div className="flex flex-wrap items-center gap-2">
             {podeEventoExtra && (
               <Link
