@@ -19,6 +19,11 @@ const ROTAS_PUBLICAS = [
   "/api/cron",
   "/api/telegram/webhook",
   "/confirmar-presenca",
+  // Manifesto PWA: lido pelo navegador ANTES de qualquer login (instalação
+  // como app) — conteúdo estático sem dado sensível, mesmo bug-pattern do
+  // /api/cron acima: sem isso o middleware redireciona pro /login e o
+  // navegador não consegue instalar o atalho na tela inicial.
+  "/manifest.webmanifest",
 ];
 
 // Renova a sessão do Supabase a cada requisição e protege rotas privadas.
