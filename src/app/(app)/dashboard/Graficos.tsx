@@ -202,7 +202,12 @@ async function gerarImagemTipos(
   for (const t of porTipo) {
     ctx.fillStyle = "#1a1a1a";
     ctx.font = "600 26px Oswald, 'Arial Narrow', sans-serif";
-    ctx.fillText(t.nome.toUpperCase(), PADX, y + 24);
+    // Nome do culto com o nº de presentes ao lado (ex.: "DOMINGO DE MANHÃ — 9 PRESENTES").
+    ctx.fillText(
+      `${t.nome.toUpperCase()} — ${t.presentes} PRESENTE${t.presentes === 1 ? "" : "S"}`,
+      PADX,
+      y + 24,
+    );
 
     ctx.fillStyle = "#3a3a3a";
     ctx.font = "600 22px Montserrat, sans-serif";
@@ -340,10 +345,80 @@ function BotaoCompartilhar({
       onClick={compartilhar}
       disabled={ocupado}
       title="Compartilhar como imagem (com o período e os dados por equipe)"
-      className="shrink-0 rounded-lg border border-edge px-2.5 py-1 text-xs font-medium text-ink-soft hover:border-brand-edge hover:bg-brand-faint hover:text-brand-text disabled:opacity-60"
+      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-edge px-2.5 py-1 text-xs font-medium text-ink-soft hover:border-brand-edge hover:bg-brand-faint hover:text-brand-text disabled:opacity-60"
     >
-      {ocupado ? "Gerando…" : erro ? "Erro — tentar de novo" : "Compartilhar 📤"}
+      <IconeCompartilhar />
+      {ocupado ? "Gerando…" : erro ? "Erro — tentar de novo" : "Compartilhar"}
     </button>
+  );
+}
+
+// Rótulo do eixo X do gráfico por tipo de culto: nome na 1ª linha e o número
+// de PRESENTES em destaque na 2ª (pedido do usuário: "Domingo de manhã —
+// 9 presentes"). Recharts injeta x/y/payload/index ao clonar o elemento.
+function TickTipoCulto({
+  x,
+  y,
+  payload,
+  index,
+  dados,
+  corNome,
+  corPresentes,
+}: {
+  // Recharts entrega x/y como number|string ao clonar o elemento do tick.
+  x?: number | string;
+  y?: number | string;
+  payload?: { value?: unknown };
+  index?: number;
+  dados: SerieTipo[];
+  corNome: string;
+  corPresentes: string;
+}) {
+  const item = typeof index === "number" ? dados[index] : undefined;
+  const nome = String(payload?.value ?? "");
+  const curto = nome.length > 15 ? `${nome.slice(0, 15)}…` : nome;
+  const n = item?.presentes ?? 0;
+
+  return (
+    <g transform={`translate(${Number(x) || 0},${Number(y) || 0})`}>
+      <title>{`${nome} — ${n} presente${n === 1 ? "" : "s"}`}</title>
+      <text x={0} y={0} dy={13} textAnchor="middle" fill={corNome} fontSize={11}>
+        {curto}
+      </text>
+      <text
+        x={0}
+        y={0}
+        dy={29}
+        textAnchor="middle"
+        fill={corPresentes}
+        fontSize={12}
+        fontWeight={700}
+      >
+        {`${n} presente${n === 1 ? "" : "s"}`}
+      </text>
+    </g>
+  );
+}
+
+// Ícone de compartilhar (nós conectados) — substitui o emoji 📤, que variava
+// de desenho conforme o sistema e destoava do resto da interface.
+function IconeCompartilhar() {
+  return (
+    <svg
+      className="h-3.5 w-3.5"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" />
+    </svg>
   );
 }
 
@@ -398,17 +473,27 @@ export function GraficosDashboard({
           ) : undefined
         }
       >
-        <ResponsiveContainer width="100%" height={240}>
+        <ResponsiveContainer width="100%" height={268}>
           <BarChart
             data={porTipo}
-            margin={{ top: 20, right: 8, left: -16, bottom: 4 }}
+            margin={{ top: 22, right: 8, left: -16, bottom: 4 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke={cores.grade} />
+            {/* Eixo em 2 linhas: nome do culto e, logo abaixo, o nº de
+                presentes em destaque (ex.: "Domingo Manhã" / "9 presentes"). */}
             <XAxis
               dataKey="nome"
-              tick={eixoPct}
               interval={0}
-              tickFormatter={(v: string) => (v.length > 12 ? v.slice(0, 12) + "…" : v)}
+              height={46}
+              tickLine={false}
+              tick={(props) => (
+                <TickTipoCulto
+                  {...props}
+                  dados={porTipo}
+                  corNome={cores.eixo}
+                  corPresentes={cores.presenca}
+                />
+              )}
             />
             <YAxis domain={[0, 100]} tick={eixoPct} />
             <Tooltip
@@ -432,10 +517,12 @@ export function GraficosDashboard({
               radius={[6, 6, 0, 0]}
               isAnimationActive={false}
             >
-              {/* Nº de presentes acima da barra */}
+              {/* Percentual acima da barra (o nº de presentes vai no eixo, em
+                  destaque, junto ao nome do culto). */}
               <LabelList
-                dataKey="presentes"
+                dataKey="taxaPresenca"
                 position="top"
+                formatter={(v: unknown) => `${Math.round(Number(v) || 0)}%`}
                 style={{ fill: cores.eixo, fontSize: 11, fontWeight: 600 }}
               />
             </Bar>

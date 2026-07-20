@@ -19,6 +19,7 @@
     "setup:notificacoes": "tsx scripts/setup-notificacoes.ts",
     "setup:pgcron": "tsx scripts/setup-pgcron-notificacoes.ts",
     "setup:telegram": "tsx scripts/setup-telegram-webhook.ts",
+    "icones": "tsx scripts/gerar-icones.ts",
     "test:recorrencia": "tsx scripts/test-recorrencia.ts",
     "test:rodizio": "tsx scripts/test-rodizio.ts"
   },
@@ -44,6 +45,7 @@
     "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "sharp": "^0.35.3",
     "tailwindcss": "^4",
     "tsx": "^4.23.0",
     "typescript": "^5"

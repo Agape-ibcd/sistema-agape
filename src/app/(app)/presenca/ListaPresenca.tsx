@@ -63,6 +63,28 @@ type Props = {
 
 type StatusSave = "ocioso" | "pendente" | "salvando" | "salvo" | "erro";
 
+// Situação de uma linha no momento do "Salvar tudo agora".
+type EstadoLinha = {
+  nome: string;
+  registrado: boolean; // já tem lançamento gravado
+  presente: boolean;
+  excluido: boolean; // lançamento excluído de propósito
+  erro: boolean; // falhou ao salvar
+};
+
+// O que cada linha expõe ao componente pai.
+type ApiLinha = {
+  flush: () => Promise<void>;
+  estado: () => EstadoLinha;
+};
+
+type ResumoPresenca = {
+  presentes: number;
+  ausentes: number;
+  faltando: string[];
+  erros: string[];
+};
+
 export function ListaPresenca({
   eventoId,
   equipeId,
@@ -77,14 +99,36 @@ export function ListaPresenca({
     null,
   );
 
-  // Registro das funções de "salvar agora" de cada linha (p/ Salvar tudo).
-  const flushes = useRef(new Map<string, () => void>());
-  const registrarFlush = useCallback((id: string, fn: () => void) => {
-    flushes.current.set(id, fn);
+  // Registro de cada linha: `flush` grava o que estiver pendente e `estado`
+  // devolve a situação ATUAL da linha na tela (o resumo do "Salvar tudo" não
+  // pode usar os dados do servidor, que só chegam na próxima revalidação).
+  const linhas = useRef(new Map<string, ApiLinha>());
+  const registrarLinha = useCallback((id: string, api: ApiLinha) => {
+    linhas.current.set(id, api);
     return () => {
-      flushes.current.delete(id);
+      linhas.current.delete(id);
     };
   }, []);
+
+  const [salvandoTudo, setSalvandoTudo] = useState(false);
+  const [resumo, setResumo] = useState<ResumoPresenca | null>(null);
+
+  async function salvarTudo() {
+    setSalvandoTudo(true);
+    const api = [...linhas.current.values()];
+    await Promise.all(api.map((l) => l.flush()));
+    const estados = api.map((l) => l.estado());
+    const registrados = estados.filter((e) => e.registrado);
+    const presentes = registrados.filter((e) => e.presente).length;
+    setSalvandoTudo(false);
+    setResumo({
+      presentes,
+      ausentes: registrados.length - presentes,
+      // Quem foi excluído de propósito não conta como "faltou registrar".
+      faltando: estados.filter((e) => !e.registrado && !e.excluido).map((e) => e.nome),
+      erros: estados.filter((e) => e.erro).map((e) => e.nome),
+    });
+  }
 
   const totalLancados = membros.filter((m) => m.ativo).length;
 
@@ -126,29 +170,165 @@ export function ListaPresenca({
                 eventoId={eventoId}
                 equipeId={equipeId}
                 horarioChegadaSugerido={horarioChegadaSugerido}
-                registrarFlush={registrarFlush}
+                registrarLinha={registrarLinha}
                 excluirAction={excluirAction}
                 restaurarAction={restaurarAction}
               />
             ))}
           </ul>
 
-          {/* Rede de segurança: grava imediatamente qualquer linha pendente. */}
+          {/* Rede de segurança: grava imediatamente qualquer linha pendente e
+              mostra o resumo do que foi lançado. */}
           <div className="mt-3 border-t border-edge-soft pt-3">
             <button
               type="button"
-              onClick={() => flushes.current.forEach((fn) => fn())}
-              className="w-full rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong sm:w-auto"
+              onClick={() => void salvarTudo()}
+              disabled={salvandoTudo}
+              className="w-full rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-60 sm:w-auto"
             >
-              Salvar tudo agora
+              {salvandoTudo ? "Salvando…" : "Salvar tudo agora"}
             </button>
           </div>
         </>
       )}
 
+      {resumo && (
+        <CardResumo
+          resumo={resumo}
+          equipeNome={equipeNome}
+          onFechar={() => setResumo(null)}
+        />
+      )}
+
       <FeedbackModal estado={estadoExcluir} />
       <FeedbackModal estado={estadoRestaurar} />
     </section>
+  );
+}
+
+// Card de confirmação do "Salvar tudo agora": quantos presentes/ausentes e,
+// se alguém ficou sem lançamento, o alerta com os nomes.
+function CardResumo({
+  resumo,
+  equipeNome,
+  onFechar,
+}: {
+  resumo: ResumoPresenca;
+  equipeNome?: string;
+  onFechar: () => void;
+}) {
+  const { presentes, ausentes, faltando, erros } = resumo;
+  const total = presentes + ausentes;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-sm rounded-2xl vidro-forte p-5 shadow-xl">
+        <div className="flex items-center gap-2">
+          <span
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+              erros.length > 0 ? "bg-danger-soft" : "bg-success-soft"
+            }`}
+            aria-hidden
+          >
+            {erros.length > 0 ? (
+              <svg
+                className="h-5 w-5 text-danger-text"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              >
+                <path d="M12 8v5M12 17h.01" />
+              </svg>
+            ) : (
+              <svg
+                className="h-5 w-5 text-success-text"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m5 13 4 4L19 7" />
+              </svg>
+            )}
+          </span>
+          <div className="min-w-0">
+            <h3 className="text-base font-semibold text-ink">
+              {erros.length > 0 ? "Salvo com falhas" : "Presenças salvas"}
+            </h3>
+            {equipeNome && (
+              <p className="truncate text-xs text-ink-subtle">{equipeNome}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Números em destaque */}
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="rounded-xl bg-success-soft p-3 text-center">
+            <p className="font-display text-3xl font-semibold leading-none text-success-text">
+              {presentes}
+            </p>
+            <p className="mt-1 text-xs font-medium text-success-text">
+              {presentes === 1 ? "presente" : "presentes"}
+            </p>
+          </div>
+          <div className="rounded-xl bg-danger-soft p-3 text-center">
+            <p className="font-display text-3xl font-semibold leading-none text-danger-text">
+              {ausentes}
+            </p>
+            <p className="mt-1 text-xs font-medium text-danger-text">
+              {ausentes === 1 ? "ausente" : "ausentes"}
+            </p>
+          </div>
+        </div>
+        <p className="mt-2 text-center text-xs text-ink-subtle">
+          {total} lançamento(s) registrado(s).
+        </p>
+
+        {/* Alerta: quem ficou sem registro */}
+        {faltando.length > 0 && (
+          <div className="mt-4 rounded-xl bg-warn-faint p-3">
+            <p className="text-sm font-semibold text-warn-text">
+              Faltou registrar {faltando.length} pessoa
+              {faltando.length > 1 ? "s" : ""}
+            </p>
+            <ul className="mt-1.5 list-inside list-disc text-xs text-warn-text">
+              {faltando.map((n) => (
+                <li key={n}>{n}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {erros.length > 0 && (
+          <div className="mt-3 rounded-xl bg-danger-faint p-3">
+            <p className="text-sm font-semibold text-danger-text">
+              Não foi possível salvar {erros.length} lançamento
+              {erros.length > 1 ? "s" : ""}
+            </p>
+            <ul className="mt-1.5 list-inside list-disc text-xs text-danger-text">
+              {erros.map((n) => (
+                <li key={n}>{n}</li>
+              ))}
+            </ul>
+            <p className="mt-1.5 text-xs text-danger-text">
+              Use “tentar de novo” na linha correspondente.
+            </p>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={onFechar}
+          className="mt-5 w-full rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong"
+        >
+          Entendi
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -216,7 +396,7 @@ function LinhaPresenca({
   eventoId,
   equipeId,
   horarioChegadaSugerido,
-  registrarFlush,
+  registrarLinha,
   excluirAction,
   restaurarAction,
 }: {
@@ -224,7 +404,7 @@ function LinhaPresenca({
   eventoId: string;
   equipeId: string;
   horarioChegadaSugerido: string;
-  registrarFlush: (id: string, fn: () => void) => () => void;
+  registrarLinha: (id: string, api: ApiLinha) => () => void;
   excluirAction: (formData: FormData) => void;
   restaurarAction: (formData: FormData) => void;
 }) {
@@ -254,9 +434,24 @@ function LinhaPresenca({
   // durante o render) — o timer só dispara bem depois, com o valor já fresco.
   const dadosRef = useRef({ presente, pontualidade, horario, justificativa });
   const statusRef = useRef<StatusSave>(statusSave);
+  // Situação da linha lida pelo resumo do "Salvar tudo agora".
+  const infoRef = useRef<EstadoLinha>({
+    nome: membro.nome,
+    registrado: lancamentoId !== null,
+    presente,
+    excluido: Boolean(excluido) && !ativo,
+    erro: statusSave === "erro",
+  });
   useEffect(() => {
     dadosRef.current = { presente, pontualidade, horario, justificativa };
     statusRef.current = statusSave;
+    infoRef.current = {
+      nome: membro.nome,
+      registrado: lancamentoId !== null,
+      presente,
+      excluido: Boolean(excluido) && !ativo,
+      erro: statusSave === "erro",
+    };
   });
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seqRef = useRef(0); // descarta respostas fora de ordem
@@ -312,9 +507,19 @@ function LinhaPresenca({
       setLancamentoId(r.presencaId);
       setStatusSave("salvo");
       setErroSave(null);
+      // Atualiza JÁ (sem esperar o re-render): o resumo do "Salvar tudo" lê
+      // este ref logo depois do await.
+      infoRef.current = {
+        ...infoRef.current,
+        registrado: true,
+        presente: d.presente,
+        excluido: false,
+        erro: false,
+      };
     } else {
       setStatusSave("erro");
       setErroSave(r.message);
+      infoRef.current = { ...infoRef.current, erro: true };
     }
   }, [eventoId, equipeId, membro.id]);
 
@@ -328,14 +533,18 @@ function LinhaPresenca({
     [salvarAgora],
   );
 
-  // "Salvar tudo": só age se houver alteração pendente ou erro a repetir.
+  // "Salvar tudo": grava se houver alteração pendente ou erro a repetir, e
+  // expõe a situação da linha para o card de resumo.
   useEffect(() => {
-    return registrarFlush(membro.id, () => {
-      if (statusRef.current === "pendente" || statusRef.current === "erro") {
-        void salvarAgora();
-      }
+    return registrarLinha(membro.id, {
+      flush: async () => {
+        if (statusRef.current === "pendente" || statusRef.current === "erro") {
+          await salvarAgora();
+        }
+      },
+      estado: () => infoRef.current,
     });
-  }, [membro.id, registrarFlush, salvarAgora]);
+  }, [membro.id, registrarLinha, salvarAgora]);
 
   // Limpa o timer ao desmontar (troca de evento/página).
   useEffect(() => {

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <radialGradient id="brilho" cx="18%" cy="28%" r="75%">
+      <stop offset="0%" stop-color="#173D7A"/>
+      <stop offset="100%" stop-color="#0D2B5C"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#brilho)"/>
+
+  <!-- Marca (centrada verticalmente com o bloco de texto ao lado) -->
+  <g transform="translate(92,206) scale(2.05)">
+    <path d="M30 98 L30 54 A30 30 0 0 1 90 54 L90 98"
+          stroke="#FFFFFF" stroke-width="7" stroke-linecap="round"
+          stroke-linejoin="round" fill="none"/>
+    <g transform="translate(39.6,38.4) scale(1.7)">
+      <path d="M12 21s-7-4.5-9.5-9C1 9 2.5 5.5 6 5.5c2 0 3.2 1.2 4 2.3.8-1.1 2-2.3 4-2.3 3.5 0 5 3.5 3.5 6.5C19 16.5 12 21 12 21Z" fill="#E1352A"/>
+    </g></g>
+
+  <!-- Assinatura -->
+  <text x="360" y="214" fill="#C9D4E8" font-family="Segoe UI, Arial, sans-serif"
+        font-size="30" font-weight="600" letter-spacing="12">MINISTÉRIO</text>
+  <text x="360" y="308" fill="#FFFFFF" font-family="Segoe Script, Brush Script MT, cursive"
+        font-size="104" font-weight="700">Ágape</text>
+
+  <!-- Filete dourado -->
+  <rect x="362" y="348" width="120" height="5" rx="2.5" fill="#B8860B"/>
+
+  <!-- Frase da marca (texto pedido para o OG) -->
+  <text x="360" y="426" fill="#FFFFFF" font-family="Georgia, serif"
+        font-size="46" font-style="italic">Recebendo a Todos com Muito Amor.</text>
+
+  <!-- Rodapé -->
+  <text x="360" y="492" fill="#9FB2CF" font-family="Segoe UI, Arial, sans-serif"
+        font-size="27">Igreja Batista Casa de Deus · Jundiaí/SP</text>
+</svg>

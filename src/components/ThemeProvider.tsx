@@ -52,20 +52,24 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     aplicar(tema === "escuro" ? "claro" : "escuro", true);
   }, [tema, aplicar]);
 
-  // Sem escolha explícita salva, acompanha mudanças do tema do sistema.
+  // O tema é PERSISTENTE: o app não acompanha mais mudanças do tema do sistema
+  // (modo escuro automático do celular trocava a tela por conta própria, que o
+  // usuário lia como "esqueceu minha escolha"). O script inline do root layout
+  // já grava a resolução inicial; isto é só uma rede de segurança para o caso
+  // de ele não ter rodado. Não mexe em estado — o tema visual já está aplicado.
   useEffect(() => {
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const aoMudar = (e: MediaQueryListEvent) => {
-      try {
-        if (localStorage.getItem("tema")) return;
-      } catch {
-        /* segue e aplica o tema do sistema */
+    try {
+      const salvo = localStorage.getItem("tema");
+      if (salvo !== "claro" && salvo !== "escuro") {
+        localStorage.setItem(
+          "tema",
+          document.documentElement.classList.contains("dark") ? "escuro" : "claro",
+        );
       }
-      aplicar(e.matches ? "escuro" : "claro", false);
-    };
-    mq.addEventListener("change", aoMudar);
-    return () => mq.removeEventListener("change", aoMudar);
-  }, [aplicar]);
+    } catch {
+      /* armazenamento indisponível (modo privado) — vale só nesta sessão */
+    }
+  }, []);
 
   return (
     <TemaContext.Provider value={{ tema, alternar }}>

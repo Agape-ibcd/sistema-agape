@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <!-- Favicon do Ministério Ágape: "a porta do coração" (porta da Casa de Deus
+       acolhendo um coração). Cores literais (navy da marca + Vermelho Ágape) —
+       um favicon não enxerga as CSS vars do app. -->
+  <rect width="120" height="120" rx="26" fill="#0D2B5C"/>
+  <path d="M30 98 L30 54 A30 30 0 0 1 90 54 L90 98"
+        stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"
+        stroke-linejoin="round" fill="none"/>
+  <g transform="translate(39.6,38.4) scale(1.7)">
+    <path d="M12 21s-7-4.5-9.5-9C1 9 2.5 5.5 6 5.5c2 0 3.2 1.2 4 2.3.8-1.1 2-2.3 4-2.3 3.5 0 5 3.5 3.5 6.5C19 16.5 12 21 12 21Z"
+          fill="#E1352A"/>
+  </g>
+</svg>

@@ -10,6 +10,7 @@ import { AgapeLogo } from "@/components/AgapeLogo";
 import { Rodape } from "@/components/Rodape";
 import { SinoNotificacoes } from "@/components/SinoNotificacoes";
 import { IndicadorNavegacao } from "@/components/IndicadorNavegacao";
+import { SugestaoAtalho } from "@/components/SugestaoAtalho";
 
 type Props = {
   itens: ItemMenu[];
@@ -72,6 +73,7 @@ export function AppShell({ itens, usuario, children }: Props) {
   return (
     <div className="flex min-h-full flex-1 flex-col md:flex-row">
       <IndicadorNavegacao />
+      <SugestaoAtalho />
 
       {/* Topo (mobile) — sticky com vidro: o conteúdo desliza desfocado por
           baixo ao rolar. */}
@@ -94,11 +96,47 @@ export function AppShell({ itens, usuario, children }: Props) {
         </div>
       </header>
 
-      {/* Menu mobile expansível */}
+      {/* Menu mobile — SOBREPÕE a página (não empurra o conteúdo), no mesmo
+          padrão dos painéis flutuantes (sino/popovers): backdrop desfocado +
+          gaveta lateral em vidro-forte. */}
       {menuAberto && (
-        <div className="vidro border-0 border-b px-4 py-3 md:hidden">
-          <PainelUsuario usuario={usuario} />
-          <div className="mt-3">{listaLinks}</div>
+        <div className="md:hidden">
+          <button
+            type="button"
+            aria-label="Fechar menu"
+            onClick={() => setMenuAberto(false)}
+            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu"
+            className="vidro-forte fixed right-0 top-0 z-50 flex h-full w-72 max-w-[85vw] flex-col overflow-y-auto p-4 shadow-xl"
+          >
+            <div className="mb-4 flex items-center justify-between gap-2">
+              <AgapeLogo markSize={34} />
+              <button
+                type="button"
+                aria-label="Fechar menu"
+                onClick={() => setMenuAberto(false)}
+                className="rounded-lg p-2 text-ink-soft hover:bg-surface-3"
+              >
+                <svg
+                  className="h-5 w-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  aria-hidden
+                >
+                  <path d="M6 6l12 12M18 6 6 18" />
+                </svg>
+              </button>
+            </div>
+            <PainelUsuario usuario={usuario} />
+            <div className="mt-3">{listaLinks}</div>
+          </div>
         </div>
       )}
 
