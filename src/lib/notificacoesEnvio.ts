@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { hojeSaoPaulo, type HojeBR } from "@/lib/aniversariantes";
 import { enviarEmail, ehEmailSintetico } from "@/lib/email";
 import { enviarTelegram } from "@/lib/telegram";
+import { membrosConvocados } from "@/lib/escalaMembros";
 import type { GatilhoNotificacao, CanalNotificacao, StatusEnvio } from "@prisma/client";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -218,7 +219,12 @@ export async function enviarNotificacoesAniversarioHoje(): Promise<ResumoEnvio> 
 // escalada, gerando uma ConfirmacaoEscala (token opaco, expira no fim do dia
 // do evento) por membro. `niveisAlvo` da regra é IGNORADO de propósito aqui
 // (decisão do usuário): quem foi escalado precisa saber, não importa o nível.
-export async function dispararNotificacaoNovaEscala(escalaId: string): Promise<void> {
+export async function dispararNotificacaoNovaEscala(
+  escalaId: string,
+  // Quando informado, notifica só estes membros (usado ao ADICIONAR membros a
+  // uma escala parcial já existente — não reavisa quem já estava convocado).
+  apenasMembroIds?: string[],
+): Promise<void> {
   try {
     const config = await prisma.configNotificacao.findUnique({ where: { gatilho: "nova_escala" } });
     if (!config || !config.ativo || config.canais.length === 0) return;
@@ -232,11 +238,19 @@ export async function dispararNotificacaoNovaEscala(escalaId: string): Promise<v
             membros: { where: { status: "ativo" }, select: SELECT_MEMBRO_DESTINO },
           },
         },
+        membrosEscalados: { select: { membroId: true } },
         evento: { include: { tipoEvento: { select: { nome: true } } } },
       },
     });
     if (!escala || escala.evento.status === "cancelado") return;
-    if (escala.equipe.membros.length === 0) return;
+
+    // Escala parcial ⇒ só o subconjunto convocado; senão a equipe inteira.
+    let convocados = membrosConvocados(escala.equipe.membros, escala.membrosEscalados);
+    if (apenasMembroIds) {
+      const alvo = new Set(apenasMembroIds);
+      convocados = convocados.filter((m) => alvo.has(m.id));
+    }
+    if (convocados.length === 0) return;
 
     const dataBR = escala.evento.dataEvento.toLocaleDateString("pt-BR", { timeZone: "UTC" });
     const nomeEvento = escala.evento.descricaoEspecifica ?? escala.evento.tipoEvento.nome;
@@ -247,7 +261,7 @@ export async function dispararNotificacaoNovaEscala(escalaId: string): Promise<v
     const assuntoBase = config.assunto || tpl.assunto;
     const mensagemBase = config.mensagem || tpl.mensagem;
 
-    for (const membro of escala.equipe.membros) {
+    for (const membro of convocados) {
       const token = randomUUID().replace(/-/g, "");
       await prisma.confirmacaoEscala.create({
         data: { token, escalaId: escala.id, membroId: membro.id, expiraEm },
@@ -284,6 +298,9 @@ export async function dispararNotificacaoEscalaAlterada(params: {
   eventoId: string;
   equipeIds: string[];
   detalhe: string;
+  // Quando informado, restringe os avisos a estes membros (usado ao remover só
+  // parte de uma convocação parcial). Omitido ⇒ todos os ativos das equipes.
+  restringirMembroIds?: string[];
 }): Promise<void> {
   try {
     if (params.equipeIds.length === 0) return;
@@ -297,6 +314,9 @@ export async function dispararNotificacaoEscalaAlterada(params: {
     });
     if (!evento) return;
 
+    const restricao = params.restringirMembroIds
+      ? new Set(params.restringirMembroIds)
+      : null;
     const equipes = await prisma.equipe.findMany({
       where: { id: { in: params.equipeIds } },
       select: {
@@ -313,6 +333,7 @@ export async function dispararNotificacaoEscalaAlterada(params: {
     const vistos = new Set<string>();
     for (const equipe of equipes) {
       for (const membro of equipe.membros) {
+        if (restricao && !restricao.has(membro.id)) continue;
         if (vistos.has(membro.id)) continue;
         vistos.add(membro.id);
 
@@ -493,6 +514,7 @@ async function enviarLembreteVesperaAmanha(): Promise<ResumoEnvio> {
           equipe: {
             select: { nome: true, membros: { where: { status: "ativo" }, select: SELECT_MEMBRO_DESTINO } },
           },
+          membrosEscalados: { select: { membroId: true } },
         },
       },
     },
@@ -505,7 +527,8 @@ async function enviarLembreteVesperaAmanha(): Promise<ResumoEnvio> {
     const nomeEvento = evento.descricaoEspecifica ?? evento.tipoEvento.nome;
     for (const escala of evento.escalas) {
       const item = `• ${nomeEvento} às ${evento.horarioInicio} (equipe ${escala.equipe.nome})`;
-      for (const membro of escala.equipe.membros) {
+      const convocados = membrosConvocados(escala.equipe.membros, escala.membrosEscalados);
+      for (const membro of convocados) {
         const atual = porMembro.get(membro.id);
         if (atual) atual.itens.push(item);
         else porMembro.set(membro.id, { membro, itens: [item] });

@@ -514,20 +514,23 @@ async function main() {
         const tipoId = tipoIdPorCulto.get(p.culto)!;
         const def = TIPOS_DEF[p.culto];
         const descEsp = def.categoria === "evento_extra" ? p.desc || null : null;
-        const ev = await tx.evento.upsert({
-          where: { tipoEventoId_dataEvento: { tipoEventoId: tipoId, dataEvento: p.dataCulto } },
-          update: {},
-          create: {
-            tipoEventoId: tipoId,
-            dataEvento: p.dataCulto,
-            horarioInicio: def.inicio,
-            horarioChegadaEquipe: def.chegada,
-            descricaoEspecifica: descEsp,
-            status: "realizado",
-            geradoAutomaticamente: false,
-            criadoPor: atorId,
-          },
-        });
+        // Sem a unique (tipo, data): reidratação idempotente via findFirst.
+        const ev =
+          (await tx.evento.findFirst({
+            where: { tipoEventoId: tipoId, dataEvento: p.dataCulto },
+          })) ??
+          (await tx.evento.create({
+            data: {
+              tipoEventoId: tipoId,
+              dataEvento: p.dataCulto,
+              horarioInicio: def.inicio,
+              horarioChegadaEquipe: def.chegada,
+              descricaoEspecifica: descEsp,
+              status: "realizado",
+              geradoAutomaticamente: false,
+              criadoPor: atorId,
+            },
+          }));
         eventoIdPorKey.set(key, ev.id);
       }
       log(`- eventos reconstruídos: ${eventoIdPorKey.size} (esperado: 15)`);

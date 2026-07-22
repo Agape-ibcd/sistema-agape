@@ -7,8 +7,11 @@ import {
   propagarEscala,
   removerEscala,
   trocarEscala,
+  definirMembrosEscala,
 } from "../actions";
 import { FeedbackModal } from "@/components/FeedbackModal";
+
+type MembroEquipe = { id: string; nome: string };
 
 type Escala = {
   id: string;
@@ -17,6 +20,8 @@ type Escala = {
   tipoEscala: "regular" | "especial" | "cobertura";
   origem: "manual" | "rodizio";
   observacao: string | null;
+  membrosEquipe: MembroEquipe[];
+  convocadosIds: string[]; // vazio = equipe inteira
 };
 
 type Props = {
@@ -48,10 +53,13 @@ export function EscalasPanel({
   const [estadoPropagar, propagarAction, pPropagar] = useActionState(propagarEscala, null);
   const [estadoRemover, removerAction, pRemover] = useActionState(removerEscala, null);
   const [estadoTrocar, trocarAction, pTrocar] = useActionState(trocarEscala, null);
+  const [estadoMembros, membrosAction, pMembros] = useActionState(definirMembrosEscala, null);
   // ts da pergunta de propagação já respondida/dispensada.
   const [propagacaoDispensada, setPropagacaoDispensada] = useState<number | null>(null);
   // Escala com o painel "trocar equipe" aberto.
   const [trocandoId, setTrocandoId] = useState<string | null>(null);
+  // Escala com o painel "escolher membros" (convocação parcial) aberto.
+  const [editandoMembrosId, setEditandoMembrosId] = useState<string | null>(null);
 
   const inputCls =
     "w-full rounded-xl border border-edge px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-ring";
@@ -83,10 +91,20 @@ export function EscalasPanel({
                 aria-hidden
               />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-ink">{e.equipeNome}</p>
+                <p className="truncate text-sm font-medium text-ink">
+                  {e.equipeNome}
+                  {e.convocadosIds.length > 0 && (
+                    <span className="ml-2 rounded-full bg-warn-soft px-2 py-0.5 text-[11px] font-medium text-warn-text align-middle">
+                      {e.convocadosIds.length} de {e.membrosEquipe.length}
+                    </span>
+                  )}
+                </p>
                 <p className="text-xs text-ink-subtle">
                   {ROTULO_TIPO_ESCALA[e.tipoEscala]}
                   {e.origem === "rodizio" ? " · rodízio" : ""}
+                  {e.convocadosIds.length > 0
+                    ? " · convocação parcial"
+                    : " · equipe inteira"}
                   {e.observacao ? ` · ${e.observacao}` : ""}
                 </p>
               </div>
@@ -99,6 +117,17 @@ export function EscalasPanel({
                   >
                     Presença
                   </Link>
+                  {e.membrosEquipe.length > 0 && !cancelado && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEditandoMembrosId(editandoMembrosId === e.id ? null : e.id)
+                      }
+                      className="rounded-lg border border-edge px-3 py-1.5 text-xs font-medium text-ink-soft hover:bg-surface-2"
+                    >
+                      Membros
+                    </button>
+                  )}
                   {equipesDisponiveis.length > 0 && !cancelado && (
                     <button
                       type="button"
@@ -172,6 +201,16 @@ export function EscalasPanel({
                   {pTrocar ? "Trocando…" : "Trocar"}
                 </button>
               </form>
+            )}
+
+            {/* Convocação por membro: marque quem da equipe está escalado.
+                Todos marcados = equipe inteira (sem restrição). */}
+            {editandoMembrosId === e.id && !somenteLeitura && (
+              <MembrosEscalaForm
+                escala={e}
+                action={membrosAction}
+                pendente={pMembros}
+              />
             )}
           </li>
         ))}
@@ -277,6 +316,103 @@ export function EscalasPanel({
           if (ev.ok) setTrocandoId(null);
         }}
       />
+      <FeedbackModal
+        estado={estadoMembros}
+        onFechar={(ev) => {
+          if (ev.ok) setEditandoMembrosId(null);
+        }}
+      />
     </section>
+  );
+}
+
+// Checklist de convocação de uma escala. Estado local dos checkboxes com
+// atalhos "Todos"/"Nenhum". Envia todos os membroIds marcados; a Server Action
+// interpreta "todos marcados" como equipe inteira.
+function MembrosEscalaForm({
+  escala,
+  action,
+  pendente,
+}: {
+  escala: Escala;
+  action: (formData: FormData) => void;
+  pendente: boolean;
+}) {
+  // Estado inicial: convocados atuais, ou todos se a escala é "equipe inteira".
+  const inicial =
+    escala.convocadosIds.length > 0
+      ? new Set(escala.convocadosIds)
+      : new Set(escala.membrosEquipe.map((m) => m.id));
+  const [marcados, setMarcados] = useState<Set<string>>(inicial);
+
+  const alternar = (id: string) => {
+    setMarcados((prev) => {
+      const prox = new Set(prev);
+      if (prox.has(id)) prox.delete(id);
+      else prox.add(id);
+      return prox;
+    });
+  };
+
+  return (
+    <form action={action} className="mt-2 rounded-xl bg-surface-2 p-3">
+      <input type="hidden" name="escalaId" value={escala.id} />
+      {[...marcados].map((id) => (
+        <input key={id} type="hidden" name="membroIds" value={id} />
+      ))}
+
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className="text-xs font-medium text-ink-soft">
+          Quem está escalado ({marcados.size} de {escala.membrosEquipe.length})
+        </p>
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={() =>
+              setMarcados(new Set(escala.membrosEquipe.map((m) => m.id)))
+            }
+            className="rounded-md border border-edge px-2 py-1 text-[11px] font-medium text-ink-soft hover:bg-surface-3"
+          >
+            Todos
+          </button>
+          <button
+            type="button"
+            onClick={() => setMarcados(new Set())}
+            className="rounded-md border border-edge px-2 py-1 text-[11px] font-medium text-ink-soft hover:bg-surface-3"
+          >
+            Nenhum
+          </button>
+        </div>
+      </div>
+
+      <ul className="max-h-56 space-y-0.5 overflow-y-auto">
+        {escala.membrosEquipe.map((m) => (
+          <li key={m.id}>
+            <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-ink hover:bg-surface-3">
+              <input
+                type="checkbox"
+                checked={marcados.has(m.id)}
+                onChange={() => alternar(m.id)}
+                className="h-4 w-4 rounded border-edge text-brand focus:ring-brand-ring"
+              />
+              <span className="truncate">{m.nome}</span>
+            </label>
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-3 flex items-center gap-2">
+        <button
+          type="submit"
+          disabled={pendente || marcados.size === 0}
+          className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-60"
+        >
+          {pendente ? "Salvando…" : "Salvar convocação"}
+        </button>
+        <p className="text-[11px] text-ink-subtle">
+          Todos marcados = equipe inteira.
+        </p>
+      </div>
+    </form>
   );
 }

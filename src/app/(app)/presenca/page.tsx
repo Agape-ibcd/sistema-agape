@@ -81,6 +81,7 @@ export default async function PresencaPage({
       escalas: {
         include: {
           equipe: { select: { id: true, nome: true, corHex: true } },
+          membrosEscalados: { select: { membroId: true } },
         },
         orderBy: { dataCriacao: "asc" },
       },
@@ -108,10 +109,20 @@ export default async function PresencaPage({
 
   if (eventoSelecionado) {
     // Líder lança apenas a própria equipe (o servidor valida de novo na action).
-    const equipesDoEvento = eventoSelecionado.escalas
-      .map((esc) => esc.equipe)
-      .filter((eq) => podeQualquer || eq.id === usuario.equipeId);
+    const escalasDoEvento = eventoSelecionado.escalas.filter(
+      (esc) => podeQualquer || esc.equipe.id === usuario.equipeId,
+    );
+    const equipesDoEvento = escalasDoEvento.map((esc) => esc.equipe);
     const equipeIds = equipesDoEvento.map((eq) => eq.id);
+    // Convocação parcial por equipe: Set de membroIds, ou null = equipe inteira.
+    const convocadosPorEquipe = new Map<string, Set<string> | null>(
+      escalasDoEvento.map((esc) => [
+        esc.equipe.id,
+        esc.membrosEscalados.length > 0
+          ? new Set(esc.membrosEscalados.map((m) => m.membroId))
+          : null,
+      ]),
+    );
 
     if (equipeIds.length > 0) {
       const [membros, presencas] = await Promise.all([
@@ -126,10 +137,14 @@ export default async function PresencaPage({
         }),
       ]);
 
-      secoes = equipesDoEvento.map((eq) => ({
+      secoes = equipesDoEvento.map((eq) => {
+        const convocados = convocadosPorEquipe.get(eq.id) ?? null;
+        return {
         equipe: eq,
         membros: membros
           .filter((m) => m.equipeId === eq.id)
+          // Escala parcial: só quem foi convocado aparece para lançamento.
+          .filter((m) => convocados === null || convocados.has(m.id))
           .map((m) => {
             const doMembro = presencas.filter(
               (p) => p.membroId === m.id && p.equipeId === eq.id,
@@ -166,7 +181,8 @@ export default async function PresencaPage({
                   : null,
             };
           }),
-      }));
+        };
+      });
     }
   }
 

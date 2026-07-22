@@ -128,7 +128,14 @@ export async function salvarPresencaAuto(
     const [evento, membro] = await Promise.all([
       prisma.evento.findUnique({
         where: { id: eventoId },
-        include: { escalas: { select: { equipeId: true } } },
+        include: {
+          escalas: {
+            select: {
+              equipeId: true,
+              membrosEscalados: { select: { membroId: true } },
+            },
+          },
+        },
       }),
       prisma.membro.findUnique({ where: { id: membroId } }),
     ]);
@@ -136,11 +143,19 @@ export async function salvarPresencaAuto(
     if (evento.status === "cancelado") {
       return erro("Este evento está cancelado — não é possível registrar presença.");
     }
-    if (!evento.escalas.some((e) => e.equipeId === equipeId)) {
+    const escalaEquipe = evento.escalas.find((e) => e.equipeId === equipeId);
+    if (!escalaEquipe) {
       return erro("Esta equipe não está escalada neste evento.");
     }
     if (!membro || membro.equipeId !== equipeId) {
       return erro("Membro não pertence a esta equipe.");
+    }
+    // Escala parcial: só quem foi convocado pode ter presença lançada.
+    if (
+      escalaEquipe.membrosEscalados.length > 0 &&
+      !escalaEquipe.membrosEscalados.some((m) => m.membroId === membroId)
+    ) {
+      return erro("Este membro não foi convocado para este evento.");
     }
     if (membro.status !== "ativo") {
       return erro(

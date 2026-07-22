@@ -18,16 +18,20 @@ function localStorageProvider(chaveArmazenamento: string): () => Cache {
       mapa = new Map();
     }
 
-    window.addEventListener("beforeunload", () => {
-      try {
-        localStorage.setItem(
-          chaveArmazenamento,
-          JSON.stringify([...mapa.entries()]),
-        );
-      } catch {
-        // Modo privado / quota estourada — segue sem persistir.
-      }
-    });
+    // O provider do SWR pode ser avaliado durante o SSR (sem `window`) —
+    // só registra o listener no navegador.
+    if (typeof window !== "undefined") {
+      window.addEventListener("beforeunload", () => {
+        try {
+          localStorage.setItem(
+            chaveArmazenamento,
+            JSON.stringify([...mapa.entries()]),
+          );
+        } catch {
+          // Modo privado / quota estourada — segue sem persistir.
+        }
+      });
+    }
 
     return mapa as unknown as Cache;
   };

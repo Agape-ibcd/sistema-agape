@@ -10,10 +10,29 @@ type Props = {
   tipos: { id: string; nome: string; horarioInicio: string }[];
 };
 
+type ValoresEvento = {
+  tipoEventoId: string;
+  dataEvento: string;
+  horarioInicio: string;
+  descricaoEspecifica: string;
+};
+
 export function EventoAvulsoForm({ tipos }: Props) {
   const router = useRouter();
   const [estado, formAction, pendente] = useActionState(criarEventoAvulso, null);
   const [horario, setHorario] = useState(tipos[0]?.horarioInicio ?? "19:30");
+  // ts da pergunta "mesmo horário" já dispensada (mesmo padrão da propagação
+  // de escalas): a pergunta some quando o usuário cancela ou reenvia.
+  const [perguntaDispensada, setPerguntaDispensada] = useState<number | null>(null);
+  // Valores capturados no submit — reenviados pelo form de confirmação (o
+  // `useActionState` do React não serializa o name/value do botão que submete,
+  // então a confirmação precisa reenviar tudo por hidden inputs próprios).
+  const [ultimosValores, setUltimosValores] = useState<ValoresEvento | null>(null);
+
+  const perguntaAberta =
+    estado?.ok &&
+    estado.confirmarMesmoHorario &&
+    estado.ts !== perguntaDispensada;
 
   const chegada = /^\d{1,2}:\d{2}$/.test(horario)
     ? calcularHorarioChegada(horario)
@@ -27,6 +46,16 @@ export function EventoAvulsoForm({ tipos }: Props) {
     <>
       <form
         action={formAction}
+        onSubmit={(e) => {
+          // Guarda os valores para o form de confirmação poder reenviá-los.
+          const fd = new FormData(e.currentTarget);
+          setUltimosValores({
+            tipoEventoId: String(fd.get("tipoEventoId") ?? ""),
+            dataEvento: String(fd.get("dataEvento") ?? ""),
+            horarioInicio: String(fd.get("horarioInicio") ?? ""),
+            descricaoEspecifica: String(fd.get("descricaoEspecifica") ?? ""),
+          });
+        }}
         className="space-y-4 rounded-2xl border border-edge-soft vidro-leve p-5"
       >
         <div>
@@ -99,17 +128,70 @@ export function EventoAvulsoForm({ tipos }: Props) {
         >
           {pendente ? "Criando…" : "Criar evento"}
         </button>
+
       </form>
 
-      <FeedbackModal
-        estado={estado}
-        onFechar={(e) => {
-          if (e.ok) {
-            const id = (e as { eventoId?: string }).eventoId;
-            router.push(id ? `/eventos/${id}` : "/eventos");
-          }
-        }}
-      />
+      {/* Já existe evento no MESMO dia e horário: confirma antes de criar.
+          Form PRÓPRIO (fora do form principal) reenviando os valores por hidden
+          inputs + confirmado=1 — o React não serializa o name/value do botão
+          que submete, então a confirmação precisa carregar tudo explicitamente. */}
+      {perguntaAberta && estado?.confirmarMesmoHorario && ultimosValores && (
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4 backdrop-blur-sm"
+        >
+          <div className="vidro-forte w-full max-w-md rounded-2xl p-6">
+            <h3 className="text-base font-semibold text-ink">
+              Já existe evento neste dia e horário
+            </h3>
+            <p className="mt-2 text-sm text-ink-soft">
+              Pode ser de propósito (por exemplo, dois eventos em locais
+              diferentes). Conferir antes de criar:
+            </p>
+            <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto rounded-xl bg-surface-2 p-3 text-sm text-ink-soft">
+              {estado.confirmarMesmoHorario.rotulos.map((r) => (
+                <li key={r}>• {r}</li>
+              ))}
+            </ul>
+            <div className="mt-4 flex gap-2">
+              <form action={formAction} className="flex-1">
+                <input type="hidden" name="tipoEventoId" value={ultimosValores.tipoEventoId} />
+                <input type="hidden" name="dataEvento" value={ultimosValores.dataEvento} />
+                <input type="hidden" name="horarioInicio" value={ultimosValores.horarioInicio} />
+                <input type="hidden" name="descricaoEspecifica" value={ultimosValores.descricaoEspecifica} />
+                <input type="hidden" name="confirmado" value="1" />
+                <button
+                  type="submit"
+                  disabled={pendente}
+                  className="w-full rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-60"
+                >
+                  {pendente ? "Criando…" : "Sim, criar mesmo assim"}
+                </button>
+              </form>
+              <button
+                type="button"
+                onClick={() => setPerguntaDispensada(estado.ts)}
+                className="flex-1 rounded-xl border border-edge px-4 py-2.5 text-sm font-medium text-ink-soft hover:bg-surface-2"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!estado?.confirmarMesmoHorario && (
+        <FeedbackModal
+          estado={estado}
+          onFechar={(e) => {
+            if (e.ok) {
+              const id = (e as { eventoId?: string }).eventoId;
+              router.push(id ? `/eventos/${id}` : "/eventos");
+            }
+          }}
+        />
+      )}
     </>
   );
 }

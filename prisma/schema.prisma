@@ -169,6 +169,7 @@ model Membro {
   notificacoes  LogNotificacao[]
   confirmacoes  ConfirmacaoEscala[]
   recuperacoes  RecuperacaoSenha[]
+  escalasMembro EscalaMembro[]
 
   @@index([equipeId])
   @@index([status])
@@ -250,7 +251,10 @@ model Evento {
   escalas    EscalaEquipeEvento[]
   presencas  Presenca[]
 
-  @@unique([tipoEventoId, dataEvento])
+  // Sem unique (tipo, data): eventos extras podem repetir o tipo no mesmo dia
+  // (horários diferentes criam direto; mesmo horário passa por confirmação na
+  // action). A idempotência do gerador de recorrência é feita por consulta.
+  @@index([tipoEventoId, dataEvento])
   @@index([dataEvento])
   @@index([status])
   @@map("eventos")
@@ -274,10 +278,30 @@ model EscalaEquipeEvento {
   evento Evento @relation(fields: [eventoId], references: [id], onDelete: Cascade)
   equipe Equipe @relation(fields: [equipeId], references: [id], onDelete: Cascade)
   confirmacoes ConfirmacaoEscala[]
+  membrosEscalados EscalaMembro[]
 
   @@unique([eventoId, equipeId])
   @@index([equipeId])
   @@map("escala_equipe_evento")
+}
+
+// Convocação parcial: quando a escala tem linhas aqui, só ESTES membros da
+// equipe são convocados (presença, notificações, lembrete da véspera).
+// Escala sem linhas = equipe completa (comportamento original; é o que o
+// rodízio sempre cria). Personalizar a convocação torna a escala `manual`.
+model EscalaMembro {
+  id          String   @id @default(uuid()) @db.Uuid
+  escalaId    String   @map("escala_id") @db.Uuid
+  membroId    String   @map("membro_id") @db.Uuid
+  criadoPor   String?  @map("criado_por") @db.Uuid
+  dataCriacao DateTime @default(now()) @map("data_criacao")
+
+  escala EscalaEquipeEvento @relation(fields: [escalaId], references: [id], onDelete: Cascade)
+  membro Membro             @relation(fields: [membroId], references: [id], onDelete: Cascade)
+
+  @@unique([escalaId, membroId])
+  @@index([membroId])
+  @@map("escala_membro")
 }
 
 // ─────────────────────────────── PRESENCA ───────────────────────────────

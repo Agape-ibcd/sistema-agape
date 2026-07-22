@@ -147,6 +147,122 @@ export async function escalarEquipe(
   }
 }
 
+// Define quem da equipe está convocado numa escala (escala parcial). Recebe a
+// lista de membroIds marcados; lista vazia OU todos marcados = equipe inteira
+// (apaga as linhas de EscalaMembro). Personalizar a convocação torna a escala
+// `manual` (sai do alcance do rodízio). Notifica só as mudanças (adicionados
+// recebem "nova escala"; removidos recebem "escala alterada").
+export async function definirMembrosEscala(
+  _prev: EstadoAcao,
+  formData: FormData,
+): Promise<EstadoAcao> {
+  const usuario = await requirePermissao("gerenciar_escalas");
+  const escalaId = String(formData.get("escalaId") ?? "");
+  const marcados = formData.getAll("membroIds").map(String).filter(Boolean);
+
+  try {
+    const escala = await prisma.escalaEquipeEvento.findUnique({
+      where: { id: escalaId },
+      include: {
+        equipe: {
+          select: {
+            nome: true,
+            membros: { where: { status: "ativo" }, select: { id: true } },
+          },
+        },
+        evento: { select: { id: true, status: true } },
+        membrosEscalados: { select: { membroId: true } },
+      },
+    });
+    if (!escala) return falha("Escala não encontrada.");
+    if (escala.evento.status === "cancelado") {
+      return falha("Evento cancelado — reative-o para alterar a convocação.");
+    }
+
+    // Só membros ATIVOS que realmente pertencem à equipe da escala.
+    const idsEquipe = new Set(escala.equipe.membros.map((m) => m.id));
+    const alvo = marcados.filter((id) => idsEquipe.has(id));
+    if (alvo.length === 0) {
+      return falha("Selecione ao menos um membro (ou remova a escala inteira).");
+    }
+
+    // Todos marcados ⇒ equipe inteira: representa isso SEM linhas (estado
+    // canônico de "equipe completa"), para o rodízio poder voltar a gerir.
+    const equipeInteira = alvo.length === escala.equipe.membros.length;
+    const novoConjunto = new Set(equipeInteira ? [] : alvo);
+    const antigoConjunto = new Set(escala.membrosEscalados.map((m) => m.membroId));
+
+    // Diferença considerando que "vazio" = equipe inteira dos dois lados.
+    const eraInteira = antigoConjunto.size === 0;
+    const efetivoAntigo = eraInteira ? idsEquipe : antigoConjunto;
+    const efetivoNovo = equipeInteira ? idsEquipe : novoConjunto;
+    const adicionados = [...efetivoNovo].filter((id) => !efetivoAntigo.has(id));
+    const removidos = [...efetivoAntigo].filter((id) => !efetivoNovo.has(id));
+
+    if (adicionados.length === 0 && removidos.length === 0) {
+      return sucesso("Nenhuma mudança na convocação.");
+    }
+
+    await prisma.$transaction([
+      prisma.escalaMembro.deleteMany({ where: { escalaId } }),
+      ...(equipeInteira
+        ? []
+        : [
+            prisma.escalaMembro.createMany({
+              data: alvo.map((membroId) => ({
+                escalaId,
+                membroId,
+                criadoPor: usuario.membroId,
+              })),
+            }),
+          ]),
+      // Personalizar a convocação vira escala "manual" (fora do rodízio).
+      prisma.escalaEquipeEvento.update({
+        where: { id: escalaId },
+        data: { origem: "manual" },
+      }),
+    ]);
+
+    await writeAudit({
+      usuarioId: usuario.membroId,
+      acao: "editar",
+      tabelaAfetada: "escala_equipe_evento",
+      registroId: escalaId,
+      dadosAnteriores: {
+        convocacao: eraInteira ? "equipe inteira" : [...antigoConjunto],
+      },
+      dadosNovos: {
+        equipe: escala.equipe.nome,
+        convocacao: equipeInteira ? "equipe inteira" : alvo,
+      },
+    });
+
+    if (adicionados.length > 0) {
+      await dispararNotificacaoNovaEscala(escalaId, adicionados);
+    }
+    if (removidos.length > 0) {
+      await dispararNotificacaoEscalaAlterada({
+        eventoId: escala.evento.id,
+        equipeIds: [escala.equipeId],
+        detalhe: "Você foi retirado(a) da convocação deste evento.",
+        restringirMembroIds: removidos,
+      });
+    }
+
+    revalidarCalendario(escala.evento.id);
+    revalidatePath("/presenca");
+    return sucesso(
+      equipeInteira
+        ? `Convocação: equipe ${escala.equipe.nome} inteira.`
+        : `Convocação da equipe ${escala.equipe.nome} atualizada (${alvo.length} membro(s)).`,
+    );
+  } catch (erro) {
+    return falha(
+      `Erro ao definir a convocação: ${erro instanceof Error ? erro.message : "falha desconhecida"}`,
+    );
+  }
+}
+
 // Propaga a escala para os demais eventos da semana (tipo "cobertura").
 export async function propagarEscala(
   _prev: EstadoAcao,
@@ -230,9 +346,16 @@ export async function removerEscala(
       include: {
         equipe: { select: { nome: true } },
         evento: { include: { tipoEvento: { select: { nome: true } } } },
+        membrosEscalados: { select: { membroId: true } },
       },
     });
     if (!escala) return falha("Escala não encontrada.");
+
+    // Escala parcial: só o subconjunto convocado é avisado da remoção.
+    const restringirMembroIds =
+      escala.membrosEscalados.length > 0
+        ? escala.membrosEscalados.map((m) => m.membroId)
+        : undefined;
 
     await prisma.escalaEquipeEvento.delete({ where: { id: escalaId } });
 
@@ -253,6 +376,7 @@ export async function removerEscala(
       eventoId: escala.eventoId,
       equipeIds: [escala.equipeId],
       detalhe: "Você foi removido(a) desta escala.",
+      restringirMembroIds,
     });
 
     revalidarCalendario(escala.eventoId);
@@ -265,8 +389,15 @@ export async function removerEscala(
 }
 
 // Cria um evento avulso/extra (campanhas, conferências, eventos especiais).
+// `confirmarMesmoHorario` é a pergunta devolvida ao cliente quando já existe
+// um evento no MESMO dia e horário (pode ser legítimo — locais diferentes):
+// o form reenvia com confirmado=1 para criar mesmo assim. Horário diferente
+// no mesmo dia cria direto, sem pergunta.
 export type EstadoEvento =
-  | (NonNullable<EstadoAcao> & { eventoId?: string })
+  | (NonNullable<EstadoAcao> & {
+      eventoId?: string;
+      confirmarMesmoHorario?: { rotulos: string[] };
+    })
   | null;
 
 export async function criarEventoAvulso(
@@ -280,6 +411,8 @@ export async function criarEventoAvulso(
   const horarioInicio = String(formData.get("horarioInicio") ?? "").trim();
   const descricao = String(formData.get("descricaoEspecifica") ?? "").trim();
 
+  const confirmado = String(formData.get("confirmado") ?? "") === "1";
+
   if (!tipoEventoId) return falha("Selecione o tipo de evento.");
   const dataEvento = parseDataISO(dataStr);
   if (!dataEvento) return falha("Informe a data do evento.");
@@ -288,6 +421,29 @@ export async function criarEventoAvulso(
   try {
     const tipo = await prisma.tipoEvento.findUnique({ where: { id: tipoEventoId } });
     if (!tipo) return falha("Tipo de evento não encontrado.");
+
+    // Mesmo dia + MESMO horário (qualquer tipo, cancelados fora): pergunta
+    // antes de criar — pode ser de propósito (dois locais), mas geralmente é
+    // engano. Mesmo dia em horário diferente é sempre permitido.
+    if (!confirmado) {
+      const noMesmoHorario = await prisma.evento.findMany({
+        where: {
+          dataEvento,
+          horarioInicio,
+          status: { not: "cancelado" },
+        },
+        include: { tipoEvento: { select: { nome: true } } },
+        orderBy: { dataCriacao: "asc" },
+      });
+      if (noMesmoHorario.length > 0) {
+        return {
+          ...sucesso("")!,
+          confirmarMesmoHorario: {
+            rotulos: noMesmoHorario.map((e) => rotuloEvento(e)),
+          },
+        };
+      }
+    }
 
     const criado = await prisma.evento.create({
       data: {
@@ -331,12 +487,6 @@ export async function criarEventoAvulso(
       eventoId: criado.id,
     };
   } catch (erro) {
-    if (
-      erro instanceof Prisma.PrismaClientKnownRequestError &&
-      erro.code === "P2002"
-    ) {
-      return falha("Já existe um evento deste tipo nesta data — edite o existente.");
-    }
     return falha(
       `Erro ao criar evento: ${erro instanceof Error ? erro.message : "falha desconhecida"}`,
     );

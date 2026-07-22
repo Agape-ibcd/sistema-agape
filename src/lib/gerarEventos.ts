@@ -9,9 +9,10 @@ import {
 // ─────────────────────────────────────────────────────────────────────────
 // Geração de instâncias de eventos a partir dos tipos recorrentes.
 // Janela padrão: hoje + 3 meses (renovável — basta rodar de novo).
-// Idempotente: a unique (tipo_evento_id, data_evento) + skipDuplicates
-// garantem que rodar duas vezes não duplica nada; eventos já existentes
-// (inclusive editados ou cancelados) são preservados.
+// Idempotente por consulta: qualquer evento já existente do tipo naquela
+// data (inclusive editado, cancelado ou um avulso extra do mesmo tipo)
+// bloqueia a geração para o dia. Não há mais unique (tipo, data) no banco —
+// eventos extras podem repetir o tipo no mesmo dia.
 // ─────────────────────────────────────────────────────────────────────────
 
 export const JANELA_MESES = 3;
@@ -75,17 +76,32 @@ export async function gerarInstanciasEventos(opcoes: {
       continue;
     }
 
-    const { count } = await prisma.evento.createMany({
-      data: datas.map((dataEvento) => ({
+    const existentes = await prisma.evento.findMany({
+      where: {
         tipoEventoId: tipo.id,
-        dataEvento,
-        horarioInicio: tipo.horarioInicio,
-        horarioChegadaEquipe: tipo.horarioChegadaEquipe,
-        geradoAutomaticamente: true,
-        criadoPor: opcoes.criadoPor,
-      })),
-      skipDuplicates: true,
+        dataEvento: { gte: inicio, lte: fim },
+      },
+      select: { dataEvento: true },
     });
+    const datasOcupadas = new Set(
+      existentes.map((e) => e.dataEvento.toISOString().slice(0, 10)),
+    );
+    const novas = datas.filter(
+      (d) => !datasOcupadas.has(d.toISOString().slice(0, 10)),
+    );
+
+    const { count } = novas.length
+      ? await prisma.evento.createMany({
+          data: novas.map((dataEvento) => ({
+            tipoEventoId: tipo.id,
+            dataEvento,
+            horarioInicio: tipo.horarioInicio,
+            horarioChegadaEquipe: tipo.horarioChegadaEquipe,
+            geradoAutomaticamente: true,
+            criadoPor: opcoes.criadoPor,
+          })),
+        })
+      : { count: 0 };
 
     resultados.push({
       tipoNome: tipo.nome,

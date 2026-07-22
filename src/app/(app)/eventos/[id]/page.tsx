@@ -35,7 +35,20 @@ export default async function EventoPage({
       include: {
         tipoEvento: { select: { nome: true } },
         escalas: {
-          include: { equipe: { select: { nome: true, corHex: true } } },
+          include: {
+            equipe: {
+              select: {
+                nome: true,
+                corHex: true,
+                membros: {
+                  where: { status: "ativo" },
+                  orderBy: { nomeCompleto: "asc" },
+                  select: { id: true, nomeCompleto: true },
+                },
+              },
+            },
+            membrosEscalados: { select: { membroId: true } },
+          },
           orderBy: { dataCriacao: "asc" },
         },
       },
@@ -100,6 +113,12 @@ export default async function EventoPage({
             tipoEscala: e.tipoEscala,
             origem: e.origem,
             observacao: e.observacao,
+            membrosEquipe: e.equipe.membros.map((m) => ({
+              id: m.id,
+              nome: m.nomeCompleto,
+            })),
+            // Vazio = equipe inteira convocada.
+            convocadosIds: e.membrosEscalados.map((m) => m.membroId),
           }))}
           equipesDisponiveis={equipesDisponiveis}
           cancelado={evento.status === "cancelado"}
