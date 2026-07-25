@@ -5,19 +5,57 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useState,
   useSyncExternalStore,
 } from "react";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Tema claro/escuro. A classe `dark` no <html> é a fonte da verdade visual
-// (tokens em globals.css). Um script inline no root layout aplica a classe
-// ANTES da pintura (sem flash), lendo localStorage("tema") com fallback em
-// prefers-color-scheme. Este provider só sincroniza o estado React com a
-// classe e expõe o toggle — que persiste a escolha explícita do usuário.
+// (tokens em globals.css). A escolha é gravada em DOIS lugares:
+//   • COOKIE "tema"  → lido pelo servidor no root layout, que já manda o HTML
+//                      com a classe certa (ver o comentário lá: sem isso o
+//                      React apagava a classe ao re-adquirir o <html>);
+//   • localStorage   → leitura rápida do script inline antes da pintura.
+// Este provider sincroniza o estado React com a classe e expõe o toggle.
 // ─────────────────────────────────────────────────────────────────────────
 
 export type Tema = "claro" | "escuro";
+
+// 1 ano. Sem httpOnly de propósito: quem grava é o próprio navegador (script
+// inline e toggle). Não é dado sensível — é preferência visual.
+function gravarCookieTema(tema: Tema) {
+  document.cookie = `tema=${tema};path=/;max-age=31536000;SameSite=Lax`;
+}
+
+// Preferência já gravada neste aparelho (cookie primeiro — é o que o servidor
+// enxerga; localStorage como retaguarda). null = ainda não escolhido.
+function preferenciaGravada(): Tema | null {
+  const doCookie = /(?:^|; )tema=(claro|escuro)/.exec(document.cookie)?.[1];
+  if (doCookie === "claro" || doCookie === "escuro") return doCookie;
+  try {
+    const salvo = localStorage.getItem("tema");
+    if (salvo === "claro" || salvo === "escuro") return salvo;
+  } catch {
+    /* armazenamento indisponível (modo privado) */
+  }
+  return null;
+}
+
+function temaNoDom(): Tema {
+  return document.documentElement.classList.contains("dark") ? "escuro" : "claro";
+}
+
+// O estado do tema é DERIVADO da classe no <html> (fonte da verdade visual),
+// observada por MutationObserver. Assim o provider nunca precisa de setState
+// dentro de efeito — o lint do repo proíbe — e qualquer mudança na classe
+// (toggle ou rede de segurança) recolore os gráficos automaticamente.
+function assinarClasseHtml(aoMudar: () => void) {
+  const obs = new MutationObserver(aoMudar);
+  obs.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class"],
+  });
+  return () => obs.disconnect();
+}
 
 const TemaContext = createContext<{ tema: Tema; alternar: () => void }>({
   tema: "claro",
@@ -28,46 +66,50 @@ export function useTema() {
   return useContext(TemaContext);
 }
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [tema, setTema] = useState<Tema>(() =>
-    typeof document !== "undefined" &&
-    document.documentElement.classList.contains("dark")
-      ? "escuro"
-      : "claro",
+export function ThemeProvider({
+  temaInicial,
+  children,
+}: {
+  // Tema que o SERVIDOR usou para renderizar (lido do cookie no root layout).
+  // Serve de snapshot na hidratação, garantindo que servidor e cliente
+  // concordem antes de o navegador assumir.
+  temaInicial: Tema;
+  children: React.ReactNode;
+}) {
+  const tema = useSyncExternalStore(
+    assinarClasseHtml,
+    temaNoDom,
+    () => temaInicial,
   );
 
-  const aplicar = useCallback((novo: Tema, persistir: boolean) => {
-    document.documentElement.classList.toggle("dark", novo === "escuro");
-    if (persistir) {
-      try {
-        localStorage.setItem("tema", novo);
-      } catch {
-        /* armazenamento indisponível (modo privado) — o tema vale só na sessão */
-      }
+  const alternar = useCallback(() => {
+    const novo: Tema = temaNoDom() === "escuro" ? "claro" : "escuro";
+    // O cookie é o que faz o SERVIDOR já renderizar o tema certo na próxima
+    // navegação; sem ele a classe só existiria no cliente.
+    gravarCookieTema(novo);
+    try {
+      localStorage.setItem("tema", novo);
+    } catch {
+      /* armazenamento indisponível (modo privado) — o tema vale só na sessão */
     }
-    setTema(novo);
+    // O observer acima propaga a mudança para o estado (e para os gráficos).
+    document.documentElement.classList.toggle("dark", novo === "escuro");
   }, []);
 
-  const alternar = useCallback(() => {
-    aplicar(tema === "escuro" ? "claro" : "escuro", true);
-  }, [tema, aplicar]);
-
-  // O tema é PERSISTENTE: o app não acompanha mais mudanças do tema do sistema
-  // (modo escuro automático do celular trocava a tela por conta própria, que o
-  // usuário lia como "esqueceu minha escolha"). O script inline do root layout
-  // já grava a resolução inicial; isto é só uma rede de segurança para o caso
-  // de ele não ter rodado. Não mexe em estado — o tema visual já está aplicado.
+  // Rede de segurança da PRIMEIRA visita: aí ainda não havia cookie, então o
+  // servidor mandou o HTML no claro e o script inline resolveu o tema do
+  // sistema — mas o React apaga a classe ao re-adquirir o <html>. Repõe o que
+  // ficou gravado. Da segunda visita em diante o cookie já resolve na origem.
+  // O tema é PERSISTENTE: não acompanha mudanças do tema do sistema depois
+  // dessa primeira resolução (só o botão de alternância muda).
   useEffect(() => {
-    try {
-      const salvo = localStorage.getItem("tema");
-      if (salvo !== "claro" && salvo !== "escuro") {
-        localStorage.setItem(
-          "tema",
-          document.documentElement.classList.contains("dark") ? "escuro" : "claro",
-        );
-      }
-    } catch {
-      /* armazenamento indisponível (modo privado) — vale só nesta sessão */
+    const preferido = preferenciaGravada();
+    if (!preferido) {
+      gravarCookieTema(temaNoDom());
+      return;
+    }
+    if (preferido !== temaNoDom()) {
+      document.documentElement.classList.toggle("dark", preferido === "escuro");
     }
   }, []);
 

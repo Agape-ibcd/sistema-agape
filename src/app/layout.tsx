@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import { Oswald, Montserrat, Kaushan_Script, Cormorant_Garamond } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
@@ -85,32 +86,46 @@ export const viewport: Viewport = {
   ],
 };
 
-// Aplica a classe `dark` antes da primeira pintura (sem flash de tema errado).
-// A escolha fica em localStorage("tema") e é PERSISTENTE: na primeira visita o
-// tema do sistema é resolvido e GRAVADO, de modo que o app nunca mais troca de
-// tema sozinho (ex.: modo escuro automático do celular ao anoitecer). Depois
-// disso, só o botão de alternância muda o tema.
-const scriptTema = `(function(){try{var t=localStorage.getItem("tema");if(t!=="claro"&&t!=="escuro"){t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";localStorage.setItem("tema",t)}if(t==="escuro")document.documentElement.classList.add("dark")}catch(_){}})()`;
+// Tema claro/escuro — a escolha vive num COOKIE (além do localStorage), para
+// que o SERVIDOR já renderize a classe `dark` no <html>.
+//
+// Por que cookie e não só localStorage (bug real, 2026-07-22): o React trata
+// <html>/<head>/<body> como "host singletons". Quando uma fronteira Suspense
+// do Next reaparece (acontecia no /dashboard), o React re-adquire o <html> e
+// REAPLICA o className do JSX — apagando qualquer classe que só o script
+// inline tivesse adicionado. Com o tema no cookie, o className do JSX já
+// nasce com `dark`, então a reaplicação repõe o valor CERTO em vez de limpar.
+//
+// O tema é PERSISTENTE: na primeira visita o tema do sistema é resolvido e
+// gravado, e depois disso só o botão de alternância muda (nada de seguir o
+// modo escuro automático do celular ao anoitecer).
+const scriptTema = `(function(){try{var m=document.cookie.match(/(?:^|; )tema=(claro|escuro)/);var t=m&&m[1];if(!t)t=localStorage.getItem("tema");if(t!=="claro"&&t!=="escuro")t=matchMedia("(prefers-color-scheme: dark)").matches?"escuro":"claro";try{localStorage.setItem("tema",t)}catch(_){}document.cookie="tema="+t+";path=/;max-age=31536000;SameSite=Lax";document.documentElement.classList.toggle("dark",t==="escuro")}catch(_){}})()`;
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const fontVars = `${oswald.variable} ${montserrat.variable} ${kaushan.variable} ${cormorant.variable}`;
+  // Cookie legível no servidor: o HTML já sai com o tema certo (sem flash e
+  // sem depender do script inline sobreviver à hidratação).
+  const escuro = (await cookies()).get("tema")?.value === "escuro";
   return (
-    // suppressHydrationWarning: o script acima pode adicionar `dark` ao <html>
-    // antes da hidratação — divergência esperada e proposital.
+    // suppressHydrationWarning: na PRIMEIRA visita (ainda sem cookie) o script
+    // inline resolve o tema do sistema e pode divergir do HTML do servidor —
+    // divergência esperada e proposital.
     <html
       lang="pt-BR"
-      className={`h-full antialiased ${fontVars}`}
+      className={`h-full antialiased ${fontVars}${escuro ? " dark" : ""}`}
       suppressHydrationWarning
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: scriptTema }} />
       </head>
       <body className="min-h-full flex flex-col font-sans">
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider temaInicial={escuro ? "escuro" : "claro"}>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
