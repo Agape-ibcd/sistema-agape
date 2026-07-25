@@ -22,6 +22,7 @@ import type {
   SerieTipo,
   SerieEvento,
   Composicao,
+  EscaladosPorTipo,
 } from "@/lib/dashboard";
 import { useTema } from "@/components/ThemeProvider";
 import { coresGraficos } from "@/lib/coresGraficos";
@@ -60,6 +61,18 @@ function Cartao({
 
 function fmtPct(v: number) {
   return `${v.toFixed(1)}%`;
+}
+
+// Cor do número dentro da faixa da pilha: branco sobre cor escura, tinta
+// escura sobre cor clara. Sem isso, o dourado de uma das equipes (#ddae2c)
+// deixa o número branco ilegível.
+function corSobre(fundo: string): string {
+  const hex = fundo.replace("#", "");
+  if (hex.length !== 6) return "#fff";
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  if ([r, g, b].some(Number.isNaN)) return "#fff";
+  // Luminância perceptual (ITU-R BT.601).
+  return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? "#1a1a1a" : "#fff";
 }
 
 // ── Tooltip do gráfico por tipo de culto: quebra por equipe escalada ──────
@@ -400,6 +413,53 @@ function TickTipoCulto({
   );
 }
 
+// Tick do gráfico de escalados: nome do culto + total escalado embaixo. O
+// total vai no EIXO (não como LabelList no topo da pilha) porque o rótulo do
+// topo só renderiza onde a última faixa da pilha tem valor — cultos sem
+// aquela equipe ficariam sem total.
+function TickEscalados({
+  x,
+  y,
+  payload,
+  index,
+  dados,
+  corNome,
+  corTotal,
+}: {
+  x?: number | string;
+  y?: number | string;
+  payload?: { value?: unknown };
+  index?: number;
+  dados: { nome: string; total: number }[];
+  corNome: string;
+  corTotal: string;
+}) {
+  const item = typeof index === "number" ? dados[index] : undefined;
+  const nome = String(payload?.value ?? "");
+  const curto = nome.length > 15 ? `${nome.slice(0, 15)}…` : nome;
+  const n = item?.total ?? 0;
+
+  return (
+    <g transform={`translate(${Number(x) || 0},${Number(y) || 0})`}>
+      <title>{`${nome} — ${n} escalado${n === 1 ? "" : "s"}`}</title>
+      <text x={0} y={0} dy={13} textAnchor="middle" fill={corNome} fontSize={11}>
+        {curto}
+      </text>
+      <text
+        x={0}
+        y={0}
+        dy={29}
+        textAnchor="middle"
+        fill={corTotal}
+        fontSize={12}
+        fontWeight={700}
+      >
+        {`${n} escalado${n === 1 ? "" : "s"}`}
+      </text>
+    </g>
+  );
+}
+
 // Ícone de compartilhar (nós conectados) — substitui o emoji 📤, que variava
 // de desenho conforme o sistema e destoava do resto da interface.
 function IconeCompartilhar() {
@@ -426,6 +486,7 @@ export function GraficosDashboard({
   porEquipe,
   porTipo,
   porEvento,
+  escaladosPorTipo,
   composicao,
   mostrarEquipes,
   periodo,
@@ -433,6 +494,7 @@ export function GraficosDashboard({
   porEquipe: SerieEquipe[];
   porTipo: SerieTipo[];
   porEvento: SerieEvento[];
+  escaladosPorTipo: EscaladosPorTipo;
   composicao: Composicao;
   // Líder/membro têm uma só equipe — o gráfico por equipe fica redundante.
   mostrarEquipes: boolean;
@@ -459,6 +521,15 @@ export function GraficosDashboard({
     { nome: "Atrasados", valor: composicao.atrasados, cor: cores.atraso },
     { nome: "Ausentes", valor: composicao.ausentes, cor: cores.ausencia },
   ].filter((d) => d.valor > 0);
+
+  // Empilhado "escalados por equipe em cada culto": cada faixa da pilha é uma
+  // equipe (dataKey = equipeId), o rótulo do topo é o total do culto.
+  const dadosEscalados = escaladosPorTipo.linhas.map((l) => ({
+    nome: l.nome,
+    total: l.total,
+    ...l.porEquipe,
+  }));
+  const equipesEscaladas = escaladosPorTipo.equipes;
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -526,6 +597,74 @@ export function GraficosDashboard({
                 style={{ fill: cores.eixo, fontSize: 11, fontWeight: 600 }}
               />
             </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </Cartao>
+
+      {/* Escalados por equipe em cada culto (empilhado). Conta a CONVOCAÇÃO da
+          escala — inclusive quem ainda não teve presença lançada. */}
+      <Cartao
+        titulo="Escalados por equipe em cada culto"
+        vazio={dadosEscalados.length === 0}
+      >
+        <ResponsiveContainer width="100%" height={268}>
+          <BarChart
+            data={dadosEscalados}
+            margin={{ top: 22, right: 8, left: -16, bottom: 4 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke={cores.grade} />
+            <XAxis
+              dataKey="nome"
+              interval={0}
+              height={46}
+              tickLine={false}
+              tick={(props) => (
+                <TickEscalados
+                  {...props}
+                  dados={dadosEscalados}
+                  corNome={cores.eixo}
+                  corTotal={cores.linha}
+                />
+              )}
+            />
+            <YAxis allowDecimals={false} tick={eixoPct} />
+            <Tooltip
+              cursor={{ fill: "rgba(13,43,92,.06)" }}
+              contentStyle={tooltipStyle}
+              itemStyle={tooltipItemStyle}
+              labelStyle={tooltipLabelStyle}
+            />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            {equipesEscaladas.map((eq, i) => {
+              const ultima = i === equipesEscaladas.length - 1;
+              const fundo = eq.corHex ?? cores.linha;
+              return (
+                <Bar
+                  key={eq.equipeId}
+                  dataKey={eq.equipeId}
+                  name={eq.nome}
+                  stackId="escalados"
+                  fill={fundo}
+                  radius={ultima ? [6, 6, 0, 0] : undefined}
+                  isAnimationActive={false}
+                >
+                  {/* Número dentro de cada faixa (some quando é 0 ou a faixa
+                      é fina demais para caber o texto). */}
+                  <LabelList
+                    dataKey={eq.equipeId}
+                    position="center"
+                    formatter={(v: unknown) =>
+                      Number(v) > 0 ? String(v) : ""
+                    }
+                    style={{
+                      fill: corSobre(fundo),
+                      fontSize: 11,
+                      fontWeight: 700,
+                    }}
+                  />
+                </Bar>
+              );
+            })}
           </BarChart>
         </ResponsiveContainer>
       </Cartao>

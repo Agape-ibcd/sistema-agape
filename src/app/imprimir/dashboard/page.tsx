@@ -34,6 +34,7 @@ export default async function ImprimirDashboardPage({
   const periodo = `${filtros.inicio.toLocaleDateString("pt-BR", { timeZone: "UTC" })} a ${filtros.fim.toLocaleDateString("pt-BR", { timeZone: "UTC" })}`;
 
   const kpiLista: [string, string][] = [
+    ["Escalados", String(dados.escalados)],
     ["Convocações", String(kpis.convocacoes)],
     ["Membros ativos (distintos)", String(kpis.membrosAtivos)],
     ["Taxa de presença", pct(kpis.taxaPresenca)],

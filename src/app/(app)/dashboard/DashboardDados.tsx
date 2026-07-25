@@ -147,9 +147,9 @@ export function DashboardDados({
       {/* KPIs secundários */}
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiCard
-          rotulo="Convocações"
-          valor={String(kpis.convocacoes)}
-          sub="lançamentos no período"
+          rotulo="Escalados"
+          valor={String(data.escalados)}
+          sub="convocações da escala no período"
         />
         <KpiCard rotulo="Presentes" valor={String(kpis.presentes)} />
         <KpiCard
@@ -165,6 +165,7 @@ export function DashboardDados({
           porEquipe={data.porEquipe}
           porTipo={data.porTipo}
           porEvento={data.porEvento}
+          escaladosPorTipo={data.escaladosPorTipo}
           composicao={data.composicao}
           mostrarEquipes={escopo === "geral"}
           periodo={periodo}

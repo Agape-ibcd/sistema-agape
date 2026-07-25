@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { can } from "@/lib/rbac";
 import { parseDataISO, formatarDataISO } from "@/lib/recorrencia";
 import { intervaloPeriodo, PERIODO_PADRAO } from "@/lib/periodos";
+import { membrosConvocados } from "@/lib/escalaMembros";
 import type { UsuarioAtual } from "@/lib/auth";
 import type { Prisma, Pontualidade } from "@prisma/client";
 
@@ -11,6 +12,9 @@ import type { Prisma, Pontualidade } from "@prisma/client";
 // e das exportações. Regras fechadas com o usuário e verificadas contra a base:
 //
 //  • Convocações        = nº de lançamentos ATIVOS (excluidoEm IS NULL) no período.
+//  • Escalados          = nº de convocações da ESCALA no período (pessoa × culto),
+//                         independente de a presença ter sido lançada. Difere de
+//                         "Convocações" justamente quando falta lançar presença.
 //  • Membros Ativos     = contagem DISTINTA de membros na PRESENCA no período
 //                         (conceito do dashboard HTML — NÃO é "membros cadastrados").
 //  • Taxa de Presença   = presentes / convocações.
@@ -126,6 +130,118 @@ export async function carregarPresencas(
     },
     orderBy: [{ evento: { dataEvento: "asc" } }, { membro: { nomeCompleto: "asc" } }],
   });
+}
+
+// ── Escalados (convocação da ESCALA, não do lançamento de presença) ──────
+// Uma linha por pessoa × culto escalado. Respeita a convocação parcial
+// (EscalaMembro): escala sem linhas convoca a equipe inteira, escala com
+// linhas convoca só o subconjunto — a mesma regra que a tela de presença
+// aplica, para que os números batam com o que o líder vê para lançar.
+// Eventos cancelados ficam de fora (não acontecem, logo não convocam).
+export type LinhaEscalado = {
+  eventoId: string;
+  tipoEventoId: string;
+  tipoEventoNome: string;
+  equipeId: string;
+  equipeNome: string;
+  corHex: string | null;
+  membroId: string;
+};
+
+export async function carregarEscalados(
+  filtros: FiltrosDashboard,
+): Promise<LinhaEscalado[]> {
+  const escalas = await prisma.escalaEquipeEvento.findMany({
+    where: {
+      ...(filtros.equipeId ? { equipeId: filtros.equipeId } : {}),
+      evento: {
+        dataEvento: { gte: filtros.inicio, lte: filtros.fim },
+        status: { not: "cancelado" },
+        ...(filtros.tipoEventoId ? { tipoEventoId: filtros.tipoEventoId } : {}),
+      },
+    },
+    include: {
+      evento: {
+        select: {
+          id: true,
+          tipoEventoId: true,
+          tipoEvento: { select: { nome: true } },
+        },
+      },
+      equipe: {
+        select: {
+          id: true,
+          nome: true,
+          corHex: true,
+          membros: { where: { status: "ativo" }, select: { id: true } },
+        },
+      },
+      membrosEscalados: { select: { membroId: true } },
+    },
+  });
+
+  const linhas: LinhaEscalado[] = [];
+  for (const esc of escalas) {
+    const convocados = membrosConvocados(esc.equipe.membros, esc.membrosEscalados);
+    for (const m of convocados) {
+      // Escopo "próprio" (membro): só as próprias convocações.
+      if (filtros.membroId && m.id !== filtros.membroId) continue;
+      linhas.push({
+        eventoId: esc.evento.id,
+        tipoEventoId: esc.evento.tipoEventoId,
+        tipoEventoNome: esc.evento.tipoEvento.nome,
+        equipeId: esc.equipe.id,
+        equipeNome: esc.equipe.nome,
+        corHex: esc.equipe.corHex,
+        membroId: m.id,
+      });
+    }
+  }
+  return linhas;
+}
+
+// Série do gráfico empilhado: por tipo de culto, quantos escalados de cada
+// equipe. `equipes` é a legenda/ordem das faixas da pilha.
+export type EscaladosPorTipo = {
+  equipes: { equipeId: string; nome: string; corHex: string | null }[];
+  linhas: {
+    tipoEventoId: string;
+    nome: string;
+    total: number;
+    porEquipe: Record<string, number>; // equipeId → escalados
+  }[];
+};
+
+export function escaladosPorTipo(linhas: LinhaEscalado[]): EscaladosPorTipo {
+  const equipes = new Map<string, { equipeId: string; nome: string; corHex: string | null }>();
+  const tipos = new Map<string, EscaladosPorTipo["linhas"][number]>();
+
+  for (const l of linhas) {
+    if (!equipes.has(l.equipeId)) {
+      equipes.set(l.equipeId, {
+        equipeId: l.equipeId,
+        nome: l.equipeNome,
+        corHex: l.corHex,
+      });
+    }
+    let t = tipos.get(l.tipoEventoId);
+    if (!t) {
+      t = {
+        tipoEventoId: l.tipoEventoId,
+        nome: l.tipoEventoNome,
+        total: 0,
+        porEquipe: {},
+      };
+      tipos.set(l.tipoEventoId, t);
+    }
+    t.total += 1;
+    t.porEquipe[l.equipeId] = (t.porEquipe[l.equipeId] ?? 0) + 1;
+  }
+
+  return {
+    equipes: [...equipes.values()].sort((a, b) => a.nome.localeCompare(b.nome)),
+    linhas: [...tipos.values()].sort((a, b) => b.total - a.total),
+  };
 }
 
 // ── KPIs ─────────────────────────────────────────────────────────────────
@@ -513,6 +629,8 @@ export type DadosDashboard = {
   filtros: FiltrosDashboard;
   kpis: Kpis;
   membrosCadastradosAtivos: number;
+  escalados: number; // pessoa × culto escalado no período
+  escaladosPorTipo: EscaladosPorTipo;
   porEquipe: SerieEquipe[];
   porTipo: SerieTipo[];
   porEvento: SerieEvento[];
@@ -527,8 +645,9 @@ export async function carregarDashboard(
   params: ParamsDashboard,
 ): Promise<DadosDashboard> {
   const filtros = resolverFiltros(usuario, params);
-  const [linhas, opcoes, cadAtivos] = await Promise.all([
+  const [linhas, escalados, opcoes, cadAtivos] = await Promise.all([
     carregarPresencas(filtros),
+    carregarEscalados(filtros),
     opcoesDeFiltro(usuario, filtros),
     membrosCadastradosAtivos(filtros),
   ]);
@@ -538,6 +657,8 @@ export async function carregarDashboard(
     filtros,
     kpis: calcularKpis(linhas),
     membrosCadastradosAtivos: cadAtivos,
+    escalados: escalados.length,
+    escaladosPorTipo: escaladosPorTipo(escalados),
     porEquipe: seriesPorEquipe(linhas),
     porTipo: seriesPorTipo(linhas),
     porEvento: seriesPorEvento(linhas),
