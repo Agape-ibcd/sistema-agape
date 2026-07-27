@@ -10,6 +10,7 @@ import { FiltrosDashboard } from "./FiltrosDashboard";
 import { GraficosDashboard } from "./Graficos";
 import { TabelaDesempenho } from "./TabelaDesempenho";
 import { RegistrosDetalhados } from "./RegistrosDetalhados";
+import { Colapsavel } from "./Colapsavel";
 import { faixaDaTaxa, CLASSES_FAIXA, type FaixaCor } from "@/lib/kpiCores";
 import { CoracaoCarregando } from "@/components/CoracaoCarregando";
 
@@ -173,20 +174,14 @@ export function DashboardDados({
       </section>
 
       {/* Desempenho individual */}
-      <section className="mb-6">
-        <h2 className="mb-3 text-lg font-semibold text-ink">
-          Desempenho individual
-        </h2>
+      <Colapsavel titulo="Desempenho individual">
         <TabelaDesempenho dados={data.desempenho} mostrarEquipe={escopo === "geral"} />
-      </section>
+      </Colapsavel>
 
       {/* Registros detalhados */}
-      <section>
-        <h2 className="mb-3 text-lg font-semibold text-ink">
-          Registros detalhados
-        </h2>
+      <Colapsavel titulo="Registros detalhados">
         <RegistrosDetalhados registros={data.registros} escopo={escopo} />
-      </section>
+      </Colapsavel>
     </>
   );
 }
