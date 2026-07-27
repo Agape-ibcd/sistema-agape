@@ -170,7 +170,7 @@ async function gerarImagemTipos(
   const PADX = 64;
   const HEADER = 176;
   const FOOTER = 96;
-  const alturaBloco = (t: SerieTipo) => 96 + t.equipes.length * 30;
+  const alturaBloco = (t: SerieTipo) => 130 + t.equipes.length * 30;
   const corpo = porTipo.reduce((acc, t) => acc + alturaBloco(t) + 20, 0);
   const H = HEADER + corpo + FOOTER;
 
@@ -222,13 +222,6 @@ async function gerarImagemTipos(
       y + 24,
     );
 
-    ctx.fillStyle = "#3a3a3a";
-    ctx.font = "600 22px Montserrat, sans-serif";
-    const resumo = `${fmtPct(t.taxaPresenca)} · ${t.presentes}/${t.convocacoes}`;
-    ctx.textAlign = "right";
-    ctx.fillText(resumo, W - PADX, y + 24);
-    ctx.textAlign = "left";
-
     // Barra
     const barY = y + 38;
     ctx.fillStyle = "#eceae4";
@@ -245,8 +238,18 @@ async function gerarImagemTipos(
     );
     ctx.fill();
 
+    // Total geral — abaixo da barra, em negrito.
+    const totalY = barY + 40;
+    ctx.fillStyle = "#1a1a1a";
+    ctx.font = "700 22px Montserrat, sans-serif";
+    ctx.fillText(
+      `Total Geral: ${fmtPct(t.taxaPresenca)} · ${t.presentes}/${t.convocacoes}`,
+      PADX,
+      totalY,
+    );
+
     // Equipes
-    let ey = barY + 42;
+    let ey = totalY + 36;
     ctx.font = "400 20px Montserrat, sans-serif";
     for (const e of t.equipes) {
       ctx.fillStyle = e.corHex ?? "#a1a1aa";
