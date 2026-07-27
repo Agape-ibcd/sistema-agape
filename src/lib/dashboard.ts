@@ -142,6 +142,10 @@ export type LinhaEscalado = {
   eventoId: string;
   tipoEventoId: string;
   tipoEventoNome: string;
+  categoria: string;
+  dataEvento: Date;
+  horarioInicio: string;
+  descricaoEspecifica: string | null;
   equipeId: string;
   equipeNome: string;
   corHex: string | null;
@@ -165,7 +169,10 @@ export async function carregarEscalados(
         select: {
           id: true,
           tipoEventoId: true,
-          tipoEvento: { select: { nome: true } },
+          dataEvento: true,
+          horarioInicio: true,
+          descricaoEspecifica: true,
+          tipoEvento: { select: { nome: true, categoria: true } },
         },
       },
       equipe: {
@@ -190,6 +197,10 @@ export async function carregarEscalados(
         eventoId: esc.evento.id,
         tipoEventoId: esc.evento.tipoEventoId,
         tipoEventoNome: esc.evento.tipoEvento.nome,
+        categoria: esc.evento.tipoEvento.categoria,
+        dataEvento: esc.evento.dataEvento,
+        horarioInicio: esc.evento.horarioInicio,
+        descricaoEspecifica: esc.evento.descricaoEspecifica,
         equipeId: esc.equipe.id,
         equipeNome: esc.equipe.nome,
         corHex: esc.equipe.corHex,
@@ -224,15 +235,26 @@ export function escaladosPorTipo(linhas: LinhaEscalado[]): EscaladosPorTipo {
         corHex: l.corHex,
       });
     }
-    let t = tipos.get(l.tipoEventoId);
+    // Mesma regra de seriesPorTipo: culto regular agrega por tipo; evento
+    // avulso/extra agrega por evento individual.
+    const regular = l.categoria === "culto_regular";
+    const id = regular ? l.tipoEventoId : l.eventoId;
+    let t = tipos.get(id);
     if (!t) {
       t = {
-        tipoEventoId: l.tipoEventoId,
-        nome: l.tipoEventoNome,
+        tipoEventoId: id,
+        nome: regular
+          ? l.tipoEventoNome
+          : rotuloEventoAvulso(
+              l.dataEvento,
+              l.horarioInicio,
+              l.descricaoEspecifica,
+              l.tipoEventoNome,
+            ),
         total: 0,
         porEquipe: {},
       };
-      tipos.set(l.tipoEventoId, t);
+      tipos.set(id, t);
     }
     t.total += 1;
     t.porEquipe[l.equipeId] = (t.porEquipe[l.equipeId] ?? 0) + 1;
@@ -333,13 +355,33 @@ export type Composicao = {
   ausentes: number;
 };
 
-function rotuloEvento(l: LinhaPresenca): string {
-  const d = l.evento.dataEvento.toLocaleDateString("pt-BR", {
+function dataCurta(d: Date): string {
+  return d.toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
     timeZone: "UTC",
   });
-  return `${d} · ${l.evento.descricaoEspecifica ?? l.evento.tipoEvento.nome}`;
+}
+
+function rotuloEvento(l: LinhaPresenca): string {
+  return `${dataCurta(l.evento.dataEvento)} · ${l.evento.descricaoEspecifica ?? l.evento.tipoEvento.nome}`;
+}
+
+// Eventos avulsos/extras (categoria ≠ culto_regular) podem repetir o mesmo
+// tipoEvento no mesmo dia (ex.: 4 eventos "Evento Especial" com horários
+// diferentes) — por isso não podem ser agrupados por tipoEventoId como o
+// culto regular é. O rótulo inclui o horário para diferenciá-los mesmo
+// quando não há descrição específica.
+function rotuloEventoAvulso(
+  dataEvento: Date,
+  horarioInicio: string,
+  descricaoEspecifica: string | null,
+  tipoEventoNome: string,
+): string {
+  const base = `${dataCurta(dataEvento)} · ${horarioInicio}`;
+  return descricaoEspecifica
+    ? `${base} · ${descricaoEspecifica}`
+    : `${base} · ${tipoEventoNome}`;
 }
 
 export function seriesPorEquipe(linhas: LinhaPresenca[]): SerieEquipe[] {
@@ -371,12 +413,23 @@ export function seriesPorTipo(linhas: LinhaPresenca[]): SerieTipo[] {
   const equipesPorTipo = new Map<string, Map<string, SerieEquipeMini>>();
 
   for (const l of linhas) {
-    const id = l.evento.tipoEvento.id;
+    // Culto regular agrega por tipo (todas as ocorrências no período); evento
+    // avulso/extra agrega por evento individual (mesmo tipo pode repetir no
+    // mesmo dia com horários diferentes — ver rotuloEventoAvulso).
+    const regular = l.evento.tipoEvento.categoria === "culto_regular";
+    const id = regular ? l.evento.tipoEvento.id : l.eventoId;
     let s = mapa.get(id);
     if (!s) {
       s = {
         tipoEventoId: id,
-        nome: l.evento.tipoEvento.nome,
+        nome: regular
+          ? l.evento.tipoEvento.nome
+          : rotuloEventoAvulso(
+              l.evento.dataEvento,
+              l.evento.horarioInicio,
+              l.evento.descricaoEspecifica,
+              l.evento.tipoEvento.nome,
+            ),
         convocacoes: 0,
         presentes: 0,
         taxaPresenca: 0,
