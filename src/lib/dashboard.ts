@@ -226,6 +226,10 @@ export type EscaladosPorTipo = {
 export function escaladosPorTipo(linhas: LinhaEscalado[]): EscaladosPorTipo {
   const equipes = new Map<string, { equipeId: string; nome: string; corHex: string | null }>();
   const tipos = new Map<string, EscaladosPorTipo["linhas"][number]>();
+  // Auxiliares só para a ordenação final (regular × cronológico — mesma
+  // regra de seriesPorTipo/ordenarTiposEEventos).
+  const regularPorId = new Map<EscaladosPorTipo["linhas"][number], boolean>();
+  const timestampPorId = new Map<EscaladosPorTipo["linhas"][number], number>();
 
   for (const l of linhas) {
     if (!equipes.has(l.equipeId)) {
@@ -255,6 +259,8 @@ export function escaladosPorTipo(linhas: LinhaEscalado[]): EscaladosPorTipo {
         porEquipe: {},
       };
       tipos.set(id, t);
+      regularPorId.set(t, regular);
+      timestampPorId.set(t, timestampEvento(l.dataEvento, l.horarioInicio));
     }
     t.total += 1;
     t.porEquipe[l.equipeId] = (t.porEquipe[l.equipeId] ?? 0) + 1;
@@ -262,7 +268,15 @@ export function escaladosPorTipo(linhas: LinhaEscalado[]): EscaladosPorTipo {
 
   return {
     equipes: [...equipes.values()].sort((a, b) => a.nome.localeCompare(b.nome)),
-    linhas: [...tipos.values()].sort((a, b) => b.total - a.total),
+    linhas: [...tipos.values()].sort((a, b) => {
+      const regA = regularPorId.get(a) ?? true;
+      const regB = regularPorId.get(b) ?? true;
+      if (regA !== regB) return regA ? -1 : 1;
+      if (!regA && !regB) {
+        return (timestampPorId.get(a) ?? 0) - (timestampPorId.get(b) ?? 0);
+      }
+      return b.total - a.total;
+    }),
   };
 }
 
@@ -372,6 +386,31 @@ function rotuloEvento(l: LinhaPresenca): string {
 // diferentes) — por isso não podem ser agrupados por tipoEventoId como o
 // culto regular é. O rótulo inclui o horário para diferenciá-los mesmo
 // quando não há descrição específica.
+function timestampEvento(dataEvento: Date, horarioInicio: string): number {
+  const [h, m] = horarioInicio.split(":").map(Number);
+  return dataEvento.getTime() + (h * 60 + m) * 60_000;
+}
+
+// Ordena: cultos regulares primeiro (pela regra de sempre — mais convocado
+// primeiro), eventos avulsos/extras depois, em ordem cronológica (data+hora,
+// do mais antigo para o mais recente) — pedido do usuário, já que um evento
+// avulso não faz sentido ordenar por convocações (são instâncias únicas).
+function ordenarTiposEEventos<T extends { convocacoes: number }>(
+  arr: T[],
+  regularPorId: Map<T, boolean>,
+  timestampPorId: Map<T, number>,
+): T[] {
+  return arr.sort((a, b) => {
+    const regA = regularPorId.get(a) ?? true;
+    const regB = regularPorId.get(b) ?? true;
+    if (regA !== regB) return regA ? -1 : 1;
+    if (!regA && !regB) {
+      return (timestampPorId.get(a) ?? 0) - (timestampPorId.get(b) ?? 0);
+    }
+    return b.convocacoes - a.convocacoes;
+  });
+}
+
 function rotuloEventoAvulso(
   dataEvento: Date,
   horarioInicio: string,
@@ -411,6 +450,9 @@ export function seriesPorTipo(linhas: LinhaPresenca[]): SerieTipo[] {
   const mapa = new Map<string, SerieTipo>();
   // Detalhamento equipe→números dentro de cada tipo.
   const equipesPorTipo = new Map<string, Map<string, SerieEquipeMini>>();
+  // Auxiliares só para a ordenação final (regular × cronológico).
+  const regularPorId = new Map<SerieTipo, boolean>();
+  const timestampPorId = new Map<SerieTipo, number>();
 
   for (const l of linhas) {
     // Culto regular agrega por tipo (todas as ocorrências no período); evento
@@ -437,6 +479,8 @@ export function seriesPorTipo(linhas: LinhaPresenca[]): SerieTipo[] {
       };
       mapa.set(id, s);
       equipesPorTipo.set(id, new Map());
+      regularPorId.set(s, regular);
+      timestampPorId.set(s, timestampEvento(l.evento.dataEvento, l.evento.horarioInicio));
     }
     s.convocacoes += 1;
     if (l.presente) s.presentes += 1;
@@ -465,7 +509,7 @@ export function seriesPorTipo(linhas: LinhaPresenca[]): SerieTipo[] {
     for (const e of eqMap.values()) e.taxaPresenca = pct(e.presentes, e.convocacoes);
     s.equipes = [...eqMap.values()].sort((a, b) => b.presentes - a.presentes);
   }
-  return arr.sort((a, b) => b.convocacoes - a.convocacoes);
+  return ordenarTiposEEventos(arr, regularPorId, timestampPorId);
 }
 
 export function seriesPorEvento(linhas: LinhaPresenca[]): SerieEvento[] {
