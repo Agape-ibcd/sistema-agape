@@ -13,6 +13,7 @@ import {
   restaurarPresenca,
 } from "./actions";
 import { FeedbackModal } from "@/components/FeedbackModal";
+import { registrarChecagemPendencia } from "./pendenciaGuard";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Lista de presença com SALVAMENTO AUTOMÁTICO: cada linha salva sozinha após
@@ -109,6 +110,18 @@ export function ListaPresenca({
       linhas.current.delete(id);
     };
   }, []);
+
+  // Avisa antes de sair da página (AvisoSairPendencia) enquanto houver linha
+  // sem presença/ausência lançada nesta seção — checagem sob demanda, não
+  // reativa (lê `linhas.current` na hora, não força re-render da página).
+  useEffect(() => {
+    return registrarChecagemPendencia(`${eventoId}:${equipeId}`, () =>
+      [...linhas.current.values()].some((l) => {
+        const e = l.estado();
+        return !e.registrado && !e.excluido;
+      }),
+    );
+  }, [eventoId, equipeId]);
 
   const [salvandoTudo, setSalvandoTudo] = useState(false);
   const [resumo, setResumo] = useState<ResumoPresenca | null>(null);

@@ -4,6 +4,7 @@ import { requirePermissao } from "@/lib/auth";
 import { can } from "@/lib/rbac";
 import { formatarDataISO, parseDataISO } from "@/lib/recorrencia";
 import { ListaPresenca, type MembroLinha } from "./ListaPresenca";
+import { AvisoSairPendencia } from "./AvisoSairPendencia";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Registro de presença — fluxo "EVENTO primeiro" (mobile-first):
@@ -202,6 +203,7 @@ export default async function PresencaPage({
       {eventoSelecionado ? (
         // ── Lançamento do evento selecionado ───────────────────────────
         <div className="space-y-4">
+          <AvisoSairPendencia />
           <Link
             href={qs({ ref: formatarDataISO(inicioSemana) })}
             className="text-sm text-brand-text hover:underline"
