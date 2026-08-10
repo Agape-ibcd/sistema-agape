@@ -152,6 +152,11 @@ const TEMPLATE_PADRAO: Record<
     mensagem:
       "Olá, {{nome}}!\n\n{{membro}} atualizou o próprio perfil.\n{{detalhe}}",
   },
+  presenca_pendente: {
+    assunto: "Presença pendente — {{evento}}",
+    mensagem:
+      "Olá, {{nome}}!\n\nJá se passaram 3h do início de {{evento}} ({{equipe}}, {{data}} às {{hora}}) e a presença ainda não foi totalmente registrada.\n\nFaltam: {{faltando}}\n\nRegistre em: {{link}}",
+  },
 };
 
 // Envia (e loga) os e-mails/Telegram de aniversário de quem faz aniversário
@@ -464,6 +469,147 @@ export async function dispararNotificacaoPerfilEditado(params: {
   } catch (erro) {
     console.error("[notificacoes] falha ao disparar perfil_editado:", erro);
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Presença pendente: 3h após o início do evento, se a equipe escalada ainda
+// não tem presença COMPLETA registrada (todo convocado com um lançamento
+// ativo, presente ou ausente), avisa o(s) líder(es) da própria equipe —
+// listando quem falta. Repete a cada 24h a partir daquele marco de 3h,
+// até 5 avisos por escala (controlado em EscalaEquipeEvento.avisosPresenca-
+// Pendente/ultimoAvisoPresencaPendenteEm). Equipe sem líder ativo cai no
+// admin/super_admin (mesmo padrão de fallback de notificarSupervisores).
+// Chamada a cada tick do cron (não é diária/horário fixo como os gatilhos em
+// ENVIADORES_DIARIOS) — a própria função decide, por escala, se já é a hora.
+// ─────────────────────────────────────────────────────────────────────────
+
+const LIMITE_AVISOS_PRESENCA_PENDENTE = 5;
+const HORAS_ATE_PRIMEIRO_AVISO = 3;
+const HORAS_ENTRE_AVISOS = 24;
+// Eventos mais antigos que isso não são mais checados (evita varrer o
+// histórico inteiro a cada tick) — cobre folgadamente 3h + 4×24h + margem.
+const JANELA_DIAS_PRESENCA_PENDENTE = 8;
+
+// Evento.dataEvento é Date (meia-noite UTC) + horarioInicio "HH:MM" — o
+// instante real de início é esse horário no fuso de São Paulo (UTC−3 fixo,
+// sem DST no Brasil, mesma premissa já usada no resto do motor).
+function inicioEventoUTC(dataEvento: Date, horarioInicio: string): Date {
+  const dataISO = dataEvento.toISOString().slice(0, 10);
+  return new Date(`${dataISO}T${horarioInicio}:00-03:00`);
+}
+
+// `apenasEscalaIds`: escopo opcional para teste isolado (nunca varrer dados
+// reais sem querer — ver incidente documentado na Etapa 6 parte 2). Sem
+// argumento, roda contra todas as escalas elegíveis (comportamento normal).
+export async function verificarPresencasPendentes(
+  apenasEscalaIds?: string[],
+): Promise<ResumoEnvio> {
+  let resumo: ResumoEnvio = { enviados: 0, falhas: 0, pulados: 0 };
+
+  const config = await prisma.configNotificacao.findUnique({ where: { gatilho: "presenca_pendente" } });
+  if (!config || !config.ativo || config.canais.length === 0) return resumo;
+
+  const agora = new Date();
+  const janelaInicio = new Date(agora.getTime() - JANELA_DIAS_PRESENCA_PENDENTE * 24 * 60 * 60 * 1000);
+
+  const escalas = await prisma.escalaEquipeEvento.findMany({
+    where: {
+      avisosPresencaPendente: { lt: LIMITE_AVISOS_PRESENCA_PENDENTE },
+      evento: {
+        status: { not: "cancelado" },
+        dataEvento: { gte: janelaInicio, lte: agora },
+      },
+      ...(apenasEscalaIds ? { id: { in: apenasEscalaIds } } : {}),
+    },
+    include: {
+      evento: { include: { tipoEvento: { select: { nome: true } } } },
+      equipe: {
+        select: {
+          nome: true,
+          membros: { where: { status: "ativo" }, select: { id: true, nomeCompleto: true } },
+          lideres: {
+            where: { dataFim: null },
+            select: { membro: { select: SELECT_MEMBRO_DESTINO } },
+          },
+        },
+      },
+      membrosEscalados: { select: { membroId: true } },
+    },
+  });
+
+  const admins = await prisma.membro.findMany({
+    where: { status: "ativo", nivelAcesso: { in: ["admin", "super_admin"] } },
+    select: SELECT_MEMBRO_DESTINO,
+  });
+
+  const tpl = TEMPLATE_PADRAO.presenca_pendente;
+  const assuntoBase = config.assunto || tpl.assunto;
+  const mensagemBase = config.mensagem || tpl.mensagem;
+  const appUrl = (process.env.APP_URL ?? "").replace(/\/$/, "");
+
+  for (const escala of escalas) {
+    const inicio = inicioEventoUTC(escala.evento.dataEvento, escala.evento.horarioInicio);
+    const marco1 = new Date(inicio.getTime() + HORAS_ATE_PRIMEIRO_AVISO * 60 * 60 * 1000);
+    if (agora < marco1) continue; // ainda não passou das 3h
+
+    // Próximo aviso permitido: 3h após o início, depois a cada 24h.
+    const proximoAviso = new Date(marco1.getTime() + escala.avisosPresencaPendente * HORAS_ENTRE_AVISOS * 60 * 60 * 1000);
+    if (agora < proximoAviso) continue;
+
+    const convocados = membrosConvocados(escala.equipe.membros, escala.membrosEscalados);
+    if (convocados.length === 0) continue;
+
+    const presencasAtivas = await prisma.presenca.findMany({
+      where: {
+        eventoId: escala.eventoId,
+        equipeId: escala.equipeId,
+        excluidoEm: null,
+        membroId: { in: convocados.map((m) => m.id) },
+      },
+      select: { membroId: true },
+    });
+    const registrados = new Set(presencasAtivas.map((p) => p.membroId));
+    const faltando = convocados.filter((m) => !registrados.has(m.id));
+    if (faltando.length === 0) continue; // completo — nada a avisar
+
+    const destinatarios = escala.equipe.lideres.map((l) => l.membro);
+    const destinatariosFinal = destinatarios.length > 0 ? destinatarios : admins;
+
+    const dataBR = escala.evento.dataEvento.toLocaleDateString("pt-BR", { timeZone: "UTC" });
+    const nomeEvento = escala.evento.descricaoEspecifica ?? escala.evento.tipoEvento.nome;
+    const dadosBase = {
+      equipe: escala.equipe.nome,
+      evento: nomeEvento,
+      data: dataBR,
+      hora: escala.evento.horarioInicio,
+      faltando: faltando.map((m) => m.nomeCompleto).join(", "),
+      link: `${appUrl}/presenca?ref=${dataBR.split("/").reverse().join("-")}&eventoId=${escala.eventoId}`,
+    };
+
+    const vistos = new Set<string>();
+    for (const membro of destinatariosFinal) {
+      if (vistos.has(membro.id)) continue;
+      vistos.add(membro.id);
+
+      const dados = { ...dadosBase, nome: membro.nomeCompleto.split(" ")[0] };
+      const r = await enviarParaMembro({
+        gatilho: "presenca_pendente",
+        membro,
+        canaisRegra: config.canais,
+        assunto: preencherTemplate(assuntoBase, dados),
+        mensagem: preencherTemplate(mensagemBase, dados),
+        referenciaId: escala.id,
+      });
+      resumo = somarResumo(resumo, r);
+    }
+
+    await prisma.escalaEquipeEvento.update({
+      where: { id: escala.id },
+      data: { avisosPresencaPendente: { increment: 1 }, ultimoAvisoPresencaPendenteEm: agora },
+    });
+  }
+
+  return resumo;
 }
 
 // ─────────────────────────────────────────────────────────────────────────

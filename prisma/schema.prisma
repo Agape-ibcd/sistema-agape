@@ -106,6 +106,7 @@ enum GatilhoNotificacao {
   lembrete_vespera // D-1 às 18h
   membro_editado_por_lider // líder alterou o cadastro de um membro da equipe → avisa admin/super
   perfil_editado // membro/líder alterou o próprio perfil → avisa líder(es) da equipe + admin/super
+  presenca_pendente // 3h+ após o início do evento sem presença completa → avisa o(s) líder(es) da equipe
 }
 
 enum CanalNotificacao {
@@ -274,6 +275,12 @@ model EscalaEquipeEvento {
   observacao  String?      @db.Text
   criadoPor   String?      @map("criado_por") @db.Uuid
   dataCriacao DateTime     @default(now()) @map("data_criacao")
+
+  // Controle do gatilho `presenca_pendente` (ver notificacoesEnvio.ts): quantos
+  // avisos já foram mandados ao líder por presença incompleta (máx. 5, um a
+  // cada 24h a partir de 3h após o início do evento) e quando foi o último.
+  avisosPresencaPendente        Int       @default(0) @map("avisos_presenca_pendente")
+  ultimoAvisoPresencaPendenteEm DateTime? @map("ultimo_aviso_presenca_pendente_em")
 
   evento Evento @relation(fields: [eventoId], references: [id], onDelete: Cascade)
   equipe Equipe @relation(fields: [equipeId], references: [id], onDelete: Cascade)

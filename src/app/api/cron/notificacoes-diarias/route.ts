@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verificarEDispararGatilhosDiarios } from "@/lib/notificacoesEnvio";
+import { verificarEDispararGatilhosDiarios, verificarPresencasPendentes } from "@/lib/notificacoesEnvio";
 
 // Chamada com frequência (pg_cron do Supabase, a cada poucos minutos — ver
 // scripts/setup-pgcron-notificacoes.ts) e também 1x/dia pelo Vercel Cron
@@ -17,6 +17,9 @@ export async function GET(request: NextRequest) {
   }
 
   const status = await verificarEDispararGatilhosDiarios();
+  // Não é diária/horário fixo (é por evento, checada a cada tick) — roda à
+  // parte dos gatilhos de ENVIADORES_DIARIOS acima.
+  const presencaPendente = await verificarPresencasPendentes();
 
-  return NextResponse.json({ status });
+  return NextResponse.json({ status, presencaPendente });
 }

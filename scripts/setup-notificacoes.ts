@@ -74,6 +74,20 @@ const REGRAS_PADRAO = [
       "Olá, {{nome}}!\n\n{{membro}} atualizou o próprio perfil.\n{{detalhe}}\n\nMinistério Ágape",
     horarioEnvio: null,
   },
+  {
+    // Avisa o(s) líder(es) da equipe quando a presença fica pendente 3h+
+    // após o início do evento. Nasce INATIVO de propósito (mesma cautela do
+    // incidente de teste da Etapa 6 parte 2) — ativar pelo painel quando o
+    // texto for revisado.
+    gatilho: "presenca_pendente" as const,
+    ativo: false,
+    niveisAlvo: [],
+    canais: ["email", "telegram"] as const,
+    assunto: "Presença pendente — {{evento}}",
+    mensagem:
+      "Olá, {{nome}}!\n\nJá se passaram 3h do início de {{evento}} ({{equipe}}, {{data}} às {{hora}}) e a presença ainda não foi totalmente registrada.\n\nFaltam: {{faltando}}\n\nRegistre em: {{link}}\n\nMinistério Ágape",
+    horarioEnvio: null,
+  },
 ];
 
 async function main() {

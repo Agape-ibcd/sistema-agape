@@ -11,6 +11,7 @@ const ORDEM: GatilhoNotificacao[] = [
   "lembrete_vespera",
   "membro_editado_por_lider",
   "perfil_editado",
+  "presenca_pendente",
 ];
 
 const META: Record<
@@ -74,6 +75,16 @@ const META: Record<
     usaNiveisAlvo: false,
     avisoDestinatarios:
       "Enviado automaticamente aos líderes da equipe da pessoa + Administradores e Super Administradores.",
+  },
+  presenca_pendente: {
+    titulo: "Presença pendente",
+    descricao:
+      "Avisa o líder quando, 3h após o início do evento, a presença da equipe ainda não foi totalmente registrada — repete a cada 24h, até 5 vezes.",
+    implementado: true,
+    usaHorario: false,
+    usaNiveisAlvo: false,
+    avisoDestinatarios:
+      "Enviado automaticamente ao(s) líder(es) da equipe escalada (ou a Administradores/Super Administradores, se a equipe não tiver líder ativo).",
   },
 };
 
