@@ -14,6 +14,7 @@ import {
 } from "./actions";
 import { FeedbackModal } from "@/components/FeedbackModal";
 import { registrarChecagemPendencia } from "./pendenciaGuard";
+import { registrarContagemSecao } from "./resumoFlutuanteRegistry";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Lista de presença com SALVAMENTO AUTOMÁTICO: cada linha salva sozinha após
@@ -122,6 +123,22 @@ export function ListaPresenca({
       }),
     );
   }, [eventoId, equipeId]);
+
+  // Contagem para o ResumoFlutuante (painel arrastável): lido por polling
+  // periódico, não reativo — não vale forçar re-render da página inteira a
+  // cada toggle só para um card discreto de contadores.
+  useEffect(() => {
+    return registrarContagemSecao(`${eventoId}:${equipeId}`, () => {
+      const estados = [...linhas.current.values()].map((l) => l.estado());
+      const registrados = estados.filter((e) => e.registrado);
+      const presentes = registrados.filter((e) => e.presente).length;
+      return {
+        escalados: membros.length,
+        presentes,
+        ausentes: registrados.length - presentes,
+      };
+    });
+  }, [eventoId, equipeId, membros.length]);
 
   const [salvandoTudo, setSalvandoTudo] = useState(false);
   const [resumo, setResumo] = useState<ResumoPresenca | null>(null);
@@ -345,31 +362,87 @@ function CardResumo({
   );
 }
 
-// Toggle segmentado compacto (Presente/Ausente, Pontual/Atrasado).
-function Segmentado<T extends string>({
+// ─────────────────────────────────────────────────────────────────────────
+// Ícones dos toggles de presença/pontualidade. Simples, 18px, herdam a cor
+// do botão (currentColor) — ver SegmentadoIcone abaixo para o estado
+// neutro/ativo (neon) de cada um.
+// ─────────────────────────────────────────────────────────────────────────
+
+function IconeCheck() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="m5 13 4 4L19 7" />
+    </svg>
+  );
+}
+
+function IconeX() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
+      <path d="M6 6l12 12M18 6 6 18" />
+    </svg>
+  );
+}
+
+// Relógio com ponteiros "em ponto" (pontual).
+function IconePontual() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 12V7M12 12h4" />
+    </svg>
+  );
+}
+
+// Mesmo relógio, mas com os ponteiros "atrasados" (posição diferente) —
+// diferencia visualmente de Pontual além da cor.
+function IconeAtrasado() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 12 8.7 15M12 12l3.3-1.8" />
+    </svg>
+  );
+}
+
+// Classes por "tom" — fundo neon (glow via shadow com a cor sólida do token)
+// só quando ativo; neutro quando não selecionado.
+const TOM_CLASSES = {
+  success: "border-success-edge bg-success-soft text-success-text shadow-[0_0_10px_var(--success)]",
+  danger: "border-danger-edge bg-danger-soft text-danger-text shadow-[0_0_10px_var(--danger)]",
+  info: "border-info-edge bg-info-soft text-info-text shadow-[0_0_10px_var(--info-text)]",
+  warn: "border-warn-edge bg-warn-soft text-warn-text shadow-[0_0_10px_var(--warn)]",
+} as const;
+
+// Toggle segmentado em ícones (Presente/Ausente, Pontual/Atrasado): fundo
+// neon + cor do tom quando ativo, cor neutra quando nada selecionado ainda.
+// `title` vira tooltip nativo do navegador.
+function SegmentadoIcone<T extends string>({
   valor,
   opcoes,
   onEscolher,
 }: {
   valor: T | null;
-  opcoes: { valor: T; rotulo: string; corAtiva: string }[];
+  opcoes: { valor: T; titulo: string; tom: keyof typeof TOM_CLASSES; icone: React.ReactNode }[];
   onEscolher: (v: T) => void;
 }) {
   return (
-    <span className="inline-flex overflow-hidden rounded-lg border border-edge">
+    <span className="inline-flex gap-1.5">
       {opcoes.map((o) => (
         <button
           key={o.valor}
           type="button"
+          title={o.titulo}
+          aria-label={o.titulo}
           onClick={() => onEscolher(o.valor)}
           aria-pressed={valor === o.valor}
-          className={`px-2.5 py-1.5 text-xs font-medium transition ${
+          className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border transition ${
             valor === o.valor
-              ? o.corAtiva
-              : "bg-surface text-ink-soft hover:bg-surface-2"
+              ? TOM_CLASSES[o.tom]
+              : "border-edge text-ink-faint hover:bg-surface-2 hover:text-ink-soft"
           }`}
         >
-          {o.rotulo}
+          {o.icone}
         </button>
       ))}
     </span>
@@ -604,11 +677,17 @@ function LinhaPresenca({
   }
 
   const naoLancado = !lancamentoId && statusSave === "ocioso";
+  // Nome fica na cor da situação registrada — neutro enquanto não há lançamento.
+  const corNome = naoLancado
+    ? "text-ink"
+    : presente
+      ? "text-success-text"
+      : "text-danger-text";
 
   return (
     <li className="py-2.5">
       <div className="flex items-center justify-between gap-2">
-        <p className="min-w-0 truncate text-sm font-medium text-ink">
+        <p className={`min-w-0 truncate text-sm font-medium ${corNome}`}>
           {membro.nome}
         </p>
         <span className="shrink-0">
@@ -625,11 +704,11 @@ function LinhaPresenca({
       </div>
 
       <div className="mt-1.5 flex flex-wrap items-center gap-2">
-        <Segmentado
+        <SegmentadoIcone
           valor={naoLancado ? null : presente ? "sim" : "nao"}
           opcoes={[
-            { valor: "sim", rotulo: "Presente", corAtiva: "bg-success text-white" },
-            { valor: "nao", rotulo: "Ausente", corAtiva: "bg-warn text-white" },
+            { valor: "sim", titulo: "Presente", tom: "success", icone: <IconeCheck /> },
+            { valor: "nao", titulo: "Ausente", tom: "danger", icone: <IconeX /> },
           ]}
           onEscolher={(v) => {
             setPresente(v === "sim");
@@ -637,21 +716,13 @@ function LinhaPresenca({
           }}
         />
 
-        {presente ? (
+        {naoLancado ? null : presente ? (
           <>
-            <Segmentado
-              valor={naoLancado ? null : pontualidade}
+            <SegmentadoIcone
+              valor={pontualidade}
               opcoes={[
-                {
-                  valor: "pontual",
-                  rotulo: "Pontual",
-                  corAtiva: "bg-success text-white",
-                },
-                {
-                  valor: "atrasado",
-                  rotulo: "Atrasado",
-                  corAtiva: "bg-warn text-white",
-                },
+                { valor: "pontual", titulo: "Pontual", tom: "info", icone: <IconePontual /> },
+                { valor: "atrasado", titulo: "Atrasado", tom: "warn", icone: <IconeAtrasado /> },
               ]}
               onEscolher={(v) => {
                 setPontualidade(v);
