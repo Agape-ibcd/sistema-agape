@@ -107,6 +107,8 @@ enum GatilhoNotificacao {
   membro_editado_por_lider // líder alterou o cadastro de um membro da equipe → avisa admin/super
   perfil_editado // membro/líder alterou o próprio perfil → avisa líder(es) da equipe + admin/super
   presenca_pendente // 3h+ após o início do evento sem presença completa → avisa o(s) líder(es) da equipe
+  aniversario_lideres_dia // aniversariante(s) do dia → avisa líder(es) da equipe + admin/super, com cartão
+  aniversariantes_mes // último dia do mês → lista dos aniversariantes do mês seguinte p/ todos os líderes + admin/super
 }
 
 enum CanalNotificacao {

@@ -12,6 +12,8 @@ const ORDEM: GatilhoNotificacao[] = [
   "membro_editado_por_lider",
   "perfil_editado",
   "presenca_pendente",
+  "aniversario_lideres_dia",
+  "aniversariantes_mes",
 ];
 
 const META: Record<
@@ -85,6 +87,26 @@ const META: Record<
     usaNiveisAlvo: false,
     avisoDestinatarios:
       "Enviado automaticamente ao(s) líder(es) da equipe escalada (ou a Administradores/Super Administradores, se a equipe não tiver líder ativo).",
+  },
+  aniversario_lideres_dia: {
+    titulo: "Aniversariante do dia — aviso ao líder",
+    descricao:
+      "Avisa o(s) líder(es) da equipe do aniversariante + Administradores/Super, com o cartão de aniversário. Só dispara se houver aniversariante hoje.",
+    implementado: true,
+    usaHorario: true,
+    usaNiveisAlvo: false,
+    avisoDestinatarios:
+      "Enviado automaticamente ao(s) líder(es) da equipe de cada aniversariante + Administradores e Super Administradores.",
+  },
+  aniversariantes_mes: {
+    titulo: "Aniversariantes do mês seguinte",
+    descricao:
+      "No último dia do mês, envia a lista de aniversariantes do mês seguinte para todos os líderes e administradores.",
+    implementado: true,
+    usaHorario: true,
+    usaNiveisAlvo: false,
+    avisoDestinatarios:
+      "Enviado automaticamente a todos os Líderes + Administradores e Super Administradores.",
   },
 };
 

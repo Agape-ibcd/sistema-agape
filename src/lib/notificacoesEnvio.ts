@@ -1,7 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
-import { hojeSaoPaulo, type HojeBR } from "@/lib/aniversariantes";
+import { hojeSaoPaulo, aniversariantesDoMes, nomeMes, type HojeBR, type Aniversariante } from "@/lib/aniversariantes";
 import { enviarEmail, ehEmailSintetico } from "@/lib/email";
 import { enviarTelegram } from "@/lib/telegram";
 import { membrosConvocados } from "@/lib/escalaMembros";
@@ -69,10 +69,14 @@ async function enviarParaMembro(params: {
   canaisRegra: CanalNotificacao[];
   assunto: string; // só usado no e-mail
   mensagem: string; // texto puro, já com placeholders resolvidos
+  // HTML rico (ex.: cartão de aniversário) para o CORPO DO E-MAIL — quando
+  // presente, substitui o `paraHtml(mensagem)` padrão. Telegram sempre usa
+  // `mensagem` (texto puro), independente disto.
+  mensagemHtml?: string;
   referenciaId?: string;
 }): Promise<ResumoEnvio> {
   const resumo: ResumoEnvio = { enviados: 0, falhas: 0, pulados: 0 };
-  const { gatilho, membro, canaisRegra, assunto, mensagem, referenciaId } = params;
+  const { gatilho, membro, canaisRegra, assunto, mensagem, mensagemHtml, referenciaId } = params;
 
   const registrar = (canal: CanalNotificacao, status: StatusEnvio, destino: string, detalhe: string) =>
     prisma.logNotificacao.create({
@@ -87,7 +91,7 @@ async function enviarParaMembro(params: {
       resumo.pulados += 1;
       await registrar("email", "pulado", membro.email, "e-mail sintético (não entregável)");
     } else {
-      const r = await enviarEmail({ para: membro.email, assunto, html: paraHtml(mensagem) });
+      const r = await enviarEmail({ para: membro.email, assunto, html: mensagemHtml ?? paraHtml(mensagem) });
       if (r.ok) {
         resumo.enviados += 1;
         await registrar("email", "enviado", membro.email, r.id || "ok");
@@ -156,6 +160,16 @@ const TEMPLATE_PADRAO: Record<
     assunto: "Presença pendente — {{evento}}",
     mensagem:
       "Olá, {{nome}}!\n\nJá se passaram 3h do início de {{evento}} ({{equipe}}, {{data}} às {{hora}}) e a presença ainda não foi totalmente registrada.\n\nFaltam: {{faltando}}\n\nRegistre em: {{link}}",
+  },
+  // aniversario_lideres_dia e aniversariantes_mes: só o texto padrão por
+  // enquanto — o disparo (Etapa 2/4 deste pacote) ainda não está implementado.
+  aniversario_lideres_dia: {
+    assunto: "Ministério Ágape: Aniversariantes do Dia.",
+    mensagem: "Olá, {{nome}}!\n\nHoje é aniversário de:\n{{lista}}",
+  },
+  aniversariantes_mes: {
+    assunto: "Ministério Ágape: Aniversariantes do Mês de {{mes}} de {{ano}}.",
+    mensagem: "Olá, {{nome}}!\n\nAniversariantes de {{mes}}:\n{{lista}}",
   },
 };
 
@@ -707,9 +721,174 @@ async function enviarLembreteVesperaAmanha(): Promise<ResumoEnvio> {
   return resumo;
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Aniversariante(s) do dia → aviso ao(s) líder(es) da equipe + admin/super,
+// com o cartão de aniversário em HTML (equivalente por e-mail do cartão
+// visual de CartaoAniversario.tsx — canvas não roda em cliente de e-mail,
+// então é recriado em HTML/CSS com as mesmas cores da moldura "Esmeralda").
+// Só dispara se houver aniversariante hoje.
+// ─────────────────────────────────────────────────────────────────────────
+
+// Mesma paleta da moldura "Esmeralda" padrão em CartaoAniversario.tsx.
+function cartaoAniversarioHtml(a: Aniversariante): string {
+  const foto = a.fotoUrl
+    ? `<img src="${a.fotoUrl}" width="96" height="96" alt="${a.nome}" style="border-radius:50%;object-fit:cover;border:3px solid #ffffff;display:block;margin:0 auto 12px;" />`
+    : "";
+  return `
+    <div style="background-color:#059669;background-image:linear-gradient(135deg,#065f46,#059669);border-radius:16px;padding:24px;text-align:center;color:#ffffff;font-family:Arial,Helvetica,sans-serif;max-width:360px;margin:16px auto;">
+      ${foto}
+      <p style="font-size:20px;font-weight:bold;margin:0 0 2px;">🎉 ${a.nome}</p>
+      <p style="font-size:12px;margin:0 0 2px;opacity:0.85;">${a.equipeNome ?? "sem equipe"}</p>
+      <p style="font-size:12px;margin:0 0 12px;opacity:0.85;">${a.dataBR}</p>
+      <p style="font-size:14px;line-height:1.5;margin:0;">Que Deus abençoe sua vida com saúde, alegria e muitas realizações. É uma honra servir ao lado de você!</p>
+    </div>`;
+}
+
+// Resolve destinatários (líder(es) ativos da equipe de cada aniversariante +
+// todos admin/super, deduplicados) e envia UM e-mail por destinatário
+// listando todos os aniversariantes do dia + o cartão de cada um.
+export async function dispararNotificacaoAniversarioLideres(
+  // Override para teste manual/script — sem argumento, usa os aniversariantes
+  // REAIS de hoje.
+  aniversariantesOverride?: Aniversariante[],
+  // Restringe os destinatários a estes IDs — usado só em teste manual/script,
+  // para não notificar líderes/admins reais ao simular um envio.
+  apenasMembroIds?: string[],
+): Promise<ResumoEnvio> {
+  let resumo: ResumoEnvio = { enviados: 0, falhas: 0, pulados: 0 };
+
+  const config = await prisma.configNotificacao.findUnique({ where: { gatilho: "aniversario_lideres_dia" } });
+  if (!config || !config.ativo || config.canais.length === 0) return resumo;
+
+  const hoje = hojeSaoPaulo();
+  const aniversariantes =
+    aniversariantesOverride ?? (await aniversariantesDoMes(hoje)).filter((a) => a.ehHoje);
+  if (aniversariantes.length === 0) return resumo;
+
+  const equipeIds = [...new Set(aniversariantes.map((a) => a.equipeId).filter((v): v is string => !!v))];
+  const [lideresPorEquipe, admins] = await Promise.all([
+    equipeIds.length
+      ? prisma.equipeLider.findMany({
+          where: { equipeId: { in: equipeIds }, dataFim: null },
+          select: { membro: { select: SELECT_MEMBRO_DESTINO } },
+        })
+      : Promise.resolve([]),
+    prisma.membro.findMany({
+      where: { status: "ativo", nivelAcesso: { in: ["admin", "super_admin"] } },
+      select: SELECT_MEMBRO_DESTINO,
+    }),
+  ]);
+
+  const destinatarios = new Map<string, MembroDestino>();
+  for (const l of lideresPorEquipe) destinatarios.set(l.membro.id, l.membro);
+  for (const a of admins) destinatarios.set(a.id, a);
+  if (apenasMembroIds) {
+    const alvo = new Set(apenasMembroIds);
+    for (const id of destinatarios.keys()) if (!alvo.has(id)) destinatarios.delete(id);
+  }
+  if (destinatarios.size === 0) return resumo;
+
+  const tpl = TEMPLATE_PADRAO.aniversario_lideres_dia;
+  const assuntoBase = config.assunto || tpl.assunto;
+  const mensagemBase = config.mensagem || tpl.mensagem;
+  const listaTexto = aniversariantes.map((a) => `${a.nome} (${a.equipeNome ?? "sem equipe"})`).join("\n");
+  const cardsHtml = aniversariantes.map(cartaoAniversarioHtml).join("");
+
+  for (const membro of destinatarios.values()) {
+    const dados = { nome: membro.nomeCompleto.split(" ")[0], lista: listaTexto };
+    const r = await enviarParaMembro({
+      gatilho: "aniversario_lideres_dia",
+      membro,
+      canaisRegra: config.canais,
+      assunto: preencherTemplate(assuntoBase, dados),
+      mensagem: preencherTemplate(mensagemBase, dados),
+      mensagemHtml: `<p>Olá, ${dados.nome}!</p><p>Hoje é aniversário de:</p>${cardsHtml}`,
+      referenciaId: `aniversario:${hoje.ano}-${String(hoje.mes).padStart(2, "0")}-${String(hoje.dia).padStart(2, "0")}`,
+    });
+    resumo = somarResumo(resumo, r);
+  }
+
+  return resumo;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Digest mensal: no ÚLTIMO DIA do mês, lista os aniversariantes do mês
+// SEGUINTE (nome, data, equipe) para todos os líderes + admin/super — texto
+// puro (sem cartão, é uma lista). Fora do último dia, não faz nada.
+// ─────────────────────────────────────────────────────────────────────────
+
+function ehUltimoDiaDoMes(hoje: HojeBR): boolean {
+  // Dia 0 do mês seguinte = último dia do mês atual (UTC evita fuso).
+  return new Date(Date.UTC(hoje.ano, hoje.mes, 0)).getUTCDate() === hoje.dia;
+}
+
+// `mesOverride`: teste manual/script (ex.: setembro) — ignora o gate de
+// "último dia do mês" e usa esse mês diretamente.
+export async function enviarDigestAniversariantesMes(
+  mesOverride?: number,
+  // Restringe os destinatários a estes IDs — usado só em teste manual/script.
+  apenasMembroIds?: string[],
+): Promise<ResumoEnvio> {
+  let resumo: ResumoEnvio = { enviados: 0, falhas: 0, pulados: 0 };
+
+  const config = await prisma.configNotificacao.findUnique({ where: { gatilho: "aniversariantes_mes" } });
+  if (!config || !config.ativo || config.canais.length === 0) return resumo;
+
+  const hoje = hojeSaoPaulo();
+  if (mesOverride === undefined && !ehUltimoDiaDoMes(hoje)) return resumo;
+
+  const proximoMes = mesOverride ?? (hoje.mes % 12) + 1;
+  // Só vira o ano no fluxo natural (dezembro→janeiro); com mesOverride
+  // (teste manual/script) assume o ano corrente, que é o esperado no teste.
+  const anoProximoMes =
+    mesOverride === undefined && proximoMes < hoje.mes ? hoje.ano + 1 : hoje.ano;
+  const aniversariantes = await aniversariantesDoMes(hoje, proximoMes);
+  if (aniversariantes.length === 0) return resumo;
+
+  const destinatarios = await prisma.membro.findMany({
+    where: {
+      status: "ativo",
+      nivelAcesso: { in: ["lider", "admin", "super_admin"] },
+      ...(apenasMembroIds ? { id: { in: apenasMembroIds } } : {}),
+    },
+    select: SELECT_MEMBRO_DESTINO,
+  });
+  if (destinatarios.length === 0) return resumo;
+
+  const tpl = TEMPLATE_PADRAO.aniversariantes_mes;
+  const assuntoBase = config.assunto || tpl.assunto;
+  const mensagemBase = config.mensagem || tpl.mensagem;
+  const mesTexto = nomeMes(proximoMes);
+  const listaTexto = aniversariantes
+    .map((a) => `${a.nome} — ${a.dataBR} (${a.equipeNome ?? "sem equipe"})`)
+    .join("\n");
+
+  for (const membro of destinatarios) {
+    const dados = {
+      nome: membro.nomeCompleto.split(" ")[0],
+      mes: mesTexto,
+      ano: String(anoProximoMes),
+      lista: listaTexto,
+    };
+    const r = await enviarParaMembro({
+      gatilho: "aniversariantes_mes",
+      membro,
+      canaisRegra: config.canais,
+      assunto: preencherTemplate(assuntoBase, dados),
+      mensagem: preencherTemplate(mensagemBase, dados),
+      referenciaId: `aniversariantes-mes:${proximoMes}`,
+    });
+    resumo = somarResumo(resumo, r);
+  }
+
+  return resumo;
+}
+
 const ENVIADORES_DIARIOS: Partial<Record<GatilhoNotificacao, () => Promise<ResumoEnvio>>> = {
   aniversario_dia: enviarNotificacoesAniversarioHoje,
   lembrete_vespera: enviarLembreteVesperaAmanha,
+  aniversario_lideres_dia: () => dispararNotificacaoAniversarioLideres(),
+  aniversariantes_mes: () => enviarDigestAniversariantesMes(),
 };
 
 export type StatusChecagem = {

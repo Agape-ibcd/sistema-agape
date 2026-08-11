@@ -43,6 +43,7 @@ export type Aniversariante = {
   id: string;
   nome: string;
   fotoUrl: string | null;
+  equipeId: string | null;
   equipeNome: string | null;
   dia: number;
   mes: number;
@@ -72,6 +73,7 @@ export async function aniversariantesDoMes(
       nomeCompleto: true,
       fotoUrl: true,
       dataNascimento: true,
+      equipeId: true,
       equipe: { select: { nome: true } },
     },
   });
@@ -95,6 +97,7 @@ export async function aniversariantesDoMes(
       id: m.id,
       nome: m.nomeCompleto,
       fotoUrl: m.fotoUrl,
+      equipeId: m.equipeId,
       equipeNome: m.equipe?.nome ?? null,
       dia,
       mes,

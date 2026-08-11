@@ -88,6 +88,31 @@ const REGRAS_PADRAO = [
       "Olá, {{nome}}!\n\nJá se passaram 3h do início de {{evento}} ({{equipe}}, {{data}} às {{hora}}) e a presença ainda não foi totalmente registrada.\n\nFaltam: {{faltando}}\n\nRegistre em: {{link}}\n\nMinistério Ágape",
     horarioEnvio: null,
   },
+  {
+    // Avisa líder(es) da equipe + admin/super sobre aniversariante(s) do dia
+    // (só dispara se houver algum) — inclui o cartão em HTML. Nasce INATIVO
+    // (mesma cautela do incidente de teste da Etapa 6 parte 2).
+    gatilho: "aniversario_lideres_dia" as const,
+    ativo: false,
+    niveisAlvo: [],
+    canais: ["email"] as const,
+    assunto: "Ministério Ágape: Aniversariantes do Dia.",
+    mensagem:
+      "Olá, {{nome}}!\n\nHoje é aniversário de:\n{{lista}}\n\nMinistério Ágape",
+    horarioEnvio: "06:05",
+  },
+  {
+    // Digest do último dia do mês: aniversariantes do mês SEGUINTE, em lista,
+    // para todos os líderes + admin/super. Nasce INATIVO (mesma cautela).
+    gatilho: "aniversariantes_mes" as const,
+    ativo: false,
+    niveisAlvo: [],
+    canais: ["email"] as const,
+    assunto: "Ministério Ágape: Aniversariantes do Mês de {{mes}} de {{ano}}.",
+    mensagem:
+      "Olá, {{nome}}!\n\nAniversariantes de {{mes}}:\n{{lista}}\n\nMinistério Ágape",
+    horarioEnvio: "07:00",
+  },
 ];
 
 async function main() {
