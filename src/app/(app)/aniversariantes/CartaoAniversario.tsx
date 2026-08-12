@@ -12,7 +12,6 @@ export type DadosCartao = {
   nome: string;
   fotoUrl: string | null;
   dataBR: string; // "15/07"
-  idadeQueCompleta: number | null;
 };
 
 type Moldura = {
@@ -190,12 +189,10 @@ async function desenharCartao(
   }
   ctx.fillText(dados.nome, cx, 600);
 
-  // Data e idade
+  // Data
   ctx.fillStyle = "#52525b";
   ctx.font = "34px system-ui, sans-serif";
-  const idade =
-    dados.idadeQueCompleta != null ? ` · ${dados.idadeQueCompleta} anos` : "";
-  ctx.fillText(`${dados.dataBR}${idade}`, cx, 652);
+  ctx.fillText(dados.dataBR, cx, 652);
 
   // Mensagem (limitada para caber no cartão)
   ctx.fillStyle = "#3f3f46";

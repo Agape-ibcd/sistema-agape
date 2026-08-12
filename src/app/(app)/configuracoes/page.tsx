@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { requirePermissao } from "@/lib/auth";
-import { RegraNotificacaoForm, type RegraDados } from "./RegraNotificacaoForm";
-import { TestarAniversarioBotao } from "./TestarAniversarioBotao";
+import { RegraNotificacaoForm, IconeEnviar, type RegraDados } from "./RegraNotificacaoForm";
 import type { GatilhoNotificacao } from "@prisma/client";
 
 const ORDEM: GatilhoNotificacao[] = [
@@ -27,6 +26,10 @@ const META: Record<
     // Texto do aviso de destinatários quando usaNiveisAlvo=false (o padrão fala
     // em "membros escalados"; gatilhos de edição têm destinatários próprios).
     avisoDestinatarios?: string;
+    // Texto de confirmação do ícone "Enviar agora" (window.confirm no
+    // cliente) — só os gatilhos em lote/diários têm um envio manual que faz
+    // sentido sem um alvo específico (escala/evento/edição pontual).
+    confirmacaoEnvioManual?: string;
   }
 > = {
   aniversario_dia: {
@@ -35,6 +38,8 @@ const META: Record<
     implementado: true,
     usaHorario: true,
     usaNiveisAlvo: true,
+    confirmacaoEnvioManual:
+      "Enviar agora, de verdade, a mensagem de aniversário para quem faz aniversário HOJE (nos níveis de acesso marcados na regra já salva), pelos canais habilitados (e-mail/Telegram)? Se já foi enviado hoje pelo horário automático, isso envia de novo.",
   },
   nova_escala: {
     titulo: "Nova escala — confirmação de presença",
@@ -58,6 +63,8 @@ const META: Record<
     implementado: true,
     usaHorario: true,
     usaNiveisAlvo: false,
+    confirmacaoEnvioManual:
+      "Enviar agora, de verdade, o lembrete de amanhã para todos que estão escalados em algum evento de amanhã (um resumo por pessoa)?",
   },
   membro_editado_por_lider: {
     titulo: "Líder editou um membro da equipe",
@@ -87,6 +94,8 @@ const META: Record<
     usaNiveisAlvo: false,
     avisoDestinatarios:
       "Enviado automaticamente ao(s) líder(es) da equipe escalada (ou a Administradores/Super Administradores, se a equipe não tiver líder ativo).",
+    confirmacaoEnvioManual:
+      "Verificar agora todas as escalas com presença pendente (3h+ após o início do evento) e avisar o(s) líder(es) responsáveis (ou Administradores/Super, se a equipe não tiver líder ativo)? Só envia para quem estiver realmente com pendência neste momento.",
   },
   aniversario_lideres_dia: {
     titulo: "Aniversariante do dia — aviso ao líder",
@@ -97,6 +106,8 @@ const META: Record<
     usaNiveisAlvo: false,
     avisoDestinatarios:
       "Enviado automaticamente ao(s) líder(es) da equipe de cada aniversariante + Administradores e Super Administradores.",
+    confirmacaoEnvioManual:
+      "Enviar agora, de verdade, o aviso de aniversariante do dia para o(s) líder(es) da equipe de cada aniversariante de HOJE + todos os Administradores e Super Administradores? Se não houver ninguém fazendo aniversário hoje, nada é enviado.",
   },
   aniversariantes_mes: {
     titulo: "Aniversariantes do mês seguinte",
@@ -107,6 +118,8 @@ const META: Record<
     usaNiveisAlvo: false,
     avisoDestinatarios:
       "Enviado automaticamente a todos os Líderes + Administradores e Super Administradores.",
+    confirmacaoEnvioManual:
+      "Enviar agora, de verdade, a lista de aniversariantes do PRÓXIMO mês para todos os Líderes + Administradores e Super Administradores? Isso força o envio mesmo fora do último dia do mês (quando ele dispara sozinho).",
   },
 };
 
@@ -139,14 +152,18 @@ export default async function ConfiguracoesPage() {
         </p>
       </header>
 
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-edge-soft bg-surface-2 p-4">
+      <div className="mb-6 rounded-2xl border border-edge-soft bg-surface-2 p-4">
         <p className="text-sm text-ink-soft">
-          <strong>Aniversário do dia</strong> e <strong>Lembrete véspera</strong>{" "}
-          rodam sozinhos no horário configurado abaixo. Use o botão para testar
-          o aniversário sem esperar a execução automática — os gatilhos de
-          escala disparam na hora, direto na tela de Eventos.
+          Os gatilhos diários (<strong>Aniversário do dia</strong>,{" "}
+          <strong>Lembrete véspera</strong> etc.) rodam sozinhos no horário
+          configurado em cada card — os gatilhos de escala disparam na hora,
+          direto na tela de Eventos. Use o ícone{" "}
+          <span className="inline-flex align-middle text-brand">
+            <IconeEnviar />
+          </span>{" "}
+          ao lado de &quot;Ativa&quot; em cada card para enviar aquela
+          notificação manualmente, sem esperar o horário automático.
         </p>
-        <TestarAniversarioBotao />
       </div>
 
       <div className="space-y-5">
@@ -156,6 +173,7 @@ export default async function ConfiguracoesPage() {
           const meta = META[gatilho];
           const dados: RegraDados = {
             id: regra.id,
+            gatilho,
             titulo: meta.titulo,
             descricao: meta.descricao,
             implementado: meta.implementado,
@@ -168,6 +186,7 @@ export default async function ConfiguracoesPage() {
             usaHorario: meta.usaHorario,
             usaNiveisAlvo: meta.usaNiveisAlvo,
             avisoDestinatarios: meta.avisoDestinatarios,
+            confirmacaoEnvioManual: meta.confirmacaoEnvioManual,
           };
           return <RegraNotificacaoForm key={regra.id} regra={dados} />;
         })}

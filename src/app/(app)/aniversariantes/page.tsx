@@ -59,7 +59,6 @@ function CardAniversariante({ a }: { a: Aniversariante }) {
           nome: a.nome,
           fotoUrl: a.fotoUrl,
           dataBR: a.dataBR,
-          idadeQueCompleta: a.idadeQueCompleta,
         }}
       />
       <span className="shrink-0 text-right text-lg font-bold tabular-nums text-ink-faint">

@@ -5,8 +5,16 @@ import { prisma } from "@/lib/prisma";
 import { requirePermissao } from "@/lib/auth";
 import { writeAudit } from "@/lib/audit";
 import { sucesso, falha, type EstadoAcao } from "@/lib/actions";
-import { enviarNotificacoesAniversarioHoje } from "@/lib/notificacoesEnvio";
-import type { NivelAcesso } from "@prisma/client";
+import {
+  enviarNotificacoesAniversarioHoje,
+  dispararNotificacaoAniversarioLideres,
+  enviarDigestAniversariantesMes,
+  enviarLembreteVesperaAmanha,
+  verificarPresencasPendentes,
+  type ResumoEnvio,
+} from "@/lib/notificacoesEnvio";
+import { hojeSaoPaulo } from "@/lib/aniversariantes";
+import type { GatilhoNotificacao, NivelAcesso } from "@prisma/client";
 
 const NIVEIS_VALIDOS: NivelAcesso[] = [
   "super_admin",
@@ -81,24 +89,43 @@ export async function salvarConfigNotificacao(
   }
 }
 
-// Dispara manualmente os e-mails de aniversário de hoje — útil para validar
-// a regra sem esperar o cron diário do Vercel.
-export async function testarAniversarioAgora(
-  _prev: EstadoAcao, // eslint-disable-line @typescript-eslint/no-unused-vars -- assinatura exigida por useActionState
-  _formData: FormData, // eslint-disable-line @typescript-eslint/no-unused-vars -- idem
+// Gatilhos diários/em lote que fazem sentido disparar manualmente (sem
+// precisar de um alvo específico como uma escala ou um evento) — os demais
+// (nova_escala, escala_alterada, membro_editado_por_lider, perfil_editado)
+// só disparam de verdade a partir da ação real que os originou.
+const ENVIADORES_MANUAIS: Partial<Record<GatilhoNotificacao, () => Promise<ResumoEnvio>>> = {
+  aniversario_dia: enviarNotificacoesAniversarioHoje,
+  aniversario_lideres_dia: () => dispararNotificacaoAniversarioLideres(),
+  // Força o envio do mês seguinte mesmo fora do último dia do mês (o gatilho
+  // automático só dispara nessa data) — é o mesmo uso de mesOverride já
+  // usado nos scripts de teste manual.
+  aniversariantes_mes: () => enviarDigestAniversariantesMes((hojeSaoPaulo().mes % 12) + 1),
+  lembrete_vespera: enviarLembreteVesperaAmanha,
+  presenca_pendente: () => verificarPresencasPendentes(),
+};
+
+// Dispara manualmente uma regra de notificação em lote — usado pelo ícone
+// "Enviar agora" de cada card em /configuracoes, com confirmação prévia no
+// cliente (window.confirm). Envia de verdade para os destinatários reais
+// elegíveis no momento, sem esperar o horário/cron configurado.
+export async function enviarNotificacaoManual(
+  _prev: EstadoAcao,
+  formData: FormData,
 ): Promise<EstadoAcao> {
   await requirePermissao("configuracoes_sistema");
 
-  const resumo = await enviarNotificacoesAniversarioHoje();
+  const gatilho = String(formData.get("gatilho") ?? "") as GatilhoNotificacao;
+  const enviar = ENVIADORES_MANUAIS[gatilho];
+  if (!enviar) return falha("Envio manual não disponível para esta regra.");
+
+  const resumo = await enviar();
   revalidatePath("/configuracoes");
 
   const total = resumo.enviados + resumo.falhas + resumo.pulados;
   if (total === 0) {
-    return sucesso(
-      "Nenhum aniversariante hoje (ou a regra está desativada) — nada foi enviado.",
-    );
+    return sucesso("Nada a enviar agora (sem destinatários elegíveis no momento).");
   }
   return sucesso(
-    `Teste executado: ${resumo.enviados} enviado(s), ${resumo.falhas} falha(s), ${resumo.pulados} pulado(s). Veja o log abaixo.`,
+    `Envio manual: ${resumo.enviados} enviado(s), ${resumo.falhas} falha(s), ${resumo.pulados} pulado(s). Veja o log abaixo.`,
   );
 }

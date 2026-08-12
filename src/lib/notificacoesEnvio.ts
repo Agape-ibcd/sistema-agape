@@ -655,7 +655,7 @@ function inicioDoDiaSaoPauloUTC(hoje: HojeBR): Date {
 // AGENDADO de amanhã, uma única mensagem listando todos os compromissos do
 // dia seguinte — nunca é "lote" porque só olha um dia à frente, cobrindo
 // naturalmente o caso do rodízio (que não dispara nova_escala por escala).
-async function enviarLembreteVesperaAmanha(): Promise<ResumoEnvio> {
+export async function enviarLembreteVesperaAmanha(): Promise<ResumoEnvio> {
   let resumo: ResumoEnvio = { enviados: 0, falhas: 0, pulados: 0 };
 
   const config = await prisma.configNotificacao.findUnique({ where: { gatilho: "lembrete_vespera" } });
