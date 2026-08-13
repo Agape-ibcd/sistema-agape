@@ -23,3 +23,22 @@ export function acessoMembros(usuario: UsuarioAtual): AcessoMembros {
   if (can(usuario.nivelAcesso, "ver_membros_equipe")) return "equipe";
   return "nenhum";
 }
+
+// Confere se o usuário pode editar (dados/foto/status) o membro-alvo
+// específico. Além do escopo geral de acessoMembros(), aplica a única
+// restrição hierárquica dentro do acesso "total": admin não edita
+// super_admin (só outro super_admin pode). O líder já é restrito à própria
+// equipe por acessoMembros() = "equipe"; aqui só confirmamos o vínculo.
+export function podeEditarMembroAlvo(
+  usuario: UsuarioAtual,
+  alvo: { nivelAcesso: string; equipeId: string | null },
+): boolean {
+  const acesso = acessoMembros(usuario);
+  if (acesso === "nenhum") return false;
+  if (acesso === "equipe") return alvo.equipeId === usuario.equipeId;
+  // acesso === "total"
+  if (usuario.nivelAcesso === "admin" && alvo.nivelAcesso === "super_admin") {
+    return false;
+  }
+  return true;
+}

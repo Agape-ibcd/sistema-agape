@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUsuario } from "@/lib/auth";
-import { acessoMembros } from "@/lib/acessoMembros";
+import { acessoMembros, podeEditarMembroAlvo } from "@/lib/acessoMembros";
 import { ROTULO_NIVEL } from "@/lib/rbac";
 import { MembroForm } from "../MembroForm";
 
@@ -33,8 +33,8 @@ export default async function EditarMembroPage({
   ]);
   if (!membro) notFound();
 
-  // Líder só acessa membros da própria equipe.
-  if (restrito && membro.equipeId !== usuario.equipeId) redirect("/nao-autorizado");
+  // Líder só acessa membros da própria equipe; admin não edita super_admin.
+  if (!podeEditarMembroAlvo(usuario, membro)) redirect("/nao-autorizado");
 
   return (
     <div className="mx-auto max-w-2xl">

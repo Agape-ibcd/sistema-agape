@@ -2,6 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { writeAudit } from "@/lib/audit";
 import { parseDataISO } from "@/lib/recorrencia";
+import { podeEditarMembroAlvo } from "@/lib/acessoMembros";
 import type { UsuarioAtual } from "@/lib/auth";
 import type { StatusMembro } from "@prisma/client";
 
@@ -48,6 +49,9 @@ export async function aplicarStatusMembro(
 
   const antes = await prisma.membro.findUnique({ where: { id: membroId } });
   if (!antes) return erro("Membro não encontrado.");
+  if (!podeEditarMembroAlvo(executor, antes)) {
+    return erro("Você não tem permissão para alterar o status deste cadastro.");
+  }
   if (antes.status === novoStatus) {
     return erro(`${antes.nomeCompleto} já está com o status "${novoStatus}".`);
   }

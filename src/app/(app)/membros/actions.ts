@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { Prisma, type StatusMembro } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requirePermissao, requireUsuario } from "@/lib/auth";
-import { acessoMembros } from "@/lib/acessoMembros";
+import { acessoMembros, podeEditarMembroAlvo } from "@/lib/acessoMembros";
 import { writeAudit } from "@/lib/audit";
 import { sucesso, falha, type EstadoAcao } from "@/lib/actions";
 import { uploadFotoMembro, removerFotoMembro } from "@/lib/storage";
@@ -159,6 +159,9 @@ export async function salvarMembro(
     if (id) {
       const antes = await prisma.membro.findUnique({ where: { id } });
       if (!antes) return falha("Membro não encontrado.");
+      if (!podeEditarMembroAlvo(usuario, antes)) {
+        return falha("Você não tem permissão para editar este cadastro.");
+      }
       if (antes.nivelAcesso === "monitor" && equipeId) {
         return falha(
           "Monitores não participam de equipes — deixe o campo Equipe como “Sem equipe” ou mude o nível de acesso antes.",
@@ -263,8 +266,8 @@ export async function removerFoto(
   try {
     const membro = await prisma.membro.findUnique({ where: { id } });
     if (!membro) return falha("Membro não encontrado.");
-    if (acesso === "equipe" && membro.equipeId !== usuario.equipeId) {
-      return falha("Você só pode editar membros da sua equipe.");
+    if (!podeEditarMembroAlvo(usuario, membro)) {
+      return falha("Você não tem permissão para editar este cadastro.");
     }
     if (!membro.fotoUrl) return falha("Este membro não tem foto cadastrada.");
 
