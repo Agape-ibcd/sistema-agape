@@ -173,6 +173,7 @@ model Membro {
   confirmacoes  ConfirmacaoEscala[]
   recuperacoes  RecuperacaoSenha[]
   escalasMembro EscalaMembro[]
+  alteracoesPerfilPendentes AlteracaoPerfilPendente[]
 
   @@index([equipeId])
   @@index([status])
@@ -464,6 +465,31 @@ model RecuperacaoSenha {
 
   @@index([membroId])
   @@map("recuperacao_senha")
+}
+
+// ───────────────────── ALTERACAO_PERFIL_PENDENTE ─────────────────────────
+// Edição de nome/e-mail/celular/nascimento pelo próprio membro (todos os
+// níveis, inclusive monitor), com confirmação por e-mail/Telegram — a
+// alteração só é aplicada quando o link é clicado, e expira em 24h. Guarda
+// o estado PROPOSTO completo (não um diff) para aplicar de uma vez ao
+// confirmar. Mesmo padrão de token opaco + expiração de RecuperacaoSenha/
+// ConfirmacaoEscala — sem sessão na confirmação, a segurança é o token.
+model AlteracaoPerfilPendente {
+  id              String    @id @default(uuid()) @db.Uuid
+  membroId        String    @map("membro_id") @db.Uuid
+  nomeCompleto    String    @map("nome_completo") @db.VarChar(200)
+  email           String    @db.VarChar(150)
+  celularWhatsapp String?   @map("celular_whatsapp") @db.VarChar(20)
+  dataNascimento  DateTime? @map("data_nascimento") @db.Date
+  token           String    @unique @db.VarChar(64)
+  expiraEm        DateTime  @map("expira_em")
+  usado           Boolean   @default(false)
+  criadoEm        DateTime  @default(now()) @map("criado_em")
+
+  membro Membro @relation(fields: [membroId], references: [id], onDelete: Cascade)
+
+  @@index([membroId])
+  @@map("alteracao_perfil_pendente")
 }
 
 // ─────────────────────────────── AUDIT_LOG ───────────────────────────────

@@ -3,6 +3,7 @@
 import { useRef, useState, useActionState } from "react";
 import {
   atualizarPerfil,
+  solicitarAlteracaoDados,
   atualizarFotoPerfil,
   removerFotoPerfil,
 } from "./actions";
@@ -10,22 +11,37 @@ import { FeedbackModal } from "@/components/FeedbackModal";
 import { Avatar } from "@/components/Avatar";
 import { prepararFotoInput } from "@/lib/fotoCliente";
 
+type PendenteInfo = {
+  nomeCompleto: string;
+  email: string;
+  criadoEm: string;
+  expiraEm: string;
+};
+
 type Props = {
   nome: string;
+  email: string;
   fotoUrl: string | null;
   celular: string;
   observacao: string;
   dataNascimento: string; // "YYYY-MM-DD" ou ""
+  pendente: PendenteInfo | null;
 };
 
 export function PerfilForm({
   nome,
+  email,
   fotoUrl,
   celular,
   observacao,
   dataNascimento,
+  pendente,
 }: Props) {
-  const [estado, formAction, pendente] = useActionState(atualizarPerfil, null);
+  const [estado, formAction, pendenteObs] = useActionState(atualizarPerfil, null);
+  const [estadoDados, dadosAction, pendenteDados] = useActionState(
+    solicitarAlteracaoDados,
+    null,
+  );
   const [estadoFoto, fotoAction, pendenteFoto] = useActionState(
     atualizarFotoPerfil,
     null,
@@ -122,10 +138,72 @@ export function PerfilForm({
         </div>
       </form>
 
+      {/* Nome/e-mail/celular/nascimento — não aplica na hora: pede confirmação
+          por e-mail/Telegram (link válido por 24h) antes de gravar. */}
       <form
-        action={formAction}
-        className="space-y-4 rounded-2xl border border-edge-soft vidro-leve p-5"
+        action={dadosAction}
+        className="mb-6 space-y-4 rounded-2xl border border-edge-soft vidro-leve p-5"
       >
+        <div>
+          <h3 className="text-sm font-semibold text-ink">Dados cadastrais</h3>
+          <p className="mt-0.5 text-xs text-ink-subtle">
+            Alterar qualquer um destes campos gera um link de confirmação
+            (válido por 24h) enviado ao seu e-mail/Telegram atuais — a
+            mudança só entra em vigor depois de confirmada.
+          </p>
+        </div>
+
+        {pendente && (
+          <div className="rounded-xl border border-info-edge bg-info-faint p-3 text-xs text-info-text">
+            Você tem uma alteração pendente de confirmação (nome &quot;
+            {pendente.nomeCompleto}&quot;, e-mail {pendente.email}), enviada
+            em{" "}
+            {new Date(pendente.criadoEm).toLocaleString("pt-BR", {
+              timeZone: "America/Sao_Paulo",
+            })}
+            . Vale até{" "}
+            {new Date(pendente.expiraEm).toLocaleString("pt-BR", {
+              timeZone: "America/Sao_Paulo",
+            })}
+            . Confira sua caixa de entrada/Telegram — enviar de novo abaixo
+            gera um novo link e cancela este.
+          </div>
+        )}
+
+        <div>
+          <label
+            htmlFor="nomeCompleto"
+            className="mb-1 block text-sm font-medium text-ink-soft"
+          >
+            Nome completo
+          </label>
+          <input
+            id="nomeCompleto"
+            name="nomeCompleto"
+            type="text"
+            defaultValue={nome}
+            maxLength={200}
+            className="w-full rounded-xl border border-edge px-3 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-ring"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="email"
+            className="mb-1 block text-sm font-medium text-ink-soft"
+          >
+            E-mail
+          </label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            defaultValue={email}
+            maxLength={150}
+            className="w-full rounded-xl border border-edge px-3 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand-ring"
+          />
+        </div>
+
         <div>
           <label
             htmlFor="celular"
@@ -160,6 +238,19 @@ export function PerfilForm({
           />
         </div>
 
+        <button
+          type="submit"
+          disabled={pendenteDados}
+          className="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-strong disabled:opacity-60"
+        >
+          {pendenteDados ? "Enviando…" : "Enviar link de confirmação"}
+        </button>
+      </form>
+
+      <form
+        action={formAction}
+        className="space-y-4 rounded-2xl border border-edge-soft vidro-leve p-5"
+      >
         <div>
           <label
             htmlFor="observacao"
@@ -179,14 +270,15 @@ export function PerfilForm({
 
         <button
           type="submit"
-          disabled={pendente}
+          disabled={pendenteObs}
           className="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-strong disabled:opacity-60"
         >
-          {pendente ? "Salvando…" : "Salvar alterações"}
+          {pendenteObs ? "Salvando…" : "Salvar observação"}
         </button>
       </form>
 
       <FeedbackModal estado={estado} />
+      <FeedbackModal estado={estadoDados} />
       <FeedbackModal
         estado={estadoFoto}
         onFechar={(e) => {

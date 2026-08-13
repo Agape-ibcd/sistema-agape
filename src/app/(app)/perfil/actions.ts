@@ -12,26 +12,81 @@ import { parseDataISO } from "@/lib/recorrencia";
 import { sucesso, falha, type EstadoAcao } from "@/lib/actions";
 import { obterBotUsername } from "@/lib/telegram";
 import { dispararNotificacaoPerfilEditado } from "@/lib/notificacoesEnvio";
+import { solicitarAlteracaoPerfil } from "@/lib/alteracaoPerfil";
 
-// Ações do próprio perfil. Todas exigem `editar_perfil_proprio` — o nível
-// `monitor` não tem NENHUMA permissão de escrita, nem sobre o próprio cadastro.
+// Ações do próprio perfil. Todas exigem `editar_perfil_proprio` — hoje
+// concedida a todos os níveis, inclusive monitor (ajuste de 2026-07-19).
 
 // Após trocar dados que aparecem no menu (foto), revalida o layout inteiro.
 function revalidarPerfil() {
   revalidatePath("/", "layout");
 }
 
-// Atualiza os dados editáveis do próprio perfil. Serve também como a "gravação
-// de teste" da Etapa 1: escreve no banco, registra auditoria e retorna a
-// resposta do servidor para o popup de confirmação.
+// Atualiza a observação do próprio perfil — único campo de texto livre que
+// segue com edição IMEDIATA (nome/e-mail/celular/nascimento passaram a
+// exigir confirmação por e-mail/Telegram, ver `solicitarAlteracaoDados`
+// abaixo — pedido do usuário em 2026-07-27, retomado em 2026-08-13).
 export async function atualizarPerfil(
   _prev: EstadoAcao,
   formData: FormData,
 ): Promise<EstadoAcao> {
   const usuario = await requirePermissao("editar_perfil_proprio");
 
-  const celular = String(formData.get("celular") ?? "").trim();
   const observacao = String(formData.get("observacao") ?? "").trim();
+
+  try {
+    const antes = await prisma.membro.findUnique({
+      where: { id: usuario.membroId },
+      select: { observacao: true },
+    });
+
+    const depois = await prisma.membro.update({
+      where: { id: usuario.membroId },
+      data: { observacao: observacao || null },
+      select: { observacao: true },
+    });
+
+    await writeAudit({
+      usuarioId: usuario.membroId,
+      acao: "editar",
+      tabelaAfetada: "membros",
+      registroId: usuario.membroId,
+      dadosAnteriores: antes,
+      dadosNovos: depois,
+    });
+
+    if ((antes?.observacao ?? "") !== (depois.observacao ?? "")) {
+      await dispararNotificacaoPerfilEditado({
+        membroId: usuario.membroId,
+        membroNome: usuario.nomeCompleto,
+        equipeId: usuario.equipeId,
+        detalhe: "Campos alterados: observação.",
+      });
+    }
+
+    revalidatePath("/perfil");
+    return sucesso("Observação atualizada com sucesso.");
+  } catch (erro) {
+    return falha(
+      `Erro ao salvar: ${erro instanceof Error ? erro.message : "falha desconhecida"}`,
+    );
+  }
+}
+
+// Pede a alteração de nome/e-mail/celular/nascimento — não aplica na hora:
+// gera um link de confirmação (válido por 24h) mandado ao e-mail/Telegram
+// ATUAIS do membro. `solicitarAlteracaoPerfil` (src/lib/alteracaoPerfil.ts)
+// valida, guarda o pedido e envia; a aplicação de fato acontece em
+// `confirmarAlteracaoPerfil`, disparada pela página pública do link.
+export async function solicitarAlteracaoDados(
+  _prev: EstadoAcao,
+  formData: FormData,
+): Promise<EstadoAcao> {
+  const usuario = await requirePermissao("editar_perfil_proprio");
+
+  const nome = String(formData.get("nomeCompleto") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  const celular = String(formData.get("celular") ?? "").trim();
   const nascimentoStr = String(formData.get("dataNascimento") ?? "").trim();
 
   if (celular.length > 20) {
@@ -43,70 +98,29 @@ export async function atualizarPerfil(
     if (!dataNascimento) return falha("Data de nascimento inválida.");
   }
 
-  try {
-    const antes = await prisma.membro.findUnique({
-      where: { id: usuario.membroId },
-      select: { celularWhatsapp: true, observacao: true, dataNascimento: true },
-    });
+  const resultado = await solicitarAlteracaoPerfil(usuario.membroId, {
+    nomeCompleto: nome,
+    email,
+    celularWhatsapp: celular || null,
+    dataNascimento,
+  });
 
-    const depois = await prisma.membro.update({
-      where: { id: usuario.membroId },
-      data: {
-        celularWhatsapp: celular || null,
-        observacao: observacao || null,
-        dataNascimento,
-      },
-      select: { celularWhatsapp: true, observacao: true, dataNascimento: true },
-    });
+  if (!resultado.ok) return falha(resultado.motivo);
 
-    await writeAudit({
-      usuarioId: usuario.membroId,
-      acao: "editar",
-      tabelaAfetada: "membros",
-      registroId: usuario.membroId,
-      dadosAnteriores: antes
-        ? { ...antes, dataNascimento: antes.dataNascimento?.toISOString() ?? null }
-        : undefined,
-      dadosNovos: {
-        ...depois,
-        dataNascimento: depois.dataNascimento?.toISOString() ?? null,
-      },
-    });
-
-    // Avisa os líderes da equipe + admin/super que a pessoa editou o próprio
-    // perfil (o próprio editor nunca recebe). Detalhe = campos que mudaram.
-    const mudou: string[] = [];
-    if ((antes?.celularWhatsapp ?? "") !== (depois.celularWhatsapp ?? "")) mudou.push("celular");
-    if ((antes?.observacao ?? "") !== (depois.observacao ?? "")) mudou.push("observação");
-    if (
-      (antes?.dataNascimento?.toISOString().slice(0, 10) ?? "") !==
-      (depois.dataNascimento?.toISOString().slice(0, 10) ?? "")
-    ) {
-      mudou.push("data de nascimento");
-    }
-    await dispararNotificacaoPerfilEditado({
-      membroId: usuario.membroId,
-      membroNome: usuario.nomeCompleto,
-      equipeId: usuario.equipeId,
-      detalhe: mudou.length
-        ? `Campos alterados: ${mudou.join(", ")}.`
-        : "Sem alterações de dados.",
-    });
-
-    revalidatePath("/perfil");
-    return sucesso("Perfil atualizado com sucesso.");
-  } catch (erro) {
-    return falha(
-      `Erro ao salvar: ${erro instanceof Error ? erro.message : "falha desconhecida"}`,
-    );
-  }
+  revalidatePath("/perfil");
+  const canaisTexto = resultado.canais
+    .map((c) => (c === "email" ? "e-mail" : "Telegram"))
+    .join(" e ");
+  return sucesso(
+    `Enviamos um link de confirmação por ${canaisTexto}. Ele vale por 24 horas — a alteração só entra em vigor depois que você confirmar.`,
+  );
 }
 
 // Troca a senha do próprio usuário: confirma a senha ATUAL num cliente
 // descartável (sem tocar na sessão) e grava a nova na sessão corrente.
 // Disponível a todos os níveis — credencial de acesso não é dado do sistema,
-// então o monitor também pode. A troca de e-mail fica para a Etapa 6
-// (depende do remetente de e-mail para o código de confirmação).
+// então o monitor também pode. (Troca de e-mail vai por outro fluxo — ver
+// `solicitarAlteracaoDados` abaixo, com confirmação por link.)
 export async function alterarSenha(
   _prev: EstadoAcao,
   formData: FormData,

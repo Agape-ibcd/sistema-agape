@@ -19,6 +19,7 @@ const ROTAS_PUBLICAS = [
   "/api/cron",
   "/api/telegram/webhook",
   "/confirmar-presenca",
+  "/confirmar-alteracao-perfil",
   // Manifesto PWA: lido pelo navegador ANTES de qualquer login (instalação
   // como app) — conteúdo estático sem dado sensível, mesmo bug-pattern do
   // /api/cron acima: sem isso o middleware redireciona pro /login e o

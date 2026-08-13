@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUsuario } from "@/lib/auth";
 import { can, ROTULO_NIVEL } from "@/lib/rbac";
 import { formatarDataISO } from "@/lib/recorrencia";
+import { alteracaoPendenteDoMembro } from "@/lib/alteracaoPerfil";
 import { PerfilForm } from "./PerfilForm";
 import { SenhaForm } from "./SenhaForm";
 import { TelegramVinculo } from "./TelegramVinculo";
@@ -20,8 +21,8 @@ export default async function PerfilPage() {
       telegramChatId: true,
     },
   });
-  // Monitor é só leitura em todo o sistema — inclusive no próprio perfil.
   const podeEditar = can(usuario.nivelAcesso, "editar_perfil_proprio");
+  const pendente = podeEditar ? await alteracaoPendenteDoMembro(usuario.membroId) : null;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -87,11 +88,22 @@ export default async function PerfilPage() {
         <>
           <PerfilForm
             nome={membro?.nomeCompleto ?? "?"}
+            email={membro?.email ?? ""}
             fotoUrl={membro?.fotoUrl ?? null}
             celular={membro?.celularWhatsapp ?? ""}
             observacao={membro?.observacao ?? ""}
             dataNascimento={
               membro?.dataNascimento ? formatarDataISO(membro.dataNascimento) : ""
+            }
+            pendente={
+              pendente
+                ? {
+                    nomeCompleto: pendente.nomeCompleto,
+                    email: pendente.email,
+                    criadoEm: pendente.criadoEm.toISOString(),
+                    expiraEm: pendente.expiraEm.toISOString(),
+                  }
+                : null
             }
           />
           <TelegramVinculo vinculado={!!membro?.telegramChatId} />

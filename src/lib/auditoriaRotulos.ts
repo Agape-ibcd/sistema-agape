@@ -16,6 +16,7 @@ export const ROTULO_ACAO: Record<string, string> = {
   alterar_senha: "Alterar senha",
   trocar_senha_obrigatoria: "Trocar senha (obrigatória)",
   recuperar_senha: "Recuperar senha",
+  confirmar_alteracao_perfil: "Confirmar alteração de perfil",
   enviar_credenciais: "Enviar credenciais",
   aplicar_rodizio: "Aplicar rodízio",
   gerar_eventos: "Gerar eventos",
