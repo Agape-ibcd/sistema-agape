@@ -429,10 +429,19 @@ select optgroup {
   transform-origin: center;
 }
 
-/* Item de menu com destaque ("Nosso Servir", pedido 2026-08-13): fundo em
-   gradiente preto sutil + texto dourado reluzente (gradiente animado, efeito
-   de brilho passando pela letra). Independente do tema claro/escuro — é um
-   selo visual fixo, não uma cor semântica do design system. */
+/* Item de menu com destaque ("Nosso Servir"): sem fundo próprio (só o hover
+   padrão do menu) — texto dourado reluzente (gradiente animado, efeito de
+   brilho passando pela letra). No tema CLARO, ganha um contorno em "neon
+   preto" (glow escuro) para não perder contraste sobre fundo claro; no tema
+   escuro o dourado já contrasta sozinho, então o glow preto fica desligado
+   (mesmo padrão de var() por tema de --neon-sino, acima). */
+:root {
+  --menu-destaque-neon: 0 0 4px rgb(0 0 0 / 0.7), 0 0 10px rgb(0 0 0 / 0.45), 0 0 18px rgb(0 0 0 / 0.25);
+}
+.dark {
+  --menu-destaque-neon: none;
+}
+
 @keyframes menu-destaque-brilho {
   0% {
     background-position: 0% 50%;
@@ -442,12 +451,7 @@ select optgroup {
   }
 }
 
-.menu-item-destaque {
-  background-image: linear-gradient(135deg, #0c0c0c, #1c1a12 60%, #0c0c0c);
-  border: 1px solid rgb(184 134 11 / 0.35);
-}
-
-.menu-item-destaque .menu-item-destaque-texto {
+.menu-item-destaque-texto {
   background-image: linear-gradient(
     90deg,
     #8a6608 0%,
@@ -463,10 +467,20 @@ select optgroup {
   color: transparent;
   animation: menu-destaque-brilho 4s linear infinite;
   filter: drop-shadow(0 0 3px rgb(232 199 102 / 0.35));
+  text-shadow: var(--menu-destaque-neon);
 }
 
-.menu-item-destaque:hover,
-.menu-item-destaque:focus-visible {
+/* Botão "O MINISTÉRIO ÁGAPE DA CASA DE DEUS" (página de agradecimento da
+   candidatura) — mesmo texto dourado reluzente acima, mas aqui É um botão de
+   ação, então mantém o pill de fundo preto (diferente do item de menu, que
+   perdeu o fundo a pedido do usuário). */
+.botao-nosso-servir {
+  background-image: linear-gradient(135deg, #0c0c0c, #1c1a12 60%, #0c0c0c);
+  border: 1px solid rgb(184 134 11 / 0.35);
+}
+
+.botao-nosso-servir:hover,
+.botao-nosso-servir:focus-visible {
   border-color: rgb(232 199 102 / 0.7);
 }
 

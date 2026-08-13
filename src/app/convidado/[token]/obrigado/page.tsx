@@ -32,7 +32,7 @@ export default function ObrigadoPage() {
 
           <Link
             href="/nosso-servir"
-            className="menu-item-destaque mt-4 inline-block rounded-xl px-6 py-3 text-sm font-semibold"
+            className="botao-nosso-servir mt-4 inline-block rounded-xl px-6 py-3 text-sm font-semibold"
           >
             <span className="menu-item-destaque-texto">O MINISTÉRIO ÁGAPE DA CASA DE DEUS</span>
           </Link>

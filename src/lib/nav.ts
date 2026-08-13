@@ -32,10 +32,6 @@ export const ITENS_MENU: ItemMenu[] = [
   // Primeiro item de propósito (pedido do usuário): captação de novos membros.
   // Visível a QUALQUER usuário logado — todo mundo pode convidar alguém.
   { href: "/convite", label: "Convite ao Ministério" },
-  // Página institucional (regras/orientações do Ministério) — a mesma URL
-  // pública usada no e-mail de agradecimento da candidatura, também acessível
-  // por qualquer usuário logado. Item com destaque visual (dourado).
-  { href: "/nosso-servir", label: "Nosso Servir", destaque: true },
   // Dashboard visível a qualquer usuário autenticado: a própria página resolve
   // o escopo por nível (geral/equipe/próprio). O membro cai na visão "perfil
   // próprio", conforme o plano.
@@ -52,4 +48,9 @@ export const ITENS_MENU: ItemMenu[] = [
   { href: "/configuracoes", label: "Configurações", permissao: "configuracoes_sistema" },
   { href: "/auditoria", label: "Auditoria", permissao: "configuracoes_sistema" },
   { href: "/perfil", label: "Meu Perfil" },
+  // Último item do menu (pedido do usuário): página institucional
+  // (regras/orientações do Ministério) — a mesma URL pública usada no botão
+  // do e-mail de agradecimento da candidatura, também acessível por qualquer
+  // usuário logado. Item com destaque visual (dourado).
+  { href: "/nosso-servir", label: "Nosso Servir", destaque: true },
 ];

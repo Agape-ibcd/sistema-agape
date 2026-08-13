@@ -63,7 +63,7 @@ export function AppShell({ itens, usuario, children }: Props) {
             key={item.href}
             href={item.href}
             onClick={() => setMenuAberto(false)}
-            className="menu-item-destaque block rounded-xl px-4 py-2.5 text-sm font-semibold transition"
+            className="menu-item-destaque block rounded-xl px-4 py-2.5 text-sm font-semibold transition hover:bg-surface-3"
           >
             <span className="menu-item-destaque-texto">{item.label}</span>
           </Link>
