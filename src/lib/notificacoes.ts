@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { hojeSaoPaulo, aniversariantesDoMes } from "@/lib/aniversariantes";
+import type { NivelAcesso } from "@prisma/client";
 
 // Notificações do sino no cabeçalho: aniversariantes do dia + lembrete de
 // escala (próximos eventos com equipe escalada). Escala é por equipe (não
@@ -21,10 +22,12 @@ export type LembreteEscala = {
 export type Notificacoes = {
   aniversariantesHoje: { id: string; nome: string }[];
   escalas: LembreteEscala[];
+  candidaturasPendentes: { id: string; nome: string }[];
 };
 
 export async function carregarNotificacoes(usuario: {
   equipeId: string | null;
+  nivelAcesso?: NivelAcesso;
 }): Promise<Notificacoes> {
   const hoje = hojeSaoPaulo();
 
@@ -80,5 +83,20 @@ export async function carregarNotificacoes(usuario: {
     };
   });
 
-  return { aniversariantesHoje, escalas: lembretes };
+  // Candidaturas pendentes (Convite ao Ministério): só quem pode aprovar
+  // (admin/super_admin) vê essa contagem no sino.
+  const candidaturasPendentes =
+    usuario.nivelAcesso === "admin" || usuario.nivelAcesso === "super_admin"
+      ? await prisma.candidaturaMembro.findMany({
+          where: { status: "pendente" },
+          select: { id: true, nomeCompleto: true },
+          orderBy: { criadoEm: "asc" },
+        })
+      : [];
+
+  return {
+    aniversariantesHoje,
+    escalas: lembretes,
+    candidaturasPendentes: candidaturasPendentes.map((c) => ({ id: c.id, nome: c.nomeCompleto })),
+  };
 }

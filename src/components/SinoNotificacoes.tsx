@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Notificacoes } from "@/lib/notificacoes";
 
-const SEM_NOTIFICACOES: Notificacoes = { aniversariantesHoje: [], escalas: [] };
+const SEM_NOTIFICACOES: Notificacoes = { aniversariantesHoje: [], escalas: [], candidaturasPendentes: [] };
 const INTERVALO_ATUALIZACAO_MS = 5 * 60 * 1000;
 
 // Sino de notificações do cabeçalho: aniversariantes do dia + lembrete de
@@ -63,7 +63,10 @@ export function SinoNotificacoes({
   const escalasPendentes = dados.escalas.filter(
     (e) => !lidos.has(`escala-${e.eventoId}-${e.equipeNome}`),
   );
-  const total = aniversariantesPendentes.length + escalasPendentes.length;
+  const candidaturasPendentes = dados.candidaturasPendentes.filter(
+    (c) => !lidos.has(`candidatura-${c.id}`),
+  );
+  const total = aniversariantesPendentes.length + escalasPendentes.length + candidaturasPendentes.length;
   const temAlerta = total > 0;
 
   useEffect(() => {
@@ -208,6 +211,23 @@ export function SinoNotificacoes({
                             ? "amanhã"
                             : `em ${e.diasAte} dias`}{" "}
                         ({e.dataBR})
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+              {candidaturasPendentes.map((c) => (
+                <li key={`candidatura-${c.id}`}>
+                  <Link
+                    href="/solicitacoes"
+                    onClick={() => marcarComoLido(`candidatura-${c.id}`)}
+                    className="flex items-start gap-2 rounded-xl p-2 text-sm hover:bg-surface-3"
+                  >
+                    <span aria-hidden>🙋</span>
+                    <span>
+                      <span className="font-medium text-ink">{c.nome}</span>{" "}
+                      <span className="text-ink-subtle">
+                        solicitou participação no Ministério
                       </span>
                     </span>
                   </Link>

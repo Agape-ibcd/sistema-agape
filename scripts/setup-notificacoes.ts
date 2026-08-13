@@ -113,6 +113,18 @@ const REGRAS_PADRAO = [
       "Olá, {{nome}}!\n\nAniversariantes de {{mes}}:\n{{lista}}\n\nMinistério Ágape",
     horarioEnvio: "07:00",
   },
+  {
+    // Avisa admin/super quando uma candidatura de novo membro é recebida
+    // (Convite ao Ministério). Disparo imediato, não pelo motor diário.
+    gatilho: "nova_candidatura" as const,
+    ativo: true,
+    niveisAlvo: [],
+    canais: ["email"] as const,
+    assunto: "Nova solicitação de participação no Ministério — {{candidato}}",
+    mensagem:
+      "Olá, {{nome}}!\n\n{{candidato}} solicitou participação no Ministério Ágape, a convite de {{convidadoPor}}.\n\nAcesse Solicitações no sistema para aprovar ou reprovar.\n\nMinistério Ágape",
+    horarioEnvio: null,
+  },
 ];
 
 async function main() {

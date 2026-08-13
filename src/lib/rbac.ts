@@ -25,7 +25,8 @@ export type Permissao =
   | "ver_perfil_proprio"
   | "editar_perfil_proprio" // alterar os próprios dados (celular, observação, foto)
   | "painel_aniversariantes"
-  | "configuracoes_sistema";
+  | "configuracoes_sistema"
+  | "aprovar_candidaturas"; // ver/decidir solicitações de novo membro (Convite ao Ministério)
 
 // Matriz nível → permissões concedidas.
 const MATRIZ: Record<NivelAcesso, Permissao[]> = {
@@ -45,6 +46,7 @@ const MATRIZ: Record<NivelAcesso, Permissao[]> = {
     "editar_perfil_proprio",
     "painel_aniversariantes",
     "configuracoes_sistema",
+    "aprovar_candidaturas",
   ],
   admin: [
     "gerenciar_tipos_evento",
@@ -60,6 +62,7 @@ const MATRIZ: Record<NivelAcesso, Permissao[]> = {
     "ver_perfil_proprio",
     "editar_perfil_proprio",
     "painel_aniversariantes",
+    "aprovar_candidaturas",
   ],
   // Monitor: acompanha os INDICADORES (dashboard geral) em modo LEITURA.
   // Não vê eventos/escalas nem gerencia nada, e não pertence a nenhuma equipe

@@ -57,16 +57,27 @@ export function AppShell({ itens, usuario, children }: Props) {
 
   const listaLinks = (
     <nav className="flex flex-col gap-1">
-      {itens.map((item) => (
-        <Link
-          key={item.href}
-          href={item.href}
-          onClick={() => setMenuAberto(false)}
-          className={linkClasses(item.href)}
-        >
-          {item.label}
-        </Link>
-      ))}
+      {itens.map((item) =>
+        item.destaque ? (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={() => setMenuAberto(false)}
+            className="menu-item-destaque block rounded-xl px-4 py-2.5 text-sm font-semibold transition"
+          >
+            <span className="menu-item-destaque-texto">{item.label}</span>
+          </Link>
+        ) : (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={() => setMenuAberto(false)}
+            className={linkClasses(item.href)}
+          >
+            {item.label}
+          </Link>
+        ),
+      )}
     </nav>
   );
 

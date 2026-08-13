@@ -171,6 +171,11 @@ const TEMPLATE_PADRAO: Record<
     assunto: "Ministério Ágape: Aniversariantes do Mês de {{mes}} de {{ano}}.",
     mensagem: "Olá, {{nome}}!\n\nAniversariantes de {{mes}}:\n{{lista}}",
   },
+  nova_candidatura: {
+    assunto: "Nova solicitação de participação no Ministério — {{candidato}}",
+    mensagem:
+      "Olá, {{nome}}!\n\n{{candidato}} solicitou participação no Ministério Ágape, a convite de {{convidadoPor}}.\n\nAcesse Solicitações no sistema para aprovar ou reprovar.",
+  },
 };
 
 // Envia (e loga) os e-mails/Telegram de aniversário de quem faz aniversário
@@ -482,6 +487,51 @@ export async function dispararNotificacaoPerfilEditado(params: {
     });
   } catch (erro) {
     console.error("[notificacoes] falha ao disparar perfil_editado:", erro);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Nova candidatura (Convite ao Ministério): candidato enviou o formulário
+// público → avisa admin/super_admin. Disparo imediato (na própria action de
+// criarCandidatura em src/lib/candidatura.ts), não pelo motor diário.
+// ─────────────────────────────────────────────────────────────────────────
+
+export async function dispararNotificacaoNovaCandidatura(params: {
+  candidatoNome: string;
+  convidadoPorNome: string;
+  candidaturaId: string;
+}): Promise<void> {
+  try {
+    const config = await prisma.configNotificacao.findUnique({ where: { gatilho: "nova_candidatura" } });
+    if (!config || !config.ativo || config.canais.length === 0) return;
+
+    const destinatarios = await prisma.membro.findMany({
+      where: { status: "ativo", nivelAcesso: { in: ["admin", "super_admin"] } },
+      select: SELECT_MEMBRO_DESTINO,
+    });
+    if (destinatarios.length === 0) return;
+
+    const tpl = TEMPLATE_PADRAO.nova_candidatura;
+    const assuntoBase = config.assunto || tpl.assunto;
+    const mensagemBase = config.mensagem || tpl.mensagem;
+
+    for (const membro of destinatarios) {
+      const dados = {
+        nome: membro.nomeCompleto.split(" ")[0],
+        candidato: params.candidatoNome,
+        convidadoPor: params.convidadoPorNome,
+      };
+      await enviarParaMembro({
+        gatilho: "nova_candidatura",
+        membro,
+        canaisRegra: config.canais,
+        assunto: preencherTemplate(assuntoBase, dados),
+        mensagem: preencherTemplate(mensagemBase, dados),
+        referenciaId: params.candidaturaId,
+      });
+    }
+  } catch (erro) {
+    console.error("[notificacoes] falha ao disparar nova_candidatura:", erro);
   }
 }
 

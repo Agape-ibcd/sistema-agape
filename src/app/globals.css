@@ -429,6 +429,47 @@ select optgroup {
   transform-origin: center;
 }
 
+/* Item de menu com destaque ("Nosso Servir", pedido 2026-08-13): fundo em
+   gradiente preto sutil + texto dourado reluzente (gradiente animado, efeito
+   de brilho passando pela letra). Independente do tema claro/escuro — é um
+   selo visual fixo, não uma cor semântica do design system. */
+@keyframes menu-destaque-brilho {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+.menu-item-destaque {
+  background-image: linear-gradient(135deg, #0c0c0c, #1c1a12 60%, #0c0c0c);
+  border: 1px solid rgb(184 134 11 / 0.35);
+}
+
+.menu-item-destaque .menu-item-destaque-texto {
+  background-image: linear-gradient(
+    90deg,
+    #8a6608 0%,
+    #e8c766 20%,
+    #fff6da 40%,
+    #e8c766 60%,
+    #8a6608 80%,
+    #e8c766 100%
+  );
+  background-size: 220% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: menu-destaque-brilho 4s linear infinite;
+  filter: drop-shadow(0 0 3px rgb(232 199 102 / 0.35));
+}
+
+.menu-item-destaque:hover,
+.menu-item-destaque:focus-visible {
+  border-color: rgb(232 199 102 / 0.7);
+}
+
 /* Motivo "dot-grid": cluster de pontos da marca, usado em fundos (login,
    estados vazios). Aplique via a classe utilitária .agape-dots. */
 .agape-dots {

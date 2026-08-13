@@ -109,6 +109,7 @@ enum GatilhoNotificacao {
   presenca_pendente // 3h+ após o início do evento sem presença completa → avisa o(s) líder(es) da equipe
   aniversario_lideres_dia // aniversariante(s) do dia → avisa líder(es) da equipe + admin/super, com cartão
   aniversariantes_mes // último dia do mês → lista dos aniversariantes do mês seguinte p/ todos os líderes + admin/super
+  nova_candidatura // candidatura de novo membro recebida (link/e-mail de convite) → avisa admin/super_admin
 }
 
 enum CanalNotificacao {
@@ -131,6 +132,22 @@ enum StatusConfirmacaoEscala {
   pendente
   confirmado
   recusado
+}
+
+// Convite ao Ministério (captação de novos membros). Um convite por (quem
+// convidou × canal): o link é reutilizável até expirar, e serve tanto para
+// "compartilhar link" quanto para o link enviado por e-mail — a diferença é
+// só `origem` e `emailConvidado` preenchido. Pedido do usuário: a solicitação
+// sempre mostra quem convidou (não existe convite "anônimo").
+enum OrigemConvite {
+  link
+  email
+}
+
+enum StatusCandidatura {
+  pendente
+  aprovado
+  reprovado
 }
 
 // ─────────────────────────────── MEMBROS ───────────────────────────────
@@ -174,6 +191,7 @@ model Membro {
   recuperacoes  RecuperacaoSenha[]
   escalasMembro EscalaMembro[]
   alteracoesPerfilPendentes AlteracaoPerfilPendente[]
+  convitesMinisterio ConviteMinisterio[]
 
   @@index([equipeId])
   @@index([status])
@@ -490,6 +508,68 @@ model AlteracaoPerfilPendente {
 
   @@index([membroId])
   @@map("alteracao_perfil_pendente")
+}
+
+// ───────────────────────── CONVITE_MINISTERIO ─────────────────────────────
+// "Convite ao Ministério": qualquer membro logado gera um convite (link
+// compartilhável ou envio por e-mail) para captar um novo membro. O link é
+// reutilizável até `expiraEm` (90 dias) — não é de uso único, porque pode ser
+// compartilhado com mais de uma pessoa. `criadoPorId` é quem gerou, exibido
+// no painel de Solicitações para o admin acompanhar quantos convites cada
+// pessoa gerou e quanto falta para expirar.
+model ConviteMinisterio {
+  id             String        @id @default(uuid()) @db.Uuid
+  token          String        @unique @db.VarChar(64)
+  criadoPorId    String        @map("criado_por_id") @db.Uuid
+  origem         OrigemConvite
+  emailConvidado String?       @map("email_convidado") @db.VarChar(150)
+  expiraEm       DateTime      @map("expira_em")
+  criadoEm       DateTime      @default(now()) @map("criado_em")
+
+  criadoPor    Membro              @relation(fields: [criadoPorId], references: [id], onDelete: Cascade)
+  candidaturas CandidaturaMembro[]
+
+  @@index([criadoPorId])
+  @@map("convite_ministerio")
+}
+
+// ───────────────────────── CANDIDATURA_MEMBRO ─────────────────────────────
+// Formulário de candidatura preenchido pela pessoa convidada (página pública
+// /convite/[token]/participar). Guarda o estado PROPOSTO completo (mesmo
+// espírito de AlteracaoPerfilPendente) — só vira um Membro de verdade quando
+// Super Admin/Admin aprova em /solicitacoes, definindo nível de acesso e
+// equipe. `membroDesde`/`mnvConclusao` guardam só mês/ano (dia sempre 1).
+model CandidaturaMembro {
+  id              String   @id @default(uuid()) @db.Uuid
+  conviteId       String   @map("convite_id") @db.Uuid
+  nomeCompleto    String   @map("nome_completo") @db.VarChar(200)
+  email           String   @db.VarChar(150)
+  celularWhatsapp String   @map("celular_whatsapp") @db.VarChar(20)
+  dataNascimento  DateTime @map("data_nascimento") @db.Date
+  fotoUrl         String   @map("foto_url") @db.VarChar(500)
+
+  membroDesde              DateTime  @map("membro_desde") @db.Date
+  fezCursoMnv              Boolean   @map("fez_curso_mnv")
+  mnvConclusao             DateTime? @map("mnv_conclusao") @db.Date
+  alunoEscolaBiblica       Boolean   @map("aluno_escola_biblica")
+  participaOutroMinisterio Boolean   @map("participa_outro_ministerio")
+  quaisMinisterios         String?   @map("quais_ministerios") @db.VarChar(300)
+
+  status              StatusCandidatura @default(pendente)
+  decididoPorId       String?           @map("decidido_por_id") @db.Uuid
+  decididoEm          DateTime?         @map("decidido_em")
+  motivoReprovacao    String?           @map("motivo_reprovacao") @db.Text
+  equipeIdDefinida    String?           @map("equipe_id_definida") @db.Uuid
+  nivelAcessoDefinido NivelAcesso?      @map("nivel_acesso_definido")
+  membroCriadoId      String?           @unique @map("membro_criado_id") @db.Uuid
+
+  criadoEm DateTime @default(now()) @map("criado_em")
+
+  convite ConviteMinisterio @relation(fields: [conviteId], references: [id], onDelete: Cascade)
+
+  @@index([conviteId])
+  @@index([status])
+  @@map("candidatura_membro")
 }
 
 // ─────────────────────────────── AUDIT_LOG ───────────────────────────────

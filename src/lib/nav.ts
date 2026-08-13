@@ -11,6 +11,9 @@ export type ItemMenu = {
   permissao?: Permissao;
   permissoesAny?: Permissao[];
   etapa?: number; // etapa do plano em que a tela é construída (rótulo "em breve")
+  // Destaque visual (dourado com fundo gradiente escuro) — reservado para o
+  // item "Nosso Servir" (pedido do usuário em 2026-08-13).
+  destaque?: boolean;
 };
 
 // Decide se um item deve aparecer para um nível, dada a checagem `can`.
@@ -26,6 +29,13 @@ export function itemVisivel(
 }
 
 export const ITENS_MENU: ItemMenu[] = [
+  // Primeiro item de propósito (pedido do usuário): captação de novos membros.
+  // Visível a QUALQUER usuário logado — todo mundo pode convidar alguém.
+  { href: "/convite", label: "Convite ao Ministério" },
+  // Página institucional (regras/orientações do Ministério) — a mesma URL
+  // pública usada no e-mail de agradecimento da candidatura, também acessível
+  // por qualquer usuário logado. Item com destaque visual (dourado).
+  { href: "/nosso-servir", label: "Nosso Servir", destaque: true },
   // Dashboard visível a qualquer usuário autenticado: a própria página resolve
   // o escopo por nível (geral/equipe/próprio). O membro cai na visão "perfil
   // próprio", conforme o plano.
@@ -37,6 +47,7 @@ export const ITENS_MENU: ItemMenu[] = [
   { href: "/membros", label: "Membros", permissoesAny: ["gerenciar_membros", "ver_membros_equipe"], etapa: 3 },
   { href: "/equipes", label: "Equipes", permissao: "gerenciar_membros", etapa: 3 },
   { href: "/aniversariantes", label: "Aniversariantes", permissao: "painel_aniversariantes" },
+  { href: "/solicitacoes", label: "Solicitações", permissao: "aprovar_candidaturas" },
   { href: "/usuarios", label: "Usuários e Acessos", permissao: "gerenciar_usuarios", etapa: 3 },
   { href: "/configuracoes", label: "Configurações", permissao: "configuracoes_sistema" },
   { href: "/auditoria", label: "Auditoria", permissao: "configuracoes_sistema" },

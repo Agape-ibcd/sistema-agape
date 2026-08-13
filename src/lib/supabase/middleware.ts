@@ -20,6 +20,17 @@ const ROTAS_PUBLICAS = [
   "/api/telegram/webhook",
   "/confirmar-presenca",
   "/confirmar-alteracao-perfil",
+  // Convite ao Ministério: link público (compartilhado ou por e-mail) para
+  // captação de novo membro — sem login, segurança é o token opaco da página
+  // (ver src/lib/candidatura.ts). Nome ("convidado") deliberadamente distinto
+  // de /convite (página autenticada que GERA o convite) para não colidir com
+  // o casamento exato/prefixo usado abaixo — evita expor /convite ao público.
+  "/convidado",
+  // "Nosso Servir": página institucional (regras/orientações do Ministério).
+  // Pública porque é o destino do botão no e-mail de agradecimento da
+  // candidatura (destinatário ainda não tem conta) — também vive no menu do
+  // app para quem já é membro (mesma URL, item com destaque em nav.ts).
+  "/nosso-servir",
   // Manifesto PWA: lido pelo navegador ANTES de qualquer login (instalação
   // como app) — conteúdo estático sem dado sensível, mesmo bug-pattern do
   // /api/cron acima: sem isso o middleware redireciona pro /login e o

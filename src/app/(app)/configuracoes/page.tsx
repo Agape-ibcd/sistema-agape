@@ -13,6 +13,7 @@ const ORDEM: GatilhoNotificacao[] = [
   "presenca_pendente",
   "aniversario_lideres_dia",
   "aniversariantes_mes",
+  "nova_candidatura",
 ];
 
 const META: Record<
@@ -120,6 +121,15 @@ const META: Record<
       "Enviado automaticamente a todos os Líderes + Administradores e Super Administradores.",
     confirmacaoEnvioManual:
       "Enviar agora, de verdade, a lista de aniversariantes do PRÓXIMO mês para todos os Líderes + Administradores e Super Administradores? Isso força o envio mesmo fora do último dia do mês (quando ele dispara sozinho).",
+  },
+  nova_candidatura: {
+    titulo: "Nova candidatura — Convite ao Ministério",
+    descricao:
+      "Avisa os administradores quando alguém envia o formulário de candidatura pelo Convite ao Ministério. Placeholders: {{candidato}}, {{convidadoPor}}.",
+    implementado: true,
+    usaHorario: false,
+    usaNiveisAlvo: false,
+    avisoDestinatarios: "Enviado automaticamente a todos os Administradores e Super Administradores.",
   },
 };
 
