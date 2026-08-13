@@ -593,7 +593,11 @@ export async function verificarPresencasPendentes(
       equipe: {
         select: {
           nome: true,
-          membros: { where: { status: "ativo" }, select: { id: true, nomeCompleto: true } },
+          // dataCadastro entra aqui só para o filtro logo abaixo (membro
+          // recém-aprovado não pode ficar "pendente" em escalas anteriores à
+          // própria entrada — bug reportado em 2026-08-13: Adair apareceu
+          // pendente em escalas passadas do Clayton no dia seguinte à aprovação).
+          membros: { where: { status: "ativo" }, select: { id: true, nomeCompleto: true, dataCadastro: true } },
           lideres: {
             where: { dataFim: null },
             select: { membro: { select: SELECT_MEMBRO_DESTINO } },
@@ -625,7 +629,12 @@ export async function verificarPresencasPendentes(
     const proximoAviso = new Date(marco1.getTime() + escala.avisosPresencaPendente * HORAS_ENTRE_AVISOS * 60 * 60 * 1000);
     if (agora < proximoAviso) continue;
 
-    const convocados = membrosConvocados(escala.equipe.membros, escala.membrosEscalados);
+    // Só quem já estava cadastrado ANTES do evento pode ser cobrado por
+    // presença — um membro aprovado depois não "faltou" a uma escala que
+    // aconteceu antes dele existir no sistema.
+    const convocados = membrosConvocados(escala.equipe.membros, escala.membrosEscalados).filter(
+      (m) => m.dataCadastro <= inicio,
+    );
     if (convocados.length === 0) continue;
 
     const presencasAtivas = await prisma.presenca.findMany({
