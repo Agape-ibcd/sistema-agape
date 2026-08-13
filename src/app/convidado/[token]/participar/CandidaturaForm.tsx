@@ -83,6 +83,48 @@ export function CandidaturaForm({ token }: { token: string }) {
       </div>
 
       <div className="space-y-3 rounded-xl border border-edge-soft bg-surface-2 p-4">
+        <div>
+          <p className="mb-2 text-sm font-medium text-ink">Você pode servir em qual culto? *</p>
+          <div className="flex flex-wrap gap-4">
+            <label className={checkboxRowCls}>
+              <input type="checkbox" name="cultoDomingoManha" className="h-4 w-4 rounded border-edge" />
+              Domingo de manhã
+            </label>
+            <label className={checkboxRowCls}>
+              <input type="checkbox" name="cultoDomingoNoite" className="h-4 w-4 rounded border-edge" />
+              Domingo à noite
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <p className="mb-2 text-sm font-medium text-ink">
+            Você pode servir durante cultos e eventos da semana? *
+          </p>
+          <div className="flex flex-wrap gap-4">
+            <label className={checkboxRowCls}>
+              <input
+                type="radio"
+                name="disponibilidadeSemana"
+                value="regular"
+                required
+                className="h-4 w-4 border-edge"
+              />
+              Servir regularmente
+            </label>
+            <label className={checkboxRowCls}>
+              <input
+                type="radio"
+                name="disponibilidadeSemana"
+                value="ocasional"
+                required
+                className="h-4 w-4 border-edge"
+              />
+              Servir ocasionalmente
+            </label>
+          </div>
+        </div>
+
         <label className={checkboxRowCls}>
           <input
             type="checkbox"

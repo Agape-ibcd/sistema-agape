@@ -6,7 +6,7 @@ import { enviarEmail, ehEmailSintetico } from "@/lib/email";
 import { uploadFotoCandidatura, moverFotoCandidaturaParaMembro } from "@/lib/storage";
 import { writeAudit } from "@/lib/audit";
 import { dispararNotificacaoNovaCandidatura } from "@/lib/notificacoesEnvio";
-import type { NivelAcesso, OrigemConvite } from "@prisma/client";
+import type { NivelAcesso, OrigemConvite, DisponibilidadeSemana } from "@prisma/client";
 
 // ─────────────────────────────────────────────────────────────────────────
 // "Convite ao Ministério" — captação de novos membros. Mesmo padrão de
@@ -79,6 +79,11 @@ function botaoNossoServir(): string {
   return `<p><a href="${url}" style="display:inline-block;background:#0c0c0c;color:#e8c766;padding:14px 24px;border-radius:10px;text-decoration:none;font-weight:700;letter-spacing:0.02em;border:1px solid #b8860b;">O MINISTÉRIO ÁGAPE DA CASA DE DEUS</a></p>`;
 }
 
+function formatarCultosDisponiveis(manha: boolean, noite: boolean): string {
+  const cultos = [manha && "domingo de manhã", noite && "domingo à noite"].filter(Boolean);
+  return cultos.length > 0 ? cultos.join(" e ") : "—";
+}
+
 // ─────────────────────────────── Convite ───────────────────────────────
 
 export type ResultadoConvite =
@@ -128,7 +133,6 @@ export async function gerarConvite(
         `<p>Gostaríamos muito de ter você servindo ao Senhor conosco.</p>`,
         `<p>Para conhecer como funcionamos e preencher os seus dados, clique no link abaixo:</p>`,
         `<p><a href="${url}" style="display:inline-block;background:#059669;color:#ffffff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:600;">Quero conhecer o Ministério Ágape</a></p>`,
-        `<p><a href="${url}">${url}</a></p>`,
         assinatura(criador.nomeCompleto),
       ].join(""),
     });
@@ -165,6 +169,9 @@ export type DadosCandidatura = {
   alunoEscolaBiblica: boolean;
   participaOutroMinisterio: boolean;
   quaisMinisterios: string | null;
+  cultoDomingoManha: boolean;
+  cultoDomingoNoite: boolean;
+  disponibilidadeSemana: DisponibilidadeSemana;
 };
 
 export type ResultadoCandidatura =
@@ -181,6 +188,9 @@ export async function criarCandidatura(
   if (nome.length < 3) return { ok: false, motivo: "Informe o nome completo." };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, motivo: "E-mail inválido." };
   if (!dados.celularWhatsapp.trim()) return { ok: false, motivo: "Informe o celular/WhatsApp." };
+  if (!dados.cultoDomingoManha && !dados.cultoDomingoNoite) {
+    return { ok: false, motivo: "Selecione em qual culto de domingo você pode servir." };
+  }
   if (foto.size === 0) return { ok: false, motivo: "A foto é obrigatória." };
 
   const emailEmUso = await prisma.membro.findUnique({ where: { email } });
@@ -210,6 +220,9 @@ export async function criarCandidatura(
         alunoEscolaBiblica: dados.alunoEscolaBiblica,
         participaOutroMinisterio: dados.participaOutroMinisterio,
         quaisMinisterios: dados.participaOutroMinisterio ? dados.quaisMinisterios?.trim() || null : null,
+        cultoDomingoManha: dados.cultoDomingoManha,
+        cultoDomingoNoite: dados.cultoDomingoNoite,
+        disponibilidadeSemana: dados.disponibilidadeSemana,
       },
     });
 
@@ -295,6 +308,7 @@ export async function aprovarCandidatura(
           candidatura.participaOutroMinisterio
             ? `Participa de outro(s) ministério(s): ${candidatura.quaisMinisterios ?? "—"}.`
             : "Não participa de outro ministério.",
+          `Disponibilidade: ${formatarCultosDisponiveis(candidatura.cultoDomingoManha, candidatura.cultoDomingoNoite)}; ${candidatura.disponibilidadeSemana === "regular" ? "servir regularmente" : "servir ocasionalmente"} durante a semana.`,
         ].join(" "),
       },
     });

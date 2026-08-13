@@ -150,6 +150,13 @@ enum StatusCandidatura {
   reprovado
 }
 
+// Disponibilidade para servir durante a semana (cultos/eventos fora do
+// domingo) — pergunta do formulário de candidatura.
+enum DisponibilidadeSemana {
+  regular
+  ocasional
+}
+
 // ─────────────────────────────── MEMBROS ───────────────────────────────
 
 model Membro {
@@ -554,6 +561,12 @@ model CandidaturaMembro {
   alunoEscolaBiblica       Boolean   @map("aluno_escola_biblica")
   participaOutroMinisterio Boolean   @map("participa_outro_ministerio")
   quaisMinisterios         String?   @map("quais_ministerios") @db.VarChar(300)
+
+  // Disponibilidade (pedido do usuário em 2026-08-13): pelo menos um dos
+  // cultos de domingo, e a frequência com que pode servir durante a semana.
+  cultoDomingoManha     Boolean               @map("culto_domingo_manha")
+  cultoDomingoNoite     Boolean               @map("culto_domingo_noite")
+  disponibilidadeSemana DisponibilidadeSemana @map("disponibilidade_semana")
 
   status              StatusCandidatura @default(pendente)
   decididoPorId       String?           @map("decidido_por_id") @db.Uuid

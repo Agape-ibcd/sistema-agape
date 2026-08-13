@@ -20,6 +20,9 @@ export type CandidaturaDados = {
   alunoEscolaBiblica: boolean;
   participaOutroMinisterio: boolean;
   quaisMinisterios: string | null;
+  cultoDomingoManha: boolean;
+  cultoDomingoNoite: boolean;
+  disponibilidadeSemana: "regular" | "ocasional";
   status: "pendente" | "aprovado" | "reprovado";
   motivoReprovacao: string | null;
   convidadoPorNome: string;
@@ -89,6 +92,18 @@ export function CandidaturaCard({
           <dt className="text-ink-subtle">Outro(s) ministério(s)</dt>
           <dd className="text-right font-medium text-ink">
             {c.participaOutroMinisterio ? c.quaisMinisterios || "Sim" : "Não"}
+          </dd>
+        </div>
+        <div className="flex justify-between gap-2">
+          <dt className="text-ink-subtle">Culto disponível</dt>
+          <dd className="text-right font-medium text-ink">
+            {[c.cultoDomingoManha && "Manhã", c.cultoDomingoNoite && "Noite"].filter(Boolean).join(" e ") || "—"}
+          </dd>
+        </div>
+        <div className="flex justify-between gap-2">
+          <dt className="text-ink-subtle">Disponibilidade na semana</dt>
+          <dd className="text-right font-medium text-ink">
+            {c.disponibilidadeSemana === "regular" ? "Regular" : "Ocasional"}
           </dd>
         </div>
       </dl>

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { buscarConvitePorToken, criarCandidatura } from "@/lib/candidatura";
 import { parseDataISO } from "@/lib/recorrencia";
 import { falha, type EstadoAcao } from "@/lib/actions";
+import type { DisponibilidadeSemana } from "@prisma/client";
 
 // "YYYY-MM" (input type=month) → primeiro dia do mês, em UTC.
 function parseMesAno(valor: string): Date | null {
@@ -48,6 +49,17 @@ export async function enviarCandidatura(
     return falha("Informe quais outros ministérios você participa.");
   }
 
+  const cultoDomingoManha = formData.get("cultoDomingoManha") === "on";
+  const cultoDomingoNoite = formData.get("cultoDomingoNoite") === "on";
+  if (!cultoDomingoManha && !cultoDomingoNoite) {
+    return falha("Selecione em qual culto de domingo você pode servir.");
+  }
+
+  const disponibilidadeSemana = String(formData.get("disponibilidadeSemana") ?? "") as DisponibilidadeSemana;
+  if (!["regular", "ocasional"].includes(disponibilidadeSemana)) {
+    return falha("Informe sua disponibilidade para servir durante a semana.");
+  }
+
   const foto = formData.get("foto");
   if (!(foto instanceof File) || foto.size === 0) {
     return falha("A foto é obrigatória.");
@@ -66,6 +78,9 @@ export async function enviarCandidatura(
       alunoEscolaBiblica,
       participaOutroMinisterio,
       quaisMinisterios,
+      cultoDomingoManha,
+      cultoDomingoNoite,
+      disponibilidadeSemana,
     },
     foto,
   );
