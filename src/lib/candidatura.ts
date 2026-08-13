@@ -42,8 +42,13 @@ function gerarSenhaProvisoria(): string {
   return `Agape-${s}`;
 }
 
+// Fallback fixo: sem isso, um APP_URL ausente/vazio em produção gera links
+// RELATIVOS ("/convidado/token") nos e-mails — sem domínio, a maioria dos
+// clientes de e-mail (Outlook, WhatsApp) não consegue resolver e mostra o
+// link quebrado/entre colchetes. Incidente reportado pelo usuário em
+// 2026-08-13: o link do convite (gerarConvite) não tinha esse fallback.
 function appUrl(): string {
-  return (process.env.APP_URL ?? "").replace(/\/$/, "");
+  return (process.env.APP_URL || "https://agape.lebrai.com.br").replace(/\/$/, "");
 }
 
 // Os nomes/textos inseridos nos e-mails vêm de dados reais (nome de quem
@@ -70,7 +75,7 @@ function assinatura(nome: string): string {
 // orientações do Ministério) — usado no e-mail de agradecimento da
 // candidatura no lugar do antigo PDF anexo.
 function botaoNossoServir(): string {
-  const url = `${appUrl() || "https://agape.lebrai.com.br"}/nosso-servir`;
+  const url = `${appUrl()}/nosso-servir`;
   return `<p><a href="${url}" style="display:inline-block;background:#0c0c0c;color:#e8c766;padding:14px 24px;border-radius:10px;text-decoration:none;font-weight:700;letter-spacing:0.02em;border:1px solid #b8860b;">O MINISTÉRIO ÁGAPE DA CASA DE DEUS</a></p>`;
 }
 
@@ -413,7 +418,7 @@ async function enviarEmailBoasVindas(params: {
   decididoPorNome: string;
 }): Promise<void> {
   const primeiroNome = escapeHtml(params.nome.split(" ")[0]);
-  const url = appUrl() || "https://agape.lebrai.com.br";
+  const url = appUrl();
 
   const blocos = [
     `<p>Olá, ${primeiroNome}!</p>`,

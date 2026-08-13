@@ -65,10 +65,7 @@ export function ConviteForm() {
       {/* Compartilhar link */}
       <div className="rounded-2xl border border-edge-soft vidro-leve p-5">
         <h2 className="text-base font-semibold text-ink">Compartilhar link</h2>
-        <p className="mt-1 text-sm text-ink-soft">
-          Gere um link e envie por WhatsApp, redes sociais ou onde preferir. O
-          link vale por 90 dias e pode ser usado por mais de uma pessoa.
-        </p>
+        <p className="mt-1 text-sm text-ink-soft">Gere um link de convite e envie por WhatsApp.</p>
 
         <button
           type="button"

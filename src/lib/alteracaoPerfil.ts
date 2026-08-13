@@ -97,7 +97,9 @@ export async function solicitarAlteracaoPerfil(
     },
   });
 
-  const appUrl = (process.env.APP_URL ?? "").replace(/\/$/, "");
+  // Fallback fixo: sem isso, APP_URL vazio em produção gera link RELATIVO no
+  // e-mail/Telegram (mesmo bug de src/lib/candidatura.ts, achado em 2026-08-13).
+  const appUrl = (process.env.APP_URL || "https://agape.lebrai.com.br").replace(/\/$/, "");
   const link = `${appUrl}/confirmar-alteracao-perfil/${token}`;
   const primeiroNome = atual.nomeCompleto.split(" ")[0];
   const canais: ("email" | "telegram")[] = [];

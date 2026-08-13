@@ -279,7 +279,10 @@ export async function dispararNotificacaoNovaEscala(
     const dataBR = escala.evento.dataEvento.toLocaleDateString("pt-BR", { timeZone: "UTC" });
     const nomeEvento = escala.evento.descricaoEspecifica ?? escala.evento.tipoEvento.nome;
     const expiraEm = new Date(escala.evento.dataEvento.getTime() + 24 * 60 * 60 * 1000);
-    const appUrl = (process.env.APP_URL ?? "").replace(/\/$/, "");
+    // Fallback fixo: sem isso, APP_URL vazio em produção gera link RELATIVO
+    // no e-mail/Telegram — sem domínio, a maioria dos clientes mostra o link
+    // quebrado. Mesmo bug encontrado em src/lib/candidatura.ts (2026-08-13).
+    const appUrl = (process.env.APP_URL || "https://agape.lebrai.com.br").replace(/\/$/, "");
 
     const tpl = TEMPLATE_PADRAO.nova_escala;
     const assuntoBase = config.assunto || tpl.assunto;
@@ -609,7 +612,9 @@ export async function verificarPresencasPendentes(
   const tpl = TEMPLATE_PADRAO.presenca_pendente;
   const assuntoBase = config.assunto || tpl.assunto;
   const mensagemBase = config.mensagem || tpl.mensagem;
-  const appUrl = (process.env.APP_URL ?? "").replace(/\/$/, "");
+  // Fallback fixo: sem isso, APP_URL vazio em produção gera link RELATIVO no
+  // e-mail/Telegram (mesmo bug de src/lib/candidatura.ts, achado em 2026-08-13).
+  const appUrl = (process.env.APP_URL || "https://agape.lebrai.com.br").replace(/\/$/, "");
 
   for (const escala of escalas) {
     const inicio = inicioEventoUTC(escala.evento.dataEvento, escala.evento.horarioInicio);
