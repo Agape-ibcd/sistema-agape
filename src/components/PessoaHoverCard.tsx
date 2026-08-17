@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import type { MembroResumo } from "@/lib/membroResumo";
 
@@ -167,6 +168,11 @@ export function PessoaHoverCard({
   useEffect(() => {
     if (!aberto) return;
     function aoClicarFora(e: MouseEvent | TouchEvent) {
+      // O tooltip dos ícones (Aniversário/Status/Assiduidade/Pontualidade) é
+      // renderizado num portal em document.body (pra nunca ser cortado pela
+      // rolagem do card) — logo não é descendente de raizRef. Clicar nele
+      // não pode fechar o card.
+      if ((e.target as Element).closest?.("[data-info-tooltip]")) return;
       if (raizRef.current && !raizRef.current.contains(e.target as Node)) {
         fechouParaForaNesteClique = true;
         // Se o clique não caiu em nenhum gatilho (não há PessoaHoverCard ali
@@ -370,21 +376,24 @@ function ConteudoResumo({
 }) {
   // Tooltip dos 4 ícones (aniversário/status/assiduidade/pontualidade): além
   // do `title` nativo (só funciona com mouse), também abre ao tocar/clicar —
-  // em telas pequenas não há hover, então o title nunca aparece. Guarda o
-  // texto (não um id): só um fica aberto por vez, e vira uma faixa abaixo
-  // dos ícones, em fluxo normal — nunca é cortada pela rolagem do card
-  // (diferente de um balão flutuante, que estouraria a borda em telas
-  // pequenas).
-  const [tooltipAberto, setTooltipAberto] = useState<string | null>(null);
-  function alternarTooltip(titulo: string) {
-    setTooltipAberto((v) => (v === titulo ? null : titulo));
+  // em telas pequenas não há hover, então o title nunca aparece. Guarda a
+  // posição do ícone (não só o texto) porque o balão é desenhado num portal
+  // em document.body, fixo por coordenadas de viewport — assim ele pode
+  // sobrepor a borda do card em vez de ser cortado pela rolagem (overflow-y
+  // do card também recorta o eixo X; um balão preso dentro dele estouraria
+  // cortado).
+  const [tooltip, setTooltip] = useState<{ titulo: string; rect: DOMRect } | null>(null);
+  function alternarTooltip(titulo: string, alvo: HTMLElement) {
+    setTooltip((v) => (v && v.titulo === titulo ? null : { titulo, rect: alvo.getBoundingClientRect() }));
   }
 
   useEffect(() => {
-    if (!tooltipAberto) return;
+    if (!tooltip) return;
     function aoTocarFora(e: MouseEvent | TouchEvent) {
       const alvo = e.target as Element;
-      if (!alvo.closest?.("[data-info-trigger]")) setTooltipAberto(null);
+      if (!alvo.closest?.("[data-info-trigger]") && !alvo.closest?.("[data-info-tooltip]")) {
+        setTooltip(null);
+      }
     }
     document.addEventListener("mousedown", aoTocarFora);
     document.addEventListener("touchstart", aoTocarFora);
@@ -392,7 +401,7 @@ function ConteudoResumo({
       document.removeEventListener("mousedown", aoTocarFora);
       document.removeEventListener("touchstart", aoTocarFora);
     };
-  }, [tooltipAberto]);
+  }, [tooltip]);
 
   if (erro) {
     return <p className="text-xs text-danger-text">Não foi possível carregar os dados.</p>;
@@ -479,13 +488,7 @@ function ConteudoResumo({
             </div>
           </div>
 
-          {/* Balão do ícone tocado/clicado — em fluxo normal (não
-              absoluto), pra nunca ser cortado pela rolagem do card. */}
-          {tooltipAberto && (
-            <p className="mt-1.5 rounded-md border border-edge bg-surface-3 px-2 py-1 text-[10px] leading-snug text-ink">
-              {tooltipAberto}
-            </p>
-          )}
+          {tooltip && <TooltipFlutuante titulo={tooltip.titulo} rect={tooltip.rect} />}
 
           {resumo.status !== "ativo" && resumo.motivoStatus && (
             <p className="mt-1 text-[10px] text-ink-subtle">Motivo: {resumo.motivoStatus}</p>
@@ -530,7 +533,7 @@ function ConteudoResumo({
 }
 
 // Ícone + valor com tooltip: `title` nativo pro mouse, e clicar/tocar avisa
-// o pai (ConteudoResumo) pra mostrar/esconder a faixa de texto com `titulo`
+// o pai (ConteudoResumo) pra abrir/fechar o balão flutuante com `titulo`
 // (necessário em telas sem hover, onde o `title` nunca aparece).
 // `data-info-trigger` marca o elemento pro listener de "tocar fora" (no pai)
 // reconhecer um clique dentro de QUALQUER gatilho.
@@ -541,7 +544,7 @@ function InfoIcone({
   children,
 }: {
   titulo: string;
-  aoClicar: (titulo: string) => void;
+  aoClicar: (titulo: string, alvo: HTMLElement) => void;
   className?: string;
   children: React.ReactNode;
 }) {
@@ -555,12 +558,56 @@ function InfoIcone({
         // stopPropagation não cancela a navegação do link ancestral.
         e.preventDefault();
         e.stopPropagation();
-        aoClicar(titulo);
+        aoClicar(titulo, e.currentTarget);
       }}
       className={`inline-flex cursor-pointer items-center gap-1 ${className}`}
     >
       {children}
     </span>
+  );
+}
+
+// Balão do tooltip tocável, num portal em document.body posicionado por
+// coordenadas de viewport (position: fixed) — assim ele pode se sobrepor
+// livremente à borda do card em vez de ser cortado pela rolagem dele.
+// Renderiza uma vez "invisível" pra medir o próprio tamanho e só então fixa
+// a posição definitiva (evita flash na posição errada).
+function TooltipFlutuante({ titulo, rect }: { titulo: string; rect: DOMRect }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!ref.current) return;
+    const margem = 8;
+    const larguraTela = document.documentElement.clientWidth;
+    const alturaTela = document.documentElement.clientHeight;
+    const w = ref.current.offsetWidth;
+    const h = ref.current.offsetHeight;
+
+    const left = Math.min(Math.max(rect.left, margem), larguraTela - w - margem);
+    let top = rect.bottom + 6;
+    if (top + h > alturaTela - margem) {
+      top = rect.top - h - 6; // não cabe embaixo: vira pra cima do ícone
+    }
+    setPos({ left, top });
+  }, [rect]);
+
+  return createPortal(
+    <div
+      ref={ref}
+      data-info-tooltip
+      role="tooltip"
+      style={{
+        position: "fixed",
+        left: pos?.left ?? rect.left,
+        top: pos?.top ?? rect.bottom + 6,
+        visibility: pos ? "visible" : "hidden",
+      }}
+      className="z-[60] w-max max-w-[13rem] rounded-md border border-edge bg-surface-3 px-2 py-1 text-[10px] font-normal normal-case leading-snug tracking-normal text-ink shadow-xl"
+    >
+      {titulo}
+    </div>,
+    document.body,
   );
 }
 
