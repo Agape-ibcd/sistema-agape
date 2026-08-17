@@ -6,11 +6,12 @@ import type { MembroResumo } from "@/lib/membroResumo";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Hover card de pessoa: envolve uma foto/nome (o `children`) e, ao passar o
-// mouse por 1s ou clicar, mostra um painel flutuante com foto grande, nome,
-// aniversário, equipe e próxima escala. Some ao tirar o mouse do card/gatilho
-// ou ao clicar fora. Busca o resumo via /api/membros/[id]/resumo (com cache
-// simples em memória entre instâncias, já que a mesma pessoa pode aparecer
-// várias vezes na mesma tela).
+// mouse por 1s ou clicar, mostra um painel flutuante com foto, aniversário,
+// equipe, status, assiduidade/pontualidade (90 dias) e próxima escala. Some
+// ao tirar o mouse do card/gatilho (com uma folga curta — dá tempo de mover
+// o cursor até o card, ex.: até o ícone de editar) ou ao clicar fora. Busca
+// o resumo via /api/membros/[id]/resumo (com cache simples em memória entre
+// instâncias, já que a mesma pessoa pode aparecer várias vezes na tela).
 //
 // O clique no gatilho sempre intercepta (preventDefault + stopPropagation):
 // necessário quando a foto/nome já está dentro de um <Link> ou <label> de
@@ -19,6 +20,7 @@ import type { MembroResumo } from "@/lib/membroResumo";
 // ─────────────────────────────────────────────────────────────────────────
 
 const ATRASO_HOVER_MS = 1000;
+const ATRASO_FECHAR_MS = 300; // folga entre o gatilho e o card (evita sumir no meio do caminho)
 const cacheResumo = new Map<string, MembroResumo>();
 
 export function PessoaHoverCard({
@@ -38,12 +40,20 @@ export function PessoaHoverCard({
 
   const raizRef = useRef<HTMLDivElement>(null);
   const painelRef = useRef<HTMLDivElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timerAbrirRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timerFecharRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  function limparTimer() {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
+  function limparTimerAbrir() {
+    if (timerAbrirRef.current) {
+      clearTimeout(timerAbrirRef.current);
+      timerAbrirRef.current = null;
+    }
+  }
+
+  function limparTimerFechar() {
+    if (timerFecharRef.current) {
+      clearTimeout(timerFecharRef.current);
+      timerFecharRef.current = null;
     }
   }
 
@@ -74,19 +84,22 @@ export function PessoaHoverCard({
   }
 
   function aoEntrarMouse() {
-    limparTimer();
-    timerRef.current = setTimeout(abrir, ATRASO_HOVER_MS);
+    limparTimerFechar();
+    limparTimerAbrir();
+    timerAbrirRef.current = setTimeout(abrir, ATRASO_HOVER_MS);
   }
 
   function aoSairMouse() {
-    limparTimer();
-    setAberto(false);
+    limparTimerAbrir();
+    limparTimerFechar();
+    timerFecharRef.current = setTimeout(() => setAberto(false), ATRASO_FECHAR_MS);
   }
 
   function aoClicar(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    limparTimer();
+    limparTimerAbrir();
+    limparTimerFechar();
     abrir();
   }
 
@@ -100,6 +113,7 @@ export function PessoaHoverCard({
   function aoClicarEditar(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
+    limparTimerFechar();
     setAberto(false);
     router.push(`/membros/${membroId}`);
   }
@@ -122,7 +136,13 @@ export function PessoaHoverCard({
     };
   }, [aberto]);
 
-  useEffect(() => limparTimer, []);
+  useEffect(
+    () => () => {
+      limparTimerAbrir();
+      limparTimerFechar();
+    },
+    [],
+  );
 
   // Mantém o painel dentro da viewport (largura e altura), igual ao Popover:
   // parte alinhado à esquerda do gatilho, abaixo dele, mas se reposiciona (ou
@@ -142,8 +162,8 @@ export function PessoaHoverCard({
 
     const espacoAbaixo = alturaTela - gatilho.bottom;
     const viraParaCima = espacoAbaixo < p.height + margem && gatilho.top > p.height + margem;
-    painelRef.current.style.top = viraParaCima ? "auto" : `${gatilho.height + 8}px`;
-    painelRef.current.style.bottom = viraParaCima ? `${gatilho.height + 8}px` : "auto";
+    painelRef.current.style.top = viraParaCima ? "auto" : `${gatilho.height + 6}px`;
+    painelRef.current.style.bottom = viraParaCima ? `${gatilho.height + 6}px` : "auto";
   }, [aberto, resumo, carregando, erro]);
 
   return (
@@ -168,14 +188,14 @@ export function PessoaHoverCard({
           role="dialog"
           aria-label={`Detalhes de ${resumo?.nomeCompleto ?? "membro"}`}
           style={{ left: 0 }}
-          className="vidro-forte absolute z-30 w-[min(20rem,calc(100vw-2rem))] rounded-2xl p-4 pr-10 shadow-xl"
+          className="vidro-forte absolute z-30 max-h-[85vh] w-[min(19rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl p-3.5 pr-9 shadow-xl"
         >
           <button
             type="button"
             onClick={aoClicarEditar}
             title="Editar Dados"
             aria-label="Editar dados"
-            className="absolute right-2.5 top-2.5 rounded-lg p-1.5 text-ink-subtle transition hover:bg-surface-3 hover:text-brand-text"
+            className="absolute right-2 top-2 rounded-lg p-1.5 text-ink-subtle transition hover:bg-surface-3 hover:text-brand-text"
           >
             <IconeLapis />
           </button>
@@ -189,8 +209,8 @@ export function PessoaHoverCard({
 function IconeLapis() {
   return (
     <svg
-      width="16"
-      height="16"
+      width="14"
+      height="14"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -205,6 +225,63 @@ function IconeLapis() {
   );
 }
 
+function IconeAssiduidade() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
+function IconeInfo() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className="shrink-0 text-ink-faint"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 16v-4M12 8h.01" />
+    </svg>
+  );
+}
+
+function IconePontualidade() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 3" />
+    </svg>
+  );
+}
+
 function ConteudoResumo({
   resumo,
   carregando,
@@ -215,15 +292,15 @@ function ConteudoResumo({
   erro: boolean;
 }) {
   if (erro) {
-    return <p className="text-sm text-danger-text">Não foi possível carregar os dados.</p>;
+    return <p className="text-xs text-danger-text">Não foi possível carregar os dados.</p>;
   }
   if (!resumo) {
     return (
-      <div className="flex items-center gap-3">
-        <div className="h-[clamp(72px,22vw,112px)] w-[clamp(72px,22vw,112px)] shrink-0 animate-pulse rounded-2xl bg-surface-3" />
+      <div className="flex items-center gap-2.5">
+        <div className="h-[clamp(56px,18vw,88px)] w-[clamp(56px,18vw,88px)] shrink-0 animate-pulse rounded-2xl bg-surface-3" />
         <div className="min-w-0 flex-1 space-y-2">
-          <div className="h-3.5 w-3/4 animate-pulse rounded bg-surface-3" />
-          <div className="h-3 w-1/2 animate-pulse rounded bg-surface-3" />
+          <div className="h-3 w-3/4 animate-pulse rounded bg-surface-3" />
+          <div className="h-2.5 w-1/2 animate-pulse rounded bg-surface-3" />
         </div>
       </div>
     );
@@ -237,43 +314,47 @@ function ConteudoResumo({
     .join("")
     .toUpperCase();
 
+  const rotuloStatus =
+    resumo.status === "ativo" ? "Ativo" : resumo.status === "afastado" ? "Afastado" : "Inativo";
+
   return (
     <div className={carregando ? "opacity-60 transition-opacity" : "transition-opacity"}>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5">
         {resumo.fotoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- foto externa (Supabase Storage)
           <img
             src={resumo.fotoUrl}
             alt={`Foto de ${resumo.nomeCompleto}`}
-            className="h-[clamp(72px,22vw,112px)] w-[clamp(72px,22vw,112px)] shrink-0 rounded-2xl object-cover"
+            className="h-[clamp(56px,18vw,88px)] w-[clamp(56px,18vw,88px)] shrink-0 rounded-2xl object-cover"
           />
         ) : (
           <span
             aria-hidden
-            className="flex h-[clamp(72px,22vw,112px)] w-[clamp(72px,22vw,112px)] shrink-0 items-center justify-center rounded-2xl bg-brand-soft text-2xl font-semibold text-brand-text"
+            className="flex h-[clamp(56px,18vw,88px)] w-[clamp(56px,18vw,88px)] shrink-0 items-center justify-center rounded-2xl bg-brand-soft text-lg font-semibold text-brand-text"
           >
             {iniciais || "?"}
           </span>
         )}
         <div className="min-w-0 flex-1">
-          <p className="truncate font-display text-base font-semibold uppercase tracking-wide text-ink">
+          <p className="truncate font-display text-[13px] font-semibold uppercase tracking-wide text-ink">
             {resumo.nomeCompleto}
           </p>
           {resumo.status !== "ativo" && (
             <span
-              className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${
+              className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[9px] font-medium ${
                 resumo.status === "afastado"
                   ? "bg-warn-soft text-warn-text"
                   : "bg-surface-3 text-ink-soft"
               }`}
             >
-              {resumo.status === "afastado" ? "Afastado" : "Inativo"}
+              {rotuloStatus}
             </span>
           )}
         </div>
       </div>
 
-      <dl className="mt-3 space-y-1.5 text-sm">
+      <dl className="mt-2.5 space-y-1 text-[11px]">
+        <LinhaInfo rotulo="Status" valor={rotuloStatus + (resumo.motivoStatus ? ` — ${resumo.motivoStatus}` : "")} quebrar />
         <LinhaInfo rotulo="Aniversário" valor={resumo.dataNascimentoBR ?? "Não informado"} />
         <LinhaInfo
           rotulo="Equipe"
@@ -282,7 +363,7 @@ function ConteudoResumo({
               {resumo.equipe?.corHex && (
                 <span
                   aria-hidden
-                  className="h-2 w-2 shrink-0 rounded-full"
+                  className="h-1.5 w-1.5 shrink-0 rounded-full"
                   style={{ backgroundColor: resumo.equipe.corHex }}
                 />
               )}
@@ -297,23 +378,62 @@ function ConteudoResumo({
           />
         )}
         <LinhaInfo
+          rotulo={
+            <span className="inline-flex items-center gap-1">
+              <IconeAssiduidade />
+              Assiduidade (90d)
+              <IconeInfo />
+            </span>
+          }
+          rotuloTitle="Percentual de presença nos últimos 90 dias"
+          valor={resumo.assiduidade90 == null ? "Sem dados" : `${resumo.assiduidade90}%`}
+        />
+        <LinhaInfo
+          rotulo={
+            <span className="inline-flex items-center gap-1">
+              <IconePontualidade />
+              Pontualidade (90d)
+              <IconeInfo />
+            </span>
+          }
+          rotuloTitle="Percentual de chegada no horário (1h15 antes do culto) nos últimos 90 dias"
+          valor={resumo.pontualidade90 == null ? "Sem dados" : `${resumo.pontualidade90}%`}
+        />
+        <LinhaInfo
           rotulo="Próxima escala"
           valor={
             resumo.proximaEscala
               ? `${resumo.proximaEscala.dataEventoBR} — ${resumo.proximaEscala.tipoEventoNome}`
               : "Nenhuma escala futura"
           }
+          quebrar
         />
       </dl>
     </div>
   );
 }
 
-function LinhaInfo({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
+function LinhaInfo({
+  rotulo,
+  rotuloTitle,
+  valor,
+  quebrar = false,
+}: {
+  rotulo: React.ReactNode;
+  rotuloTitle?: string;
+  valor: React.ReactNode;
+  quebrar?: boolean;
+}) {
   return (
-    <div className="flex items-start justify-between gap-3">
-      <dt className="shrink-0 text-ink-subtle">{rotulo}</dt>
-      <dd className="min-w-0 truncate text-right font-medium text-ink">{valor}</dd>
+    <div className="flex items-start justify-between gap-2.5">
+      <dt className="shrink-0 text-ink-subtle" title={rotuloTitle}>
+        {rotulo}
+      </dt>
+      <dd
+        className={`min-w-0 text-right font-medium text-ink ${quebrar ? "" : "truncate"}`}
+      >
+        {valor}
+      </dd>
     </div>
   );
 }
