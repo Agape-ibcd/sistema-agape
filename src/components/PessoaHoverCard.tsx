@@ -414,29 +414,34 @@ function ConteudoResumo({
             {resumo.nomeCompleto}
           </p>
 
-          <div className="mt-1 flex flex-col items-start gap-y-1 text-[11px] text-ink-soft">
-            <span className="inline-flex items-center gap-1" title="Aniversário">
-              <IconeBolo />
-              {resumo.dataNascimentoBR ?? "—"}
-            </span>
-            <span className={`inline-flex items-center gap-1 ${corStatus}`} title="Status">
-              <IconeStatus />
-              {rotuloStatus}
-            </span>
-            <span
-              className="inline-flex items-center gap-1"
-              title="Assiduidade — % de presença nos últimos 90 dias"
-            >
-              <IconeAssiduidade />
-              {resumo.assiduidade90 == null ? "—" : `${resumo.assiduidade90}%`}
-            </span>
-            <span
-              className="inline-flex items-center gap-1"
-              title="Pontualidade — % de chegada no horário (1h15 antes do culto) nos últimos 90 dias"
-            >
-              <IconePontualidade />
-              {resumo.pontualidade90 == null ? "—" : `${resumo.pontualidade90}%`}
-            </span>
+          <div className="mt-1 flex items-stretch gap-2.5 text-[11px] text-ink-soft">
+            <div className="flex flex-col justify-center gap-y-1">
+              <span className="inline-flex items-center gap-1" title="Aniversário">
+                <IconeBolo />
+                {resumo.dataNascimentoBR ?? "—"}
+              </span>
+              <span className={`inline-flex items-center gap-1 ${corStatus}`} title="Status">
+                <IconeStatus />
+                {rotuloStatus}
+              </span>
+            </div>
+            <div aria-hidden className="w-px shrink-0 bg-edge-soft" />
+            <div className="flex flex-col justify-center gap-y-1">
+              <span
+                className="inline-flex items-center gap-1"
+                title="Assiduidade — % de presença nos últimos 90 dias"
+              >
+                <IconeAssiduidade />
+                {resumo.assiduidade90 == null ? "—" : `${resumo.assiduidade90}%`}
+              </span>
+              <span
+                className="inline-flex items-center gap-1"
+                title="Pontualidade — % de chegada no horário (1h15 antes do culto) nos últimos 90 dias"
+              >
+                <IconePontualidade />
+                {resumo.pontualidade90 == null ? "—" : `${resumo.pontualidade90}%`}
+              </span>
+            </div>
           </div>
 
           {resumo.status !== "ativo" && resumo.motivoStatus && (
