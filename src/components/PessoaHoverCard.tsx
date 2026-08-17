@@ -6,22 +6,42 @@ import type { MembroResumo } from "@/lib/membroResumo";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Hover card de pessoa: envolve uma foto/nome (o `children`) e, ao passar o
-// mouse por 1s ou clicar, mostra um painel flutuante com foto, aniversário,
-// equipe, status, assiduidade/pontualidade (90 dias) e próxima escala. Some
-// ao tirar o mouse do card/gatilho (com uma folga curta — dá tempo de mover
-// o cursor até o card, ex.: até o ícone de editar) ou ao clicar fora. Busca
-// o resumo via /api/membros/[id]/resumo (com cache simples em memória entre
-// instâncias, já que a mesma pessoa pode aparecer várias vezes na tela).
+// mouse por 1s ou clicar, mostra um painel flutuante com foto, ícones de
+// aniversário/status/assiduidade/pontualidade, equipe e próxima escala.
 //
-// O clique no gatilho sempre intercepta (preventDefault + stopPropagation):
-// necessário quando a foto/nome já está dentro de um <Link> ou <label> de
-// checkbox (ex.: lista de membros, lista de usuários) — sem isso o clique
-// navegaria/marcaria a caixa em vez de abrir o card.
+// Coordenação entre instâncias (módulo inteiro, não por componente): só um
+// card fica aberto por vez. Um clique "para fora" de um card aberto SÓ o
+// fecha, mesmo que o clique tenha caído em outro gatilho — abrir outro exige
+// um segundo clique (comportamento pedido explicitamente: evita abrir um
+// card "sem querer" ao tentar apenas fechar o anterior).
+//
+// Fecha: ao tirar o mouse do card/gatilho e ficar fora por 3s (só em
+// dispositivos com hover de verdade — no touch, o toque abre e só some ao
+// tocar fora), ao clicar fora, ou Esc. O clique no gatilho sempre intercepta
+// (preventDefault + stopPropagation): necessário quando a foto/nome já está
+// dentro de um <Link> ou <label> de checkbox — sem isso o clique navegaria/
+// marcaria a caixa em vez de abrir o card.
 // ─────────────────────────────────────────────────────────────────────────
 
 const ATRASO_HOVER_MS = 1000;
-const ATRASO_FECHAR_MS = 300; // folga entre o gatilho e o card (evita sumir no meio do caminho)
+const ATRASO_FECHAR_MS = 3000;
 const cacheResumo = new Map<string, MembroResumo>();
+
+function suportaHover(): boolean {
+  return typeof window !== "undefined" && window.matchMedia?.("(hover: hover)").matches;
+}
+
+// Estado global simples (fora do React): garante um único card aberto por
+// vez e sinaliza quando um clique acabou de fechar um card "para fora", para
+// o gatilho clicado não abrir o seu na mesma tacada.
+let idAberto: string | null = null;
+let fechouParaForaNesteClique = false;
+const ouvintes = new Set<(id: string | null) => void>();
+
+function definirAberto(id: string | null) {
+  idAberto = id;
+  ouvintes.forEach((fn) => fn(id));
+}
 
 export function PessoaHoverCard({
   membroId,
@@ -80,24 +100,51 @@ export function PessoaHoverCard({
 
   function abrir() {
     setAberto(true);
+    definirAberto(membroId);
     void carregarResumo();
   }
 
+  function fechar() {
+    limparTimerAbrir();
+    limparTimerFechar();
+    setAberto(false);
+    if (idAberto === membroId) definirAberto(null);
+  }
+
+  // Outra instância abriu: se a minha estava aberta, fecha (só um por vez).
+  useEffect(() => {
+    function aoMudarAberto(id: string | null) {
+      if (id !== membroId) setAberto(false);
+    }
+    ouvintes.add(aoMudarAberto);
+    return () => {
+      ouvintes.delete(aoMudarAberto);
+    };
+  }, [membroId]);
+
   function aoEntrarMouse() {
+    if (!suportaHover()) return;
     limparTimerFechar();
     limparTimerAbrir();
     timerAbrirRef.current = setTimeout(abrir, ATRASO_HOVER_MS);
   }
 
   function aoSairMouse() {
+    if (!suportaHover()) return;
     limparTimerAbrir();
     limparTimerFechar();
-    timerFecharRef.current = setTimeout(() => setAberto(false), ATRASO_FECHAR_MS);
+    timerFecharRef.current = setTimeout(fechar, ATRASO_FECHAR_MS);
   }
 
   function aoClicar(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
+    // Havia outro card aberto e este clique (fora dele) acabou de fechá-lo:
+    // esse clique só serviu para fechar — não abre o meu junto.
+    if (fechouParaForaNesteClique) {
+      fechouParaForaNesteClique = false;
+      return;
+    }
     limparTimerAbrir();
     limparTimerFechar();
     abrir();
@@ -113,27 +160,36 @@ export function PessoaHoverCard({
   function aoClicarEditar(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    limparTimerFechar();
-    setAberto(false);
+    fechar();
     router.push(`/membros/${membroId}`);
   }
 
   useEffect(() => {
     if (!aberto) return;
-    function aoClicarFora(e: MouseEvent) {
+    function aoClicarFora(e: MouseEvent | TouchEvent) {
       if (raizRef.current && !raizRef.current.contains(e.target as Node)) {
-        setAberto(false);
+        fechouParaForaNesteClique = true;
+        // Se o clique não caiu em nenhum gatilho (não há PessoaHoverCard ali
+        // pra consumir a flag), desarma sozinha antes do próximo clique —
+        // senão um clique futuro e não relacionado ficaria bloqueado.
+        setTimeout(() => {
+          fechouParaForaNesteClique = false;
+        }, 0);
+        fechar();
       }
     }
     function aoTeclarEsc(e: KeyboardEvent) {
-      if (e.key === "Escape") setAberto(false);
+      if (e.key === "Escape") fechar();
     }
     document.addEventListener("mousedown", aoClicarFora);
+    document.addEventListener("touchstart", aoClicarFora);
     document.addEventListener("keydown", aoTeclarEsc);
     return () => {
       document.removeEventListener("mousedown", aoClicarFora);
+      document.removeEventListener("touchstart", aoClicarFora);
       document.removeEventListener("keydown", aoTeclarEsc);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `fechar` é estável o bastante aqui (mesmas refs/estado a cada render)
   }, [aberto]);
 
   useEffect(
@@ -225,6 +281,36 @@ function IconeLapis() {
   );
 }
 
+function IconeBolo() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M4 21v-6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6" />
+      <path d="M2 21h20" />
+      <path d="M7 13c0-1.4 1-1.4 1-2.8S7 7.4 7 6" />
+      <path d="M12 13c0-1.4 1-1.4 1-2.8S12 7.4 12 6" />
+      <path d="M17 13c0-1.4 1-1.4 1-2.8S17 7.4 17 6" />
+    </svg>
+  );
+}
+
+function IconeStatus() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <circle cx="12" cy="12" r="10" />
+    </svg>
+  );
+}
+
 function IconeAssiduidade() {
   return (
     <svg
@@ -239,26 +325,6 @@ function IconeAssiduidade() {
       aria-hidden
     >
       <path d="M20 6 9 17l-5-5" />
-    </svg>
-  );
-}
-
-function IconeInfo() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-      className="shrink-0 text-ink-faint"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 16v-4M12 8h.01" />
     </svg>
   );
 }
@@ -316,10 +382,16 @@ function ConteudoResumo({
 
   const rotuloStatus =
     resumo.status === "ativo" ? "Ativo" : resumo.status === "afastado" ? "Afastado" : "Inativo";
+  const corStatus =
+    resumo.status === "ativo"
+      ? "text-success-text"
+      : resumo.status === "afastado"
+        ? "text-warn-text"
+        : "text-ink-soft";
 
   return (
     <div className={carregando ? "opacity-60 transition-opacity" : "transition-opacity"}>
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-start gap-2.5">
         {resumo.fotoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- foto externa (Supabase Storage)
           <img
@@ -339,23 +411,39 @@ function ConteudoResumo({
           <p className="truncate font-display text-[13px] font-semibold uppercase tracking-wide text-ink">
             {resumo.nomeCompleto}
           </p>
-          {resumo.status !== "ativo" && (
-            <span
-              className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[9px] font-medium ${
-                resumo.status === "afastado"
-                  ? "bg-warn-soft text-warn-text"
-                  : "bg-surface-3 text-ink-soft"
-              }`}
-            >
+
+          <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-ink-soft">
+            <span className="inline-flex items-center gap-1" title="Aniversário">
+              <IconeBolo />
+              {resumo.dataNascimentoBR ?? "—"}
+            </span>
+            <span className={`inline-flex items-center gap-1 ${corStatus}`} title="Status">
+              <IconeStatus />
               {rotuloStatus}
             </span>
+            <span
+              className="inline-flex items-center gap-1"
+              title="Assiduidade — % de presença nos últimos 90 dias"
+            >
+              <IconeAssiduidade />
+              {resumo.assiduidade90 == null ? "—" : `${resumo.assiduidade90}%`}
+            </span>
+            <span
+              className="inline-flex items-center gap-1"
+              title="Pontualidade — % de chegada no horário (1h15 antes do culto) nos últimos 90 dias"
+            >
+              <IconePontualidade />
+              {resumo.pontualidade90 == null ? "—" : `${resumo.pontualidade90}%`}
+            </span>
+          </div>
+
+          {resumo.status !== "ativo" && resumo.motivoStatus && (
+            <p className="mt-1 text-[10px] text-ink-subtle">Motivo: {resumo.motivoStatus}</p>
           )}
         </div>
       </div>
 
       <dl className="mt-2.5 space-y-1 text-[11px]">
-        <LinhaInfo rotulo="Status" valor={rotuloStatus + (resumo.motivoStatus ? ` — ${resumo.motivoStatus}` : "")} quebrar />
-        <LinhaInfo rotulo="Aniversário" valor={resumo.dataNascimentoBR ?? "Não informado"} />
         <LinhaInfo
           rotulo="Equipe"
           valor={
@@ -378,28 +466,6 @@ function ConteudoResumo({
           />
         )}
         <LinhaInfo
-          rotulo={
-            <span className="inline-flex items-center gap-1">
-              <IconeAssiduidade />
-              Assiduidade (90d)
-              <IconeInfo />
-            </span>
-          }
-          rotuloTitle="Percentual de presença nos últimos 90 dias"
-          valor={resumo.assiduidade90 == null ? "Sem dados" : `${resumo.assiduidade90}%`}
-        />
-        <LinhaInfo
-          rotulo={
-            <span className="inline-flex items-center gap-1">
-              <IconePontualidade />
-              Pontualidade (90d)
-              <IconeInfo />
-            </span>
-          }
-          rotuloTitle="Percentual de chegada no horário (1h15 antes do culto) nos últimos 90 dias"
-          valor={resumo.pontualidade90 == null ? "Sem dados" : `${resumo.pontualidade90}%`}
-        />
-        <LinhaInfo
           rotulo="Próxima escala"
           valor={
             resumo.proximaEscala
@@ -415,23 +481,17 @@ function ConteudoResumo({
 
 function LinhaInfo({
   rotulo,
-  rotuloTitle,
   valor,
   quebrar = false,
 }: {
   rotulo: React.ReactNode;
-  rotuloTitle?: string;
   valor: React.ReactNode;
   quebrar?: boolean;
 }) {
   return (
     <div className="flex items-start justify-between gap-2.5">
-      <dt className="shrink-0 text-ink-subtle" title={rotuloTitle}>
-        {rotulo}
-      </dt>
-      <dd
-        className={`min-w-0 text-right font-medium text-ink ${quebrar ? "" : "truncate"}`}
-      >
+      <dt className="shrink-0 text-ink-subtle">{rotulo}</dt>
+      <dd className={`min-w-0 text-right font-medium text-ink ${quebrar ? "" : "truncate"}`}>
         {valor}
       </dd>
     </div>
