@@ -13,6 +13,7 @@ import {
   restaurarPresenca,
 } from "./actions";
 import { FeedbackModal } from "@/components/FeedbackModal";
+import { PessoaHoverCard } from "@/components/PessoaHoverCard";
 import { registrarChecagemPendencia } from "./pendenciaGuard";
 import { registrarContagemSecao } from "./resumoFlutuanteRegistry";
 
@@ -648,9 +649,11 @@ function LinhaPresenca({
       <li className="py-2.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-ink-subtle line-through">
-              {membro.nome}
-            </p>
+            <PessoaHoverCard membroId={membro.id}>
+              <p className="truncate text-sm font-medium text-ink-subtle line-through">
+                {membro.nome}
+              </p>
+            </PessoaHoverCard>
             <p className="text-xs text-danger-text">
               Excluído
               {excluido.motivoExclusao ? ` · ${excluido.motivoExclusao}` : ""}
@@ -687,9 +690,11 @@ function LinhaPresenca({
   return (
     <li className="py-2.5">
       <div className="flex items-center justify-between gap-2">
-        <p className={`min-w-0 truncate text-sm font-medium ${corNome}`}>
-          {membro.nome}
-        </p>
+        <PessoaHoverCard membroId={membro.id}>
+          <p className={`min-w-0 truncate text-sm font-medium ${corNome}`}>
+            {membro.nome}
+          </p>
+        </PessoaHoverCard>
         <span className="shrink-0">
           {naoLancado ? (
             <span className="text-xs text-ink-faint">não lançado</span>

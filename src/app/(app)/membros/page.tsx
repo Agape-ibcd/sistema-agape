@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUsuario } from "@/lib/auth";
 import { acessoMembros } from "@/lib/acessoMembros";
 import { Avatar } from "@/components/Avatar";
+import { PessoaHoverCard } from "@/components/PessoaHoverCard";
 import { FiltrosMembros } from "./FiltrosMembros";
 
 // Lista de membros com busca por nome/e-mail e filtros por equipe e status.
@@ -95,16 +96,18 @@ export default async function MembrosPage({
               href={`/membros/${m.id}`}
               className="flex items-center gap-3 px-4 py-3 transition hover:bg-surface-2"
             >
-              <Avatar nome={m.nomeCompleto} fotoUrl={m.fotoUrl} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-ink">
-                  {m.nomeCompleto}
-                </p>
-                <p className="truncate text-xs text-ink-subtle">
-                  {m.equipe?.nome ?? "Sem equipe"}
-                  {m.celularWhatsapp ? ` · ${m.celularWhatsapp}` : ""}
-                </p>
-              </div>
+              <PessoaHoverCard membroId={m.id} className="flex min-w-0 flex-1 items-center gap-3">
+                <Avatar nome={m.nomeCompleto} fotoUrl={m.fotoUrl} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-ink">
+                    {m.nomeCompleto}
+                  </p>
+                  <p className="truncate text-xs text-ink-subtle">
+                    {m.equipe?.nome ?? "Sem equipe"}
+                    {m.celularWhatsapp ? ` · ${m.celularWhatsapp}` : ""}
+                  </p>
+                </div>
+              </PessoaHoverCard>
               {m.status === "inativo" && (
                 <span className="rounded-full bg-surface-3 px-2 py-0.5 text-xs font-medium text-ink-soft">
                   Inativo

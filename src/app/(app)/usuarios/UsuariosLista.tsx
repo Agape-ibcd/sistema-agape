@@ -17,6 +17,7 @@ import {
 import { definirStatusMembro } from "../membros/actions";
 import { FeedbackModal } from "@/components/FeedbackModal";
 import { Avatar } from "@/components/Avatar";
+import { PessoaHoverCard } from "@/components/PessoaHoverCard";
 
 export type UsuarioLinha = {
   id: string;
@@ -403,58 +404,60 @@ export function UsuariosLista({
                   onChange={() => alternarSelecao(u.id)}
                   className="h-4 w-4 shrink-0 accent-brand"
                 />
-                <Avatar nome={u.nomeCompleto} fotoUrl={u.fotoUrl} tamanho={36} />
-                <div className="min-w-0 flex-1">
-                  {/* Nome clicável: abre o cadastro completo para edição. */}
-                  <Link
-                    href={`/membros/${u.id}`}
-                    className="block truncate text-sm font-medium text-ink underline-offset-2 hover:text-brand-text hover:underline"
-                    title="Editar dados do membro"
-                  >
-                    {u.nomeCompleto}
-                    {souEu && (
-                      <span className="ml-1 text-xs text-ink-faint">(você)</span>
-                    )}
-                  </Link>
-                  <p className="truncate text-xs text-ink-subtle">
-                    {u.email}
-                    {u.equipeNome ? ` · ${u.equipeNome}` : ""}
-                  </p>
-                  <p className="mt-0.5 flex flex-wrap gap-1">
-                    {inativo && (
-                      <span className="rounded-full bg-danger-soft px-2 py-0.5 text-[11px] font-medium text-danger-text">
-                        Inativo
-                      </span>
-                    )}
-                    {afastado && (
-                      <span
-                        className="rounded-full bg-warn-soft px-2 py-0.5 text-[11px] font-medium text-warn-text"
-                        title={u.motivoStatus ?? undefined}
-                      >
-                        Afastado
-                        {u.retornoPrevisto ? ` até ${dataBR(u.retornoPrevisto)}` : ""}
-                      </span>
-                    )}
-                    {retornoVencido && (
-                      <span className="rounded-full bg-danger-soft px-2 py-0.5 text-[11px] font-medium text-danger-text">
-                        retorno vencido
-                      </span>
-                    )}
-                    {!u.temAcesso && !inativo && (
-                      <span className="rounded-full bg-warn-soft px-2 py-0.5 text-[11px] font-medium text-warn-text">
-                        Sem acesso
-                      </span>
-                    )}
-                    {u.emailSintetico && (
-                      <span
-                        className="rounded-full bg-surface-3 px-2 py-0.5 text-[11px] font-medium text-ink-subtle"
-                        title="E-mail gerado na migração — não recebe mensagens"
-                      >
-                        e-mail sintético
-                      </span>
-                    )}
-                  </p>
-                </div>
+                <PessoaHoverCard membroId={u.id} className="flex min-w-0 flex-1 items-center gap-3">
+                  <Avatar nome={u.nomeCompleto} fotoUrl={u.fotoUrl} tamanho={36} />
+                  <div className="min-w-0 flex-1">
+                    {/* Nome clicável: abre o cadastro completo para edição. */}
+                    <Link
+                      href={`/membros/${u.id}`}
+                      className="block truncate text-sm font-medium text-ink underline-offset-2 hover:text-brand-text hover:underline"
+                      title="Editar dados do membro"
+                    >
+                      {u.nomeCompleto}
+                      {souEu && (
+                        <span className="ml-1 text-xs text-ink-faint">(você)</span>
+                      )}
+                    </Link>
+                    <p className="truncate text-xs text-ink-subtle">
+                      {u.email}
+                      {u.equipeNome ? ` · ${u.equipeNome}` : ""}
+                    </p>
+                    <p className="mt-0.5 flex flex-wrap gap-1">
+                      {inativo && (
+                        <span className="rounded-full bg-danger-soft px-2 py-0.5 text-[11px] font-medium text-danger-text">
+                          Inativo
+                        </span>
+                      )}
+                      {afastado && (
+                        <span
+                          className="rounded-full bg-warn-soft px-2 py-0.5 text-[11px] font-medium text-warn-text"
+                          title={u.motivoStatus ?? undefined}
+                        >
+                          Afastado
+                          {u.retornoPrevisto ? ` até ${dataBR(u.retornoPrevisto)}` : ""}
+                        </span>
+                      )}
+                      {retornoVencido && (
+                        <span className="rounded-full bg-danger-soft px-2 py-0.5 text-[11px] font-medium text-danger-text">
+                          retorno vencido
+                        </span>
+                      )}
+                      {!u.temAcesso && !inativo && (
+                        <span className="rounded-full bg-warn-soft px-2 py-0.5 text-[11px] font-medium text-warn-text">
+                          Sem acesso
+                        </span>
+                      )}
+                      {u.emailSintetico && (
+                        <span
+                          className="rounded-full bg-surface-3 px-2 py-0.5 text-[11px] font-medium text-ink-subtle"
+                          title="E-mail gerado na migração — não recebe mensagens"
+                        >
+                          e-mail sintético
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </PessoaHoverCard>
 
                 {/* Nível de acesso */}
                 <form

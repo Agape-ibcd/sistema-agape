@@ -9,6 +9,7 @@ import {
 } from "../actions";
 import { FeedbackModal } from "@/components/FeedbackModal";
 import { Avatar } from "@/components/Avatar";
+import { PessoaHoverCard } from "@/components/PessoaHoverCard";
 
 type Pessoa = {
   id: string;
@@ -77,13 +78,15 @@ export function GerirEquipe({
           )}
           {lideres.map((l) => (
             <li key={l.vinculoId} className="flex items-center gap-3 py-2.5">
-              <Avatar nome={l.nomeCompleto} fotoUrl={l.fotoUrl} tamanho={36} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-ink">
-                  {l.nomeCompleto}
-                </p>
-                <p className="text-xs text-ink-subtle">Líder desde {l.desde}</p>
-              </div>
+              <PessoaHoverCard membroId={l.membroId} className="flex min-w-0 flex-1 items-center gap-3">
+                <Avatar nome={l.nomeCompleto} fotoUrl={l.fotoUrl} tamanho={36} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-ink">
+                    {l.nomeCompleto}
+                  </p>
+                  <p className="text-xs text-ink-subtle">Líder desde {l.desde}</p>
+                </div>
+              </PessoaHoverCard>
               <form
                 action={rmLiderAction}
                 onSubmit={(e) => {
@@ -133,10 +136,12 @@ export function GerirEquipe({
           )}
           {membrosDaEquipe.map((m) => (
             <li key={m.id} className="flex items-center gap-3 py-2.5">
-              <Avatar nome={m.nomeCompleto} fotoUrl={m.fotoUrl} tamanho={36} />
-              <p className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
-                {m.nomeCompleto}
-              </p>
+              <PessoaHoverCard membroId={m.id} className="flex min-w-0 flex-1 items-center gap-3">
+                <Avatar nome={m.nomeCompleto} fotoUrl={m.fotoUrl} tamanho={36} />
+                <p className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
+                  {m.nomeCompleto}
+                </p>
+              </PessoaHoverCard>
               <form
                 action={rmMembroAction}
                 onSubmit={(e) => {

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUsuario } from "@/lib/auth";
 import { acessoMembros, podeEditarMembroAlvo } from "@/lib/acessoMembros";
 import { ROTULO_NIVEL } from "@/lib/rbac";
+import { PessoaHoverCard } from "@/components/PessoaHoverCard";
 import { MembroForm } from "../MembroForm";
 
 export default async function EditarMembroPage({
@@ -43,7 +44,11 @@ export default async function EditarMembroPage({
           ← Membros
         </Link>
         <div className="mt-1 flex flex-wrap items-center gap-2">
-          <h1 className="text-3xl font-display font-semibold uppercase tracking-wide text-ink">{membro.nomeCompleto}</h1>
+          <PessoaHoverCard membroId={membro.id}>
+            <h1 className="text-3xl font-display font-semibold uppercase tracking-wide text-ink">
+              {membro.nomeCompleto}
+            </h1>
+          </PessoaHoverCard>
           <span className="rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-medium text-brand-text">
             {ROTULO_NIVEL[membro.nivelAcesso]}
           </span>

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import type { DesempenhoMembro } from "@/lib/dashboard";
+import { PessoaHoverCard } from "@/components/PessoaHoverCard";
 
 // Tabela de desempenho individual, sortável por qualquer coluna (client).
 // Ordena por presença desc por padrão (já vem ordenada do servidor).
@@ -93,7 +94,9 @@ export function TabelaDesempenho({
         <tbody className="divide-y divide-edge-soft">
           {ordenados.map((d) => (
             <tr key={d.membroId} className="hover:bg-surface-2">
-              <td className="px-3 py-2.5 font-medium text-ink">{d.nome}</td>
+              <td className="px-3 py-2.5 font-medium text-ink">
+                <PessoaHoverCard membroId={d.membroId}>{d.nome}</PessoaHoverCard>
+              </td>
               {mostrarEquipe && (
                 <td className="px-3 py-2.5 text-ink-soft">{d.equipeNome}</td>
               )}

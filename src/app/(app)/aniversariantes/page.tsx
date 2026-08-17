@@ -1,5 +1,6 @@
 import { requirePermissao } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
+import { PessoaHoverCard } from "@/components/PessoaHoverCard";
 import {
   aniversariantesDoMes,
   hojeSaoPaulo,
@@ -33,27 +34,29 @@ function CardAniversariante({ a }: { a: Aniversariante }) {
             : "border-edge-soft vidro-leve"
       }`}
     >
-      <Avatar nome={a.nome} fotoUrl={a.fotoUrl} tamanho={48} />
-      <div className="min-w-0 flex-1">
-        <p className="flex flex-wrap items-center gap-2 truncate text-sm font-semibold text-ink">
-          {a.nome}
-          {a.ehHoje && (
-            <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-white">
-              Hoje 🎉
-            </span>
-          )}
-          {a.proximoD3 && (
-            <span className="rounded-full bg-warn-soft px-2 py-0.5 text-xs font-semibold text-warn-text">
-              {a.diasAte === 1 ? "Amanhã" : `Em ${a.diasAte} dias`}
-            </span>
-          )}
-        </p>
-        <p className="text-xs text-ink-subtle">
-          {a.dataBR}
-          {a.equipeNome ? ` · ${a.equipeNome}` : ""}
-          {idadeLabel(a) ? ` · ${idadeLabel(a)}` : ""}
-        </p>
-      </div>
+      <PessoaHoverCard membroId={a.id} className="flex min-w-0 flex-1 items-center gap-3">
+        <Avatar nome={a.nome} fotoUrl={a.fotoUrl} tamanho={48} />
+        <div className="min-w-0 flex-1">
+          <p className="flex flex-wrap items-center gap-2 truncate text-sm font-semibold text-ink">
+            {a.nome}
+            {a.ehHoje && (
+              <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-white">
+                Hoje 🎉
+              </span>
+            )}
+            {a.proximoD3 && (
+              <span className="rounded-full bg-warn-soft px-2 py-0.5 text-xs font-semibold text-warn-text">
+                {a.diasAte === 1 ? "Amanhã" : `Em ${a.diasAte} dias`}
+              </span>
+            )}
+          </p>
+          <p className="text-xs text-ink-subtle">
+            {a.dataBR}
+            {a.equipeNome ? ` · ${a.equipeNome}` : ""}
+            {idadeLabel(a) ? ` · ${idadeLabel(a)}` : ""}
+          </p>
+        </div>
+      </PessoaHoverCard>
       <CartaoAniversario
         dados={{
           nome: a.nome,
