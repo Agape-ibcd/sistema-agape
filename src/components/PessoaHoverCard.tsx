@@ -244,6 +244,15 @@ export function PessoaHoverCard({
           role="dialog"
           aria-label={`Detalhes de ${resumo?.nomeCompleto ?? "membro"}`}
           style={{ left: 0 }}
+          // Clique em QUALQUER lugar do painel (texto, ícones, o painel em
+          // si) não deve abrir a edição — só o lápis navega, e ele já
+          // intercepta o próprio clique antes de chegar aqui. Sem isso, o
+          // clique vaza pro <Link> da linha (foto/nome) em telas como a
+          // lista de Membros.
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
           className={`vidro-forte absolute z-30 max-h-[85vh] w-[min(19rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl p-3.5 shadow-xl ${resumo?.podeEditar ? "pr-9" : ""}`}
         >
           {resumo?.podeEditar && (
@@ -551,6 +560,10 @@ function InfoIcone({
       data-info-trigger={id}
       title={titulo}
       onClick={(e) => {
+        // preventDefault é essencial aqui: a linha (foto/nome) costuma estar
+        // dentro de um <Link> da tela (ex.: lista de Membros) — só
+        // stopPropagation não cancela a navegação do link ancestral.
+        e.preventDefault();
         e.stopPropagation();
         aoAlternar();
       }}
