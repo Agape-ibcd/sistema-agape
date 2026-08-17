@@ -359,6 +359,26 @@ function ConteudoResumo({
   carregando: boolean;
   erro: boolean;
 }) {
+  // Tooltip dos 4 ícones (aniversário/status/assiduidade/pontualidade): além
+  // do `title` nativo (só funciona com mouse), também abre ao tocar/clicar —
+  // em telas pequenas não há hover, então o title nunca aparece. Só um
+  // tooltip fica aberto por vez; fecha ao tocar em outro lugar.
+  const [tooltipAberto, setTooltipAberto] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!tooltipAberto) return;
+    function aoTocarFora(e: MouseEvent | TouchEvent) {
+      const alvo = e.target as Element;
+      if (!alvo.closest?.("[data-info-trigger]")) setTooltipAberto(null);
+    }
+    document.addEventListener("mousedown", aoTocarFora);
+    document.addEventListener("touchstart", aoTocarFora);
+    return () => {
+      document.removeEventListener("mousedown", aoTocarFora);
+      document.removeEventListener("touchstart", aoTocarFora);
+    };
+  }, [tooltipAberto]);
+
   if (erro) {
     return <p className="text-xs text-danger-text">Não foi possível carregar os dados.</p>;
   }
@@ -416,31 +436,52 @@ function ConteudoResumo({
 
           <div className="mt-1 flex items-stretch gap-2.5 text-[11px] text-ink-soft">
             <div className="flex flex-col justify-center gap-y-1">
-              <span className="inline-flex items-center gap-1" title="Aniversário">
+              <InfoIcone
+                id="aniversario"
+                titulo="Aniversário"
+                aberto={tooltipAberto === "aniversario"}
+                aoAlternar={() =>
+                  setTooltipAberto((v) => (v === "aniversario" ? null : "aniversario"))
+                }
+              >
                 <IconeBolo />
                 {resumo.dataNascimentoBR ?? "—"}
-              </span>
-              <span className={`inline-flex items-center gap-1 ${corStatus}`} title="Status">
+              </InfoIcone>
+              <InfoIcone
+                id="status"
+                titulo="Status"
+                aberto={tooltipAberto === "status"}
+                aoAlternar={() => setTooltipAberto((v) => (v === "status" ? null : "status"))}
+                className={corStatus}
+              >
                 <IconeStatus />
                 {rotuloStatus}
-              </span>
+              </InfoIcone>
             </div>
             <div aria-hidden className="w-px shrink-0 bg-edge-soft" />
             <div className="flex flex-col justify-center gap-y-1">
-              <span
-                className="inline-flex items-center gap-1"
-                title="Assiduidade — % de presença nos últimos 90 dias"
+              <InfoIcone
+                id="assiduidade"
+                titulo="Assiduidade — % de presença nos últimos 90 dias"
+                aberto={tooltipAberto === "assiduidade"}
+                aoAlternar={() =>
+                  setTooltipAberto((v) => (v === "assiduidade" ? null : "assiduidade"))
+                }
               >
                 <IconeAssiduidade />
                 {resumo.assiduidade90 == null ? "—" : `${resumo.assiduidade90}%`}
-              </span>
-              <span
-                className="inline-flex items-center gap-1"
-                title="Pontualidade — % de chegada no horário (1h15 antes do culto) nos últimos 90 dias"
+              </InfoIcone>
+              <InfoIcone
+                id="pontualidade"
+                titulo="Pontualidade — % de chegada no horário (1h15 antes do culto) nos últimos 90 dias"
+                aberto={tooltipAberto === "pontualidade"}
+                aoAlternar={() =>
+                  setTooltipAberto((v) => (v === "pontualidade" ? null : "pontualidade"))
+                }
               >
                 <IconePontualidade />
                 {resumo.pontualidade90 == null ? "—" : `${resumo.pontualidade90}%`}
-              </span>
+              </InfoIcone>
             </div>
           </div>
 
@@ -483,6 +524,48 @@ function ConteudoResumo({
         />
       </dl>
     </div>
+  );
+}
+
+// Ícone + valor com tooltip: `title` nativo pro mouse, e clicar/tocar
+// alterna um balão próprio (necessário em telas sem hover, onde o `title`
+// nunca aparece). `id` só marca o elemento pra o listener de "tocar fora"
+// (em ConteudoResumo) reconhecer um clique dentro de QUALQUER gatilho.
+function InfoIcone({
+  id,
+  titulo,
+  aberto,
+  aoAlternar,
+  className = "",
+  children,
+}: {
+  id: string;
+  titulo: string;
+  aberto: boolean;
+  aoAlternar: () => void;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <span
+      data-info-trigger={id}
+      title={titulo}
+      onClick={(e) => {
+        e.stopPropagation();
+        aoAlternar();
+      }}
+      className={`relative inline-flex cursor-pointer items-center gap-1 ${className}`}
+    >
+      {children}
+      {aberto && (
+        <span
+          role="tooltip"
+          className="absolute left-0 top-full z-10 mt-1.5 w-max max-w-[10rem] rounded-md border border-edge bg-surface-3 px-2 py-1 text-[10px] font-normal normal-case leading-snug tracking-normal text-ink shadow-lg"
+        >
+          {titulo}
+        </span>
+      )}
+    </span>
   );
 }
 
