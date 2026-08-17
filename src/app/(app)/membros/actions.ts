@@ -63,7 +63,11 @@ export async function salvarMembro(
 ): Promise<EstadoMembro> {
   const usuario = await requireUsuario();
   const acesso = acessoMembros(usuario);
-  if (acesso === "nenhum") return falha("Você não tem acesso ao cadastro de membros.");
+  // "somente_leitura" (monitor) nunca cria/edita — sem isso cairia no ramo
+  // "admin/super: acesso total" (nunca é `restrito`) e poderia criar membros.
+  if (acesso === "nenhum" || acesso === "somente_leitura") {
+    return falha("Você não tem acesso ao cadastro de membros.");
+  }
   const restrito = acesso === "equipe";
 
   const id = String(formData.get("id") ?? "").trim() || null;
@@ -260,7 +264,9 @@ export async function removerFoto(
 ): Promise<EstadoAcao> {
   const usuario = await requireUsuario();
   const acesso = acessoMembros(usuario);
-  if (acesso === "nenhum") return falha("Você não tem acesso ao cadastro de membros.");
+  if (acesso === "nenhum" || acesso === "somente_leitura") {
+    return falha("Você não tem acesso ao cadastro de membros.");
+  }
   const id = String(formData.get("id") ?? "");
 
   try {

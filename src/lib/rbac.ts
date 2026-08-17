@@ -15,6 +15,7 @@ export type Permissao =
   | "ver_calendario" // ver o calendário de eventos/escalas (leitura)
   | "exportar_agenda" // exportar agenda/escalas do próprio escopo (monitor não)
   | "gerenciar_membros" // cadastrar/editar QUALQUER membro (admin/super)
+  | "ver_membros_todos" // monitor: ver a lista completa de membros, só leitura
   | "ver_membros_equipe" // líder: ver a lista de membros da própria equipe
   | "editar_membros_equipe" // líder: editar dados de perfil dos membros da própria equipe
   | "ver_agenda_equipe" // líder: ver a agenda (calendário) restrita à própria equipe
@@ -68,9 +69,12 @@ const MATRIZ: Record<NivelAcesso, Permissao[]> = {
   // Não vê eventos/escalas nem gerencia nada, e não pertence a nenhuma equipe
   // (atribuir o nível remove o vínculo de equipe). Pode, porém, EDITAR o
   // próprio perfil e ver o painel de aniversariantes (ajuste de 2026-07-19).
+  // Também vê a lista completa de Membros, só leitura — nunca edita dados de
+  // ninguém (ajuste de 2026-08-17).
   monitor: [
     "dashboard_geral",
     "dashboard_equipe",
+    "ver_membros_todos",
     "ver_perfil_proprio",
     "editar_perfil_proprio",
     "painel_aniversariantes",

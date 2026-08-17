@@ -40,7 +40,7 @@ export const ITENS_MENU: ItemMenu[] = [
   // Leitura basta para o item aparecer (nível monitor); os controles de
   // escrita dentro das telas exigem as permissões específicas.
   { href: "/eventos", label: "Eventos e Escalas", permissoesAny: ["ver_calendario", "ver_agenda_equipe"], etapa: 3 },
-  { href: "/membros", label: "Membros", permissoesAny: ["gerenciar_membros", "ver_membros_equipe"], etapa: 3 },
+  { href: "/membros", label: "Membros", permissoesAny: ["gerenciar_membros", "ver_membros_equipe", "ver_membros_todos"], etapa: 3 },
   { href: "/equipes", label: "Equipes", permissao: "gerenciar_membros", etapa: 3 },
   { href: "/aniversariantes", label: "Aniversariantes", permissao: "painel_aniversariantes" },
   { href: "/solicitacoes", label: "Solicitações", permissao: "aprovar_candidaturas" },

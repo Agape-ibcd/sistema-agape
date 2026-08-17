@@ -9,8 +9,10 @@ import { PessoaHoverCard } from "@/components/PessoaHoverCard";
 import { FiltrosMembros } from "./FiltrosMembros";
 
 // Lista de membros com busca por nome/e-mail e filtros por equipe e status.
-// Admin/super veem todos; o líder vê SÓ a própria equipe (escopo travado no
-// servidor, sem botão de novo cadastro nem filtro de equipe).
+// Admin/super veem e editam todos; o líder vê SÓ a própria equipe (escopo
+// travado no servidor, sem botão de novo cadastro nem filtro de equipe); o
+// monitor vê a lista completa, mas em modo SOMENTE LEITURA (sem "+ Novo
+// membro" e sem abrir a ficha de ninguém — só o hover card).
 export default async function MembrosPage({
   searchParams,
 }: {
@@ -20,6 +22,7 @@ export default async function MembrosPage({
   const acesso = acessoMembros(usuario);
   if (acesso === "nenhum") redirect("/nao-autorizado");
   const escopoEquipe = acesso === "equipe";
+  const somenteLeitura = acesso === "somente_leitura";
 
   const { busca = "", equipe = "", status = "ativo" } = await searchParams;
 
@@ -64,7 +67,7 @@ export default async function MembrosPage({
             {membros.length} membro(s) na seleção atual.
           </p>
         </div>
-        {!escopoEquipe && (
+        {acesso === "total" && (
           <Link
             href="/membros/novo"
             className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-strong"
@@ -90,12 +93,9 @@ export default async function MembrosPage({
             Nenhum membro encontrado com estes filtros.
           </li>
         )}
-        {membros.map((m) => (
-          <li key={m.id}>
-            <Link
-              href={`/membros/${m.id}`}
-              className="flex items-center gap-3 px-4 py-3 transition hover:bg-surface-2"
-            >
+        {membros.map((m) => {
+          const conteudoLinha = (
+            <>
               <PessoaHoverCard membroId={m.id} className="flex min-w-0 flex-1 items-center gap-3">
                 <Avatar nome={m.nomeCompleto} fotoUrl={m.fotoUrl} />
                 <div className="min-w-0 flex-1">
@@ -124,9 +124,23 @@ export default async function MembrosPage({
                     : ""}
                 </span>
               )}
-            </Link>
-          </li>
-        ))}
+            </>
+          );
+          return (
+            <li key={m.id}>
+              {somenteLeitura ? (
+                <div className="flex items-center gap-3 px-4 py-3">{conteudoLinha}</div>
+              ) : (
+                <Link
+                  href={`/membros/${m.id}`}
+                  className="flex items-center gap-3 px-4 py-3 transition hover:bg-surface-2"
+                >
+                  {conteudoLinha}
+                </Link>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

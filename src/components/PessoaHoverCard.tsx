@@ -244,17 +244,19 @@ export function PessoaHoverCard({
           role="dialog"
           aria-label={`Detalhes de ${resumo?.nomeCompleto ?? "membro"}`}
           style={{ left: 0 }}
-          className="vidro-forte absolute z-30 max-h-[85vh] w-[min(19rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl p-3.5 pr-9 shadow-xl"
+          className={`vidro-forte absolute z-30 max-h-[85vh] w-[min(19rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl p-3.5 shadow-xl ${resumo?.podeEditar ? "pr-9" : ""}`}
         >
-          <button
-            type="button"
-            onClick={aoClicarEditar}
-            title="Editar Dados"
-            aria-label="Editar dados"
-            className="absolute right-2 top-2 rounded-lg p-1.5 text-ink-subtle transition hover:bg-surface-3 hover:text-brand-text"
-          >
-            <IconeLapis />
-          </button>
+          {resumo?.podeEditar && (
+            <button
+              type="button"
+              onClick={aoClicarEditar}
+              title="Editar Dados"
+              aria-label="Editar dados"
+              className="absolute right-2 top-2 rounded-lg p-1.5 text-ink-subtle transition hover:bg-surface-3 hover:text-brand-text"
+            >
+              <IconeLapis />
+            </button>
+          )}
           <ConteudoResumo resumo={resumo} carregando={carregando} erro={erro} />
         </div>
       )}
@@ -412,7 +414,7 @@ function ConteudoResumo({
             {resumo.nomeCompleto}
           </p>
 
-          <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-ink-soft">
+          <div className="mt-1 flex flex-col items-start gap-y-1 text-[11px] text-ink-soft">
             <span className="inline-flex items-center gap-1" title="Aniversário">
               <IconeBolo />
               {resumo.dataNascimentoBR ?? "—"}

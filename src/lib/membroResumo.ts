@@ -1,5 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { podeEditarMembroAlvo } from "@/lib/acessoMembros";
+import type { UsuarioAtual } from "@/lib/auth";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Resumo compacto de um membro para o hover card (foto/nome/equipe/próxima
@@ -27,9 +29,15 @@ export type MembroResumo = {
   // % (0-100, arredondado) nos últimos 90 dias; null = sem convocações no período.
   assiduidade90: number | null;
   pontualidade90: number | null;
+  // Se quem pediu o resumo (usuário logado) pode editar ESTE membro — decide
+  // se o hover card mostra o ícone de editar (ex.: monitor nunca pode).
+  podeEditar: boolean;
 };
 
-export async function buscarResumoMembro(membroId: string): Promise<MembroResumo | null> {
+export async function buscarResumoMembro(
+  membroId: string,
+  usuario: UsuarioAtual,
+): Promise<MembroResumo | null> {
   const membro = await prisma.membro.findUnique({
     where: { id: membroId },
     select: {
@@ -39,6 +47,7 @@ export async function buscarResumoMembro(membroId: string): Promise<MembroResumo
       dataNascimento: true,
       status: true,
       motivoStatus: true,
+      nivelAcesso: true,
       equipeId: true,
       equipe: { select: { nome: true, corHex: true } },
       liderancas: {
@@ -66,6 +75,7 @@ export async function buscarResumoMembro(membroId: string): Promise<MembroResumo
     proximaEscala,
     assiduidade90: desempenho.assiduidade90,
     pontualidade90: desempenho.pontualidade90,
+    podeEditar: podeEditarMembroAlvo(usuario, membro),
   };
 }
 

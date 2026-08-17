@@ -12,7 +12,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   }
 
   const { id } = await params;
-  const resumo = await buscarResumoMembro(id);
+  const resumo = await buscarResumoMembro(id, usuario);
   if (!resumo) {
     return NextResponse.json({ error: "Membro não encontrado" }, { status: 404 });
   }
