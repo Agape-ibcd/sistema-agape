@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { MembroResumo } from "@/lib/membroResumo";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -29,6 +30,7 @@ export function PessoaHoverCard({
   children: React.ReactNode;
   className?: string;
 }) {
+  const router = useRouter();
   const [aberto, setAberto] = useState(false);
   const [resumo, setResumo] = useState<MembroResumo | null>(cacheResumo.get(membroId) ?? null);
   const [carregando, setCarregando] = useState(false);
@@ -95,6 +97,13 @@ export function PessoaHoverCard({
     }
   }
 
+  function aoClicarEditar(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setAberto(false);
+    router.push(`/membros/${membroId}`);
+  }
+
   useEffect(() => {
     if (!aberto) return;
     function aoClicarFora(e: MouseEvent) {
@@ -146,7 +155,10 @@ export function PessoaHoverCard({
       onMouseLeave={aoSairMouse}
       onClick={aoClicar}
       onKeyDown={aoTeclar}
-      className={`relative inline-block cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring ${className}`}
+      // `className` decide o display (flex quando envolve foto+nome lado a
+      // lado, ou nada = inline-block quando é só um nome solto) — nunca os
+      // dois ao mesmo tempo, senão a cascata do Tailwind desempata errado.
+      className={`relative cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring ${className || "inline-block"}`}
     >
       {children}
 
@@ -156,12 +168,40 @@ export function PessoaHoverCard({
           role="dialog"
           aria-label={`Detalhes de ${resumo?.nomeCompleto ?? "membro"}`}
           style={{ left: 0 }}
-          className="vidro-forte absolute z-30 w-[min(20rem,calc(100vw-2rem))] rounded-2xl p-4 shadow-xl"
+          className="vidro-forte absolute z-30 w-[min(20rem,calc(100vw-2rem))] rounded-2xl p-4 pr-10 shadow-xl"
         >
+          <button
+            type="button"
+            onClick={aoClicarEditar}
+            title="Editar Dados"
+            aria-label="Editar dados"
+            className="absolute right-2.5 top-2.5 rounded-lg p-1.5 text-ink-subtle transition hover:bg-surface-3 hover:text-brand-text"
+          >
+            <IconeLapis />
+          </button>
           <ConteudoResumo resumo={resumo} carregando={carregando} erro={erro} />
         </div>
       )}
     </div>
+  );
+}
+
+function IconeLapis() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+      <path d="m15 5 4 4" />
+    </svg>
   );
 }
 
