@@ -370,9 +370,15 @@ function ConteudoResumo({
 }) {
   // Tooltip dos 4 ícones (aniversário/status/assiduidade/pontualidade): além
   // do `title` nativo (só funciona com mouse), também abre ao tocar/clicar —
-  // em telas pequenas não há hover, então o title nunca aparece. Só um
-  // tooltip fica aberto por vez; fecha ao tocar em outro lugar.
+  // em telas pequenas não há hover, então o title nunca aparece. Guarda o
+  // texto (não um id): só um fica aberto por vez, e vira uma faixa abaixo
+  // dos ícones, em fluxo normal — nunca é cortada pela rolagem do card
+  // (diferente de um balão flutuante, que estouraria a borda em telas
+  // pequenas).
   const [tooltipAberto, setTooltipAberto] = useState<string | null>(null);
+  function alternarTooltip(titulo: string) {
+    setTooltipAberto((v) => (v === titulo ? null : titulo));
+  }
 
   useEffect(() => {
     if (!tooltipAberto) return;
@@ -445,24 +451,11 @@ function ConteudoResumo({
 
           <div className="mt-1 flex items-stretch gap-2.5 text-[11px] text-ink-soft">
             <div className="flex flex-col justify-center gap-y-1">
-              <InfoIcone
-                id="aniversario"
-                titulo="Aniversário"
-                aberto={tooltipAberto === "aniversario"}
-                aoAlternar={() =>
-                  setTooltipAberto((v) => (v === "aniversario" ? null : "aniversario"))
-                }
-              >
+              <InfoIcone titulo="Aniversário" aoClicar={alternarTooltip}>
                 <IconeBolo />
                 {resumo.dataNascimentoBR ?? "—"}
               </InfoIcone>
-              <InfoIcone
-                id="status"
-                titulo="Status"
-                aberto={tooltipAberto === "status"}
-                aoAlternar={() => setTooltipAberto((v) => (v === "status" ? null : "status"))}
-                className={corStatus}
-              >
+              <InfoIcone titulo="Status" aoClicar={alternarTooltip} className={corStatus}>
                 <IconeStatus />
                 {rotuloStatus}
               </InfoIcone>
@@ -470,29 +463,29 @@ function ConteudoResumo({
             <div aria-hidden className="w-px shrink-0 bg-edge-soft" />
             <div className="flex flex-col justify-center gap-y-1">
               <InfoIcone
-                id="assiduidade"
                 titulo="Assiduidade — % de presença nos últimos 90 dias"
-                aberto={tooltipAberto === "assiduidade"}
-                aoAlternar={() =>
-                  setTooltipAberto((v) => (v === "assiduidade" ? null : "assiduidade"))
-                }
+                aoClicar={alternarTooltip}
               >
                 <IconeAssiduidade />
                 {resumo.assiduidade90 == null ? "—" : `${resumo.assiduidade90}%`}
               </InfoIcone>
               <InfoIcone
-                id="pontualidade"
                 titulo="Pontualidade — % de chegada no horário (1h15 antes do culto) nos últimos 90 dias"
-                aberto={tooltipAberto === "pontualidade"}
-                aoAlternar={() =>
-                  setTooltipAberto((v) => (v === "pontualidade" ? null : "pontualidade"))
-                }
+                aoClicar={alternarTooltip}
               >
                 <IconePontualidade />
                 {resumo.pontualidade90 == null ? "—" : `${resumo.pontualidade90}%`}
               </InfoIcone>
             </div>
           </div>
+
+          {/* Balão do ícone tocado/clicado — em fluxo normal (não
+              absoluto), pra nunca ser cortado pela rolagem do card. */}
+          {tooltipAberto && (
+            <p className="mt-1.5 rounded-md border border-edge bg-surface-3 px-2 py-1 text-[10px] leading-snug text-ink">
+              {tooltipAberto}
+            </p>
+          )}
 
           {resumo.status !== "ativo" && resumo.motivoStatus && (
             <p className="mt-1 text-[10px] text-ink-subtle">Motivo: {resumo.motivoStatus}</p>
@@ -536,28 +529,25 @@ function ConteudoResumo({
   );
 }
 
-// Ícone + valor com tooltip: `title` nativo pro mouse, e clicar/tocar
-// alterna um balão próprio (necessário em telas sem hover, onde o `title`
-// nunca aparece). `id` só marca o elemento pra o listener de "tocar fora"
-// (em ConteudoResumo) reconhecer um clique dentro de QUALQUER gatilho.
+// Ícone + valor com tooltip: `title` nativo pro mouse, e clicar/tocar avisa
+// o pai (ConteudoResumo) pra mostrar/esconder a faixa de texto com `titulo`
+// (necessário em telas sem hover, onde o `title` nunca aparece).
+// `data-info-trigger` marca o elemento pro listener de "tocar fora" (no pai)
+// reconhecer um clique dentro de QUALQUER gatilho.
 function InfoIcone({
-  id,
   titulo,
-  aberto,
-  aoAlternar,
+  aoClicar,
   className = "",
   children,
 }: {
-  id: string;
   titulo: string;
-  aberto: boolean;
-  aoAlternar: () => void;
+  aoClicar: (titulo: string) => void;
   className?: string;
   children: React.ReactNode;
 }) {
   return (
     <span
-      data-info-trigger={id}
+      data-info-trigger
       title={titulo}
       onClick={(e) => {
         // preventDefault é essencial aqui: a linha (foto/nome) costuma estar
@@ -565,19 +555,11 @@ function InfoIcone({
         // stopPropagation não cancela a navegação do link ancestral.
         e.preventDefault();
         e.stopPropagation();
-        aoAlternar();
+        aoClicar(titulo);
       }}
-      className={`relative inline-flex cursor-pointer items-center gap-1 ${className}`}
+      className={`inline-flex cursor-pointer items-center gap-1 ${className}`}
     >
       {children}
-      {aberto && (
-        <span
-          role="tooltip"
-          className="absolute left-0 top-full z-10 mt-1.5 w-max max-w-[10rem] rounded-md border border-edge bg-surface-3 px-2 py-1 text-[10px] font-normal normal-case leading-snug tracking-normal text-ink shadow-lg"
-        >
-          {titulo}
-        </span>
-      )}
     </span>
   );
 }
