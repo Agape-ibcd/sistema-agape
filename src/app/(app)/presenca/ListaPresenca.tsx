@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   useActionState,
@@ -385,35 +386,51 @@ function IconeX() {
   );
 }
 
-// Relógio com ponteiros "em ponto" (pontual).
-function IconePontual() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <circle cx="12" cy="12" r="8.5" />
-      <path d="M12 12V7M12 12h4" />
-    </svg>
-  );
-}
-
-// Mesmo relógio, mas com os ponteiros "atrasados" (posição diferente) —
-// diferencia visualmente de Pontual além da cor.
-function IconeAtrasado() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <circle cx="12" cy="12" r="8.5" />
-      <path d="M12 12 8.7 15M12 12l3.3-1.8" />
-    </svg>
-  );
-}
-
 // Classes por "tom" — fundo neon (glow via shadow com a cor sólida do token)
 // só quando ativo; neutro quando não selecionado.
 const TOM_CLASSES = {
   success: "border-success-edge bg-success-soft text-success-text shadow-[0_0_10px_var(--success)]",
   danger: "border-danger-edge bg-danger-soft text-danger-text shadow-[0_0_10px_var(--danger)]",
-  info: "border-info-edge bg-info-soft text-info-text shadow-[0_0_10px_var(--info-text)]",
-  warn: "border-warn-edge bg-warn-soft text-warn-text shadow-[0_0_10px_var(--warn)]",
 } as const;
+
+// ─────────────────────────────────────────────────────────────────────────
+// Pontualidade: não é mais escolhida manualmente — é derivada do horário de
+// chegada. `horarioChegadaSugerido` já vem calculado como "início − 1h15"
+// (regra do PDF, ver calcularHorarioChegada em recorrencia.ts), então essa
+// mesma janela [chegada sugerida, chegada sugerida + 1h15] = [1h15 antes do
+// início, início] é o intervalo considerado pontual — e a lista de sugestões
+// do campo de horário.
+// ─────────────────────────────────────────────────────────────────────────
+
+function paraMinutos(hhmm: string): number | null {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm.trim());
+  if (!m) return null;
+  return Number(m[1]) * 60 + Number(m[2]);
+}
+
+function formatarMinutos(min: number): string {
+  const t = ((min % 1440) + 1440) % 1440;
+  return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+}
+
+// Opções de 5 em 5 minutos, da chegada sugerida (início − 1h15) até o início.
+function gerarOpcoesHorario(chegadaSugerida: string): string[] {
+  const c = paraMinutos(chegadaSugerida);
+  if (c === null) return [];
+  const opcoes: string[] = [];
+  for (let m = 0; m <= 75; m += 5) opcoes.push(formatarMinutos(c + m));
+  return opcoes;
+}
+
+// Pontual = chegou dentro da janela [chegada sugerida, início]. Sem horário
+// escolhido ainda, trata como pontual (não há o que sinalizar).
+function ehPontual(horario: string, chegadaSugerida: string): boolean {
+  const h = paraMinutos(horario);
+  const c = paraMinutos(chegadaSugerida);
+  if (h === null || c === null) return true;
+  const offset = ((h - c) % 1440 + 1440) % 1440;
+  return offset <= 75;
+}
 
 // Toggle segmentado em ícones (Presente/Ausente, Pontual/Atrasado): fundo
 // neon + cor do tom quando ativo, cor neutra quando nada selecionado ainda.
@@ -499,12 +516,8 @@ function LinhaPresenca({
 
   // Estado local da linha (inicia a partir do lançamento ativo, se houver).
   const [presente, setPresente] = useState<boolean>(ativo ? ativo.presente : true);
-  const [pontualidade, setPontualidade] = useState<"pontual" | "atrasado">(
-    ativo?.pontualidade ?? "pontual",
-  );
-  const [horario, setHorario] = useState<string>(
-    ativo?.horarioChegada ?? horarioChegadaSugerido,
-  );
+  // Em branco até o usuário escolher — não pré-preenche mais com a sugestão.
+  const [horario, setHorario] = useState<string>(ativo?.horarioChegada ?? "");
   const [justificativa, setJustificativa] = useState<string>(
     ativo?.justificativaAusencia ?? "",
   );
@@ -519,7 +532,7 @@ function LinhaPresenca({
   // Refs para o debounce: sempre leem o estado mais atual no momento do save.
   // Sincronizadas num effect (regra do react-hooks: não escrever em ref
   // durante o render) — o timer só dispara bem depois, com o valor já fresco.
-  const dadosRef = useRef({ presente, pontualidade, horario, justificativa });
+  const dadosRef = useRef({ presente, horario, justificativa });
   const statusRef = useRef<StatusSave>(statusSave);
   // Situação da linha lida pelo resumo do "Salvar tudo agora".
   const infoRef = useRef<EstadoLinha>({
@@ -530,7 +543,7 @@ function LinhaPresenca({
     erro: statusSave === "erro",
   });
   useEffect(() => {
-    dadosRef.current = { presente, pontualidade, horario, justificativa };
+    dadosRef.current = { presente, horario, justificativa };
     statusRef.current = statusSave;
     infoRef.current = {
       nome: membro.nome,
@@ -564,8 +577,7 @@ function LinhaPresenca({
       if (!emEdicao && ativo) {
         // Restauração (ou criação vinda de outro lugar): adota os valores.
         setPresente(ativo.presente);
-        setPontualidade(ativo.pontualidade ?? "pontual");
-        setHorario(ativo.horarioChegada ?? horarioChegadaSugerido);
+        setHorario(ativo.horarioChegada ?? "");
         setJustificativa(ativo.justificativaAusencia ?? "");
         setExcluindo(false);
       }
@@ -585,7 +597,9 @@ function LinhaPresenca({
       equipeId,
       membroId: membro.id,
       presente: d.presente,
-      pontualidade: d.pontualidade,
+      pontualidade: ehPontual(d.horario, horarioChegadaSugerido)
+        ? "pontual"
+        : "atrasado",
       horarioChegada: d.presente ? d.horario : "",
       justificativa: d.presente ? "" : d.justificativa,
     });
@@ -608,7 +622,7 @@ function LinhaPresenca({
       setErroSave(r.message);
       infoRef.current = { ...infoRef.current, erro: true };
     }
-  }, [eventoId, equipeId, membro.id]);
+  }, [eventoId, equipeId, membro.id, horarioChegadaSugerido]);
 
   const agendarSave = useCallback(
     (ms: number) => {
@@ -642,6 +656,13 @@ function LinhaPresenca({
 
   const inputCls =
     "rounded-lg border border-edge px-2.5 py-1.5 text-xs outline-none focus:border-brand focus:ring-2 focus:ring-brand-ring";
+
+  const opcoesHorario = useMemo(
+    () => gerarOpcoesHorario(horarioChegadaSugerido),
+    [horarioChegadaSugerido],
+  );
+  const horarioAtrasado =
+    horario !== "" && !ehPontual(horario, horarioChegadaSugerido);
 
   // Lançamento excluído (e sem lançamento ativo): mostra riscado + restaurar.
   if (excluido && !ativo && statusSave === "ocioso") {
@@ -680,6 +701,7 @@ function LinhaPresenca({
   }
 
   const naoLancado = !lancamentoId && statusSave === "ocioso";
+  const horarioFaltando = !naoLancado && presente && horario === "";
   // Nome fica na cor da situação registrada — neutro enquanto não há lançamento.
   const corNome = naoLancado
     ? "text-ink"
@@ -723,27 +745,41 @@ function LinhaPresenca({
 
         {naoLancado ? null : presente ? (
           <>
-            <SegmentadoIcone
-              valor={pontualidade}
-              opcoes={[
-                { valor: "pontual", titulo: "Pontual", tom: "info", icone: <IconePontual /> },
-                { valor: "atrasado", titulo: "Atrasado", tom: "warn", icone: <IconeAtrasado /> },
-              ]}
-              onEscolher={(v) => {
-                setPontualidade(v);
-                agendarSave(DEBOUNCE_TOGGLE_MS);
-              }}
-            />
             <input
               type="time"
               value={horario}
+              list={`horario-opcoes-${membro.id}`}
               onChange={(e) => {
                 setHorario(e.target.value);
                 agendarSave(DEBOUNCE_TEXTO_MS);
               }}
               aria-label="Horário de chegada"
-              className={`${inputCls} w-24`}
+              aria-invalid={horarioFaltando}
+              title={
+                horarioFaltando
+                  ? "Informe o horário de chegada"
+                  : horarioAtrasado
+                    ? "Chegada após o horário considerado pontual"
+                    : undefined
+              }
+              className={`${inputCls} w-28 ${
+                horarioFaltando
+                  ? "border-danger-edge shadow-[0_0_5px_var(--danger)]"
+                  : horarioAtrasado
+                    ? "border-[#f5e400] shadow-[0_0_6px_#f5e400]"
+                    : ""
+              }`}
             />
+            <datalist id={`horario-opcoes-${membro.id}`}>
+              {opcoesHorario.map((h) => (
+                <option key={h} value={h} />
+              ))}
+            </datalist>
+            {horarioFaltando && (
+              <span className="text-xs font-medium text-danger-text">
+                Informe o horário
+              </span>
+            )}
           </>
         ) : (
           <input
