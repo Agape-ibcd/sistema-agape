@@ -656,6 +656,13 @@ function LinhaPresenca({
 
   const inputCls =
     "rounded-lg border border-edge px-2.5 py-1.5 text-xs outline-none focus:border-brand focus:ring-2 focus:ring-brand-ring";
+  // Sem "border-edge" embutida: o campo de horário troca a cor da borda
+  // conforme o estado (normal/faltando/atrasado), então a cor não pode vir
+  // fixa na base — duas classes de border-color juntas na mesma tag disputam
+  // a cascata do Tailwind e a última do arquivo gerado vence, não a última
+  // escrita aqui (foi o que apagava o contorno neon).
+  const inputSemBordaCls =
+    "rounded-lg border px-2.5 py-1.5 text-xs outline-none focus:border-brand focus:ring-2 focus:ring-brand-ring";
 
   const opcoesHorario = useMemo(
     () => gerarOpcoesHorario(horarioChegadaSugerido),
@@ -762,12 +769,12 @@ function LinhaPresenca({
                     ? "Chegada após o horário considerado pontual"
                     : undefined
               }
-              className={`${inputCls} w-28 ${
+              className={`${inputSemBordaCls} w-28 ${
                 horarioFaltando
                   ? "border-danger-edge shadow-[0_0_5px_var(--danger)]"
                   : horarioAtrasado
                     ? "border-[#f5e400] shadow-[0_0_6px_#f5e400]"
-                    : ""
+                    : "border-edge"
               }`}
             />
             <datalist id={`horario-opcoes-${membro.id}`}>
