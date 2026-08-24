@@ -396,10 +396,11 @@ const TOM_CLASSES = {
 // ─────────────────────────────────────────────────────────────────────────
 // Pontualidade: não é mais escolhida manualmente — é derivada do horário de
 // chegada. `horarioChegadaSugerido` já vem calculado como "início − 1h15"
-// (regra do PDF, ver calcularHorarioChegada em recorrencia.ts), então essa
-// mesma janela [chegada sugerida, chegada sugerida + 1h15] = [1h15 antes do
-// início, início] é o intervalo considerado pontual — e a lista de sugestões
-// do campo de horário.
+// (regra do PDF, ver calcularHorarioChegada em recorrencia.ts) — é a hora
+// de chamada da equipe. Só é pontual quem chega NESSA hora ou antes; a
+// lista de sugestões do campo de horário vai até o início do evento só
+// como atalho de seleção — a partir da 2ª opção (5 min depois da chamada)
+// já conta como atraso.
 // ─────────────────────────────────────────────────────────────────────────
 
 function paraMinutos(hhmm: string): number | null {
@@ -422,14 +423,20 @@ function gerarOpcoesHorario(chegadaSugerida: string): string[] {
   return opcoes;
 }
 
-// Pontual = chegou dentro da janela [chegada sugerida, início]. Sem horário
-// escolhido ainda, trata como pontual (não há o que sinalizar).
+// Pontual = chegou NA hora de chegada sugerida ou antes dela. Qualquer
+// minuto depois já é atraso, mesmo que ainda falte bastante para o início.
+// Sem horário escolhido ainda, trata como pontual (não há o que sinalizar).
 function ehPontual(horario: string, chegadaSugerida: string): boolean {
   const h = paraMinutos(horario);
   const c = paraMinutos(chegadaSugerida);
   if (h === null || c === null) return true;
+  // Minutos da chegada sugerida até o horário informado, sempre >= 0 (dá a
+  // volta pela meia-noite). Chegou ANTES da hora sugerida também dá a volta
+  // (fica perto de 1440) — por isso um offset grande também é pontual; só
+  // não dá pra "atrasar" por mais de 12h no mesmo evento, então acima disso
+  // tratamos como chegada antecipada, não atraso.
   const offset = ((h - c) % 1440 + 1440) % 1440;
-  return offset <= 75;
+  return offset === 0 || offset > 720;
 }
 
 // Toggle segmentado em ícones (Presente/Ausente, Pontual/Atrasado): fundo
